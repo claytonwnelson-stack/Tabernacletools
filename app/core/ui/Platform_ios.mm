@@ -1,14 +1,28 @@
-#include "Platform.h"
-#include "store/StoreBridge.h"
-#include <cmath>
+// Apple headers before JuceHeader.h (pulled in by Platform.h). That generated
+// header ends with `using namespace juce`, so the class template juce::Point is
+// already visible. Foundation, UIKit, PDFKit and CoreMIDI include MacTypes.h,
+// which then declares QuickDraw `struct Point`. Parsing that declaration while
+// the template is in scope is the iOS build error "Reference to 'Point' is
+// ambiguous" / "class template 'Point' requires template arguments". Renaming
+// Point and Component for this import is the same shield JUCE uses for
+// Component in juce_BasicNativeHeaders.h. Do not edit the Apple SDK headers.
+#import <TargetConditionals.h>
+#define Point CarbonDummyPointName
+#define Component CarbonDummyCompName
 #import <Foundation/Foundation.h>
 #import <PDFKit/PDFKit.h>
 #import <CoreMIDI/CoreMIDI.h>
 #import <AuthenticationServices/AuthenticationServices.h>
-#if JUCE_IOS
+#if TARGET_OS_IPHONE
  #import <AVFoundation/AVFoundation.h>
  #import <UIKit/UIKit.h>
 #endif
+#undef Point
+#undef Component
+
+#include "Platform.h"
+#include "store/StoreBridge.h"
+#include <cmath>
 
 // v0.11 Sign in with Apple delegate (ASAuthorizationController). Holds the callback until Apple answers.
 API_AVAILABLE(ios(13.0), macos(10.15))

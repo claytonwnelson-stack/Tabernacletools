@@ -1,8 +1,16 @@
 // v0.12 Objective-C++ bridge: C++ <-> WRStoreKitBridge (Swift). Found at runtime by class name, so this file needs neither a
 // bridging header nor the generated "<Module>-Swift.h" header (see BUILD_ON_MAC.md "StoreKit 2 / Swift").
+// Same Point shield as Platform_ios.mm: Foundation pulls in MacTypes.h, and
+// JuceHeader.h's `using namespace juce` makes juce::Point (a class template)
+// ambiguous with QuickDraw Point if the Apple header is included second.
+#define Point CarbonDummyPointName
+#define Component CarbonDummyCompName
+#import <Foundation/Foundation.h>
+#undef Point
+#undef Component
+
 #include "StoreBridge.h"
 #include <JuceHeader.h>
-#import <Foundation/Foundation.h>
 
 namespace wr::store {
 #if WR_STORE_BUILD
