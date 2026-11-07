@@ -1,0 +1,162 @@
+// Band sync (v0.5): one leader, any number of followers on the local network (works on an offline travel router).
+//
+//  * Discovery: Bonjour / mDNS service "_tabernacle._tcp" (Discovery.h). Join = one TCP connection to the leader.
+//  * Beat/tempo phase: Ableton Link (BeatClock). Every device renders its own click and voice locally, phase-locked to
+//    the shared Link timeline, so cues and changes are expressed in Link beats, not wall-clock time.
+//  * This file: message format, sequencing, late-join snapshot, leader diffing and follower apply. No sockets, no
+//    threads - fully testable on Linux (tests/test_sync.cpp, including real 127.0.0.1 TCP through Net.h).
+//
+// Wire format: one JSON object per line ("\n"-terminated, UTF-8), protocol version "v".
+//   follower -> leader   {"t":"hello","v":1,"name":"Keys iPad","last":<last seq seen or -1>,"session":"<leader session id or ''>"}
+//                        {"t":"resync"}                       (gap detected - please send a snapshot)
+//                        {"t":"pong","id":n}
+//   leader -> follower   {"t":"snap","seq":n,"session":"..","state":{...}}   full state (join, resync, reconnect)
+//                        {"t":"song","seq":n,"song":i}                       song index in the setlist
+//                        {"t":"section","seq":n,"idx":i,"pass":p}            landed (no cue / immediate)
+//                        {"t":"cue","seq":n,"idx":i,"pass":p,"cueBeat":b,"dueBeat":d}  queued: one cue bar [cueBeat, dueBeat)
+//                        {"t":"tempo","seq":n,"bpm":x}
+//                        {"t":"play","seq":n,"on":true,"atBeat":b,"countIn":8}  transport, quantised to a Link bar line
+//                        {"t":"mt","seq":n,"loaded":b,"on":b,"sec":i,"loop":i,"pending":i,"beat":x}  v0.14 backing-track transport
+//                        {"t":"ping","id":n}                                  keep-alive (no seq)
+// Every leader event carries seq = previous + 1 within a session; a follower that sees a gap (or a new session id)
+// ignores the event and asks for a snapshot. Duplicates (seq <= last) are dropped.
+#pragma once
+#include "../model/LiveSession.h"
+#include <deque>
+#include <functional>
+
+namespace wr::sync {
+
+constexpr int kProtocolVersion = 1;
+constexpr int kDefaultPort = 52741;
+inline const char* serviceType() { return "_tabernacle._tcp"; }
+
+// The shared beat timeline. App: Ableton Link (Source/LinkClock.h). Tests: FakeClock.
+struct BeatClock {
+    virtual ~BeatClock() = default;
+    virtual double beatAt (double nowSec) const = 0;      // Link timeline beat at this time
+    virtual double tempo() const = 0;
+    virtual void setTempo (double bpm, double nowSec) = 0; // leader only (Link propagates to peers)
+    virtual int peers() const { return 0; }
+};
+// next bar line on the shared timeline (quantum = beats per bar)
+inline double nextBarBeat (double beat, int bpb) { const double q = std::max (1, bpb); return (std::floor (beat / q + 1e-9) + 1.0) * q; }
+
+// ---------------------------------------------------------------- v0.7 device health (battery / thermal)
+struct DeviceHealth {
+    int batteryPct = -1;          // 0..100, -1 unknown (desktop / simulator)
+    bool charging = false;        // plugged in (charging or full)
+    int thermal = 0;              // iOS ProcessInfo.thermalState: 0 nominal, 1 fair, 2 serious, 3 critical
+    bool operator== (const DeviceHealth& o) const { return batteryPct == o.batteryPct && charging == o.charging && thermal == o.thermal; }
+};
+constexpr int kLowBatteryPct = 20;
+// "" when fine; else a short warning: "Battery 15% - plug in", "Hot - iPad may slow down" (serious), "Overheating" (critical)
+std::string healthWarning (const DeviceHealth&);
+inline int healthSeverity (const DeviceHealth& h) { return h.thermal >= 3 ? 2 : (h.thermal == 2 || (h.batteryPct >= 0 && h.batteryPct < kLowBatteryPct && ! h.charging)) ? 1 : 0; }
+std::string healthText (const DeviceHealth&);   // "87% charging - fair"
+
+// ---------------------------------------------------------------- shared state (snapshot)
+struct SongRef { Song song; std::string key; double bpm = 0;       // leader's song (chart + leader's sounding key + tempo)
+                 std::vector<std::string> arrangement;              // v0.7 effective play order (so section indices match)
+                 std::vector<ServiceNote> notes; };                 // v0.7 service notes for this setlist item
+struct State {
+    std::string setlistName, setlistDate; std::vector<SongRef> songs;
+    int songIndex = 0, sectionIndex = 0, pass = 1;
+    int pendingIdx = -1, pendingPass = 1; double cueBeat = 0, dueBeat = 0;  // queued one-bar cue (Link beats)
+    double bpm = kDefaultBpm; bool playing = false; double playBeat = 0; int countIn = 0;
+    bool hasColors = false; SectionColorMap sectionColors;   // v0.8 leader's per-kind section colours (per-song overrides ride in songs)
+};
+Json toJson (const State&);
+State stateFromJson (const Json&);
+
+struct Msg { std::string type; long long seq = -1; Json body; };
+std::string encode (const std::string& type, long long seq, Json body);  // one line incl. '\n'
+bool decode (const std::string& line, Msg& out);                          // false for junk / other protocol versions
+
+// split a byte stream into lines (TCP framing); caps runaway lines
+struct LineBuffer {
+    std::string buf; static constexpr size_t kMax = 4u << 20;
+    template <typename F> void feed (const char* d, size_t n, F&& onLine) {
+        buf.append (d, n); size_t s = 0;
+        for (size_t i; (i = buf.find ('\n', s)) != std::string::npos; s = i + 1) onLine (buf.substr (s, i - s));
+        buf.erase (0, s); if (buf.size() > kMax) buf.clear();
+    }
+};
+
+// ---------------------------------------------------------------- leader
+// Watches the leader's LiveSession and emits events; answers hello/resync with a snapshot.
+class Leader {
+public:
+    explicit Leader (std::string sessionId) : session_ (std::move (sessionId)) {}
+    const std::string& sessionId() const { return session_; }
+    // call after every LiveSession change / on a timer. Returns event lines to broadcast to every follower.
+    std::vector<std::string> update (const LiveSession& live, BeatClock& clock, double nowSec); // also pushes tempo to Link
+    // PLAY while leading: transport is quantised to the next Link bar line so every device starts the count-in together.
+    // Returns the beat it will start on; the leader's own session starts in update() when the clock gets there.
+    std::string requestPlay (LiveSession& live, const BeatClock& clock, double nowSec, bool on); // returns the event line
+    double scheduledPlayBeat() const { return playAt_; }
+    bool playScheduled() const { return playPending_; }
+    void tick (LiveSession& live, const BeatClock& clock, double nowSec);           // fires the leader's own scheduled play
+    // follower -> leader line; returns the reply for that follower only (snapshot) or ""
+    std::string onFollowerLine (const std::string& line, const LiveSession& live, const BeatClock& clock, double nowSec);
+    std::string snapshotLine (const LiveSession& live, const BeatClock& clock, double nowSec);
+    long long seq() const { return seq_; }
+    State capture (const LiveSession& live, const BeatClock& clock, double nowSec) const;
+    // v0.14 multitrack: the leader's backing-track transport (set every tick; an "mt" event goes out when it changes;
+    // sections themselves still travel as "section"/"cue", so followers' charts, highlights and patches follow as before)
+    void setTransport (const mt::Transport& t) { mt_ = t; }
+    const mt::Transport& transport() const { return mt_; }
+private:
+    mt::Transport mt_, lastMt_;
+    std::string session_; long long seq_ = 0; bool have_ = false; State last_;
+    int lastCueSeq_ = -1; double cueBeat_ = 0, dueBeat_ = 0;
+    bool playPending_ = false, announcedPlay_ = false; double playAt_ = 0; int playCountIn_ = 0; double playBeat_ = 0;
+    std::string ev (const char* t, Json body) { return encode (t, ++seq_, std::move (body)); }
+};
+
+// ---------------------------------------------------------------- follower
+class Follower {
+public:
+    // send: line to the leader (hello / resync / pong)
+    explicit Follower (std::function<void (const std::string&)> send, std::string name = "Follower") : send_ (std::move (send)), name_ (std::move (name)) {}
+    void onConnected();                                    // sends hello (with last seq + session for a fast resume)
+    void onDisconnected (double nowSec);                   // hold the current section; banner until reconnected
+    void onLine (const std::string& line, LiveSession& live, Library& lib, const BeatClock& clock, double nowSec);
+    void tick (LiveSession& live, const BeatClock& clock, double nowSec); // lands queued cues / starts play on the Link beat
+    bool connected() const { return connected_; }
+    bool synced() const { return connected_ && haveSnap_; }
+    double disconnectedSince() const { return discAt_; }
+    long long lastSeq() const { return last_; }
+    int resyncs() const { return resyncs_; }
+    std::string banner (double nowSec) const;              // "" when fine
+    // per-song local overrides kept across leader updates (followers keep their own key/capo)
+    std::map<std::string, std::pair<std::string, int>> localKey; // songId -> (key, capo)
+    std::string role = "player";                           // "player" | "projector" (shown in the leader's roster)
+    DeviceHealth health;                                   // v0.7 battery / thermal, sent in every heartbeat (app sets it)
+    bool wasKicked() const { return kicked_; }             // leader removed this device: don't auto-reconnect
+    void setName (const std::string& n) { name_ = n; }
+    // v0.14: leader's backing-track transport (display only - followers have no stems)
+    mt::Transport transport;
+    // v0.14 key changes: true = follow the leader's key even for songs this player transposed locally (chart transposes;
+    // the leader's stems are NOT pitch-shifted - change the key on the tracks before the service)
+    bool followLeaderKey = false;
+private:
+    void applySnapshot (const State& st, LiveSession& live, Library& lib, const BeatClock& clock, double now);
+    void applyCue (int idx, int pass, double cueBeat, double dueBeat, LiveSession& live, const BeatClock& clock, double now);
+    std::function<void (const std::string&)> send_; std::string name_, session_;
+    double lastHb_ = -1; bool kicked_ = false;
+    bool connected_ = false, haveSnap_ = false, wantSnap_ = false; long long last_ = -1; int resyncs_ = 0; double discAt_ = -1;
+    struct Pending { bool active = false; int idx = 0, pass = 1; double dueBeat = 0; } cue_;
+    struct PlayAt { bool active = false, on = false; double atBeat = 0; int countIn = 0; } play_;
+};
+
+// fixed-tempo shared timeline for tests (and for "no Link" fallback: beats from local time at the leader's tempo)
+struct FakeClock : BeatClock {
+    double bpm = 120, t0 = 0, b0 = 0; int nPeers = 0;
+    double beatAt (double now) const override { return b0 + (now - t0) * bpm / 60.0; }
+    double tempo() const override { return bpm; }
+    void setTempo (double b, double now) override { b0 = beatAt (now); t0 = now; bpm = b; }
+    int peers() const override { return nPeers; }
+};
+
+} // namespace wr::sync

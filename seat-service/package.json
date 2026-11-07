@@ -1,0 +1,23 @@
+{
+  "name": "seat-service",
+  "version": "0.19.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "dev": "node scripts/dev.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@peculiar/x509": "^1.14.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261103.1",
+    "@types/node": "^24.19.2",
+    "typescript": "^5.9.3"
+  }
+}

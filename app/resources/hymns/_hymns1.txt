@@ -1,0 +1,319 @@
+@@ amazing-grace | Amazing Grace | John Newton | 1779 | NEW BRITAIN | American folk melody, harm. Edwin O. Excell (melody) | 1829 | G | 80 | 3/4
+{start_of_verse: Verse 1}
+A[G]mazing grace! how [C]sweet the [G]sound
+That saved a wretch like [D]me!
+I [G]once was lost, but [C]now am [G]found;
+Was [Em]blind, but [D]now I [G]see.
+{end_of_verse}
+{start_of_verse: Verse 2}
+'Twas [G]grace that taught my [C]heart to [G]fear,
+And grace my fears re[D]lieved;
+How [G]precious did that [C]grace ap[G]pear
+The [Em]hour I [D]first be[G]lieved!
+{end_of_verse}
+{start_of_verse: Verse 3}
+Through [G]many dangers, [C]toils and [G]snares,
+I have already [D]come;
+'Tis [G]grace hath brought me [C]safe thus [G]far,
+And [Em]grace will [D]lead me [G]home.
+{end_of_verse}
+{start_of_verse: Verse 4}
+The [G]Lord has promised [C]good to [G]me,
+His word my hope se[D]cures;
+He [G]will my shield and [C]portion [G]be
+As [Em]long as [D]life en[G]dures.
+{end_of_verse}
+@@ holy-holy-holy | Holy, Holy, Holy! Lord God Almighty | Reginald Heber | 1826 | NICAEA | John B. Dykes | 1861 | D | 92 | 4/4
+{start_of_verse: Verse 1}
+[D]Holy, holy, [Bm]holy! [G]Lord God Al[D]mighty!
+Early in the [Bm]morning our [E]song shall rise to [A]Thee;
+[D]Holy, holy, [Bm]holy, [G]merciful and [D]mighty!
+[G]God in three [D]Persons, [Em]bless[A]ed Trini[D]ty!
+{end_of_verse}
+{start_of_verse: Verse 2}
+[D]Holy, holy, [Bm]holy! [G]All the saints a[D]dore Thee,
+Casting down their [Bm]golden crowns a[E]round the glassy [A]sea;
+[D]Cherubim and [Bm]seraphim [G]falling down be[D]fore Thee,
+[G]Which wert, and [D]art, and [Em]ever[A]more shalt [D]be.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[D]Holy, holy, [Bm]holy! [G]though the darkness [D]hide Thee,
+Though the eye of [Bm]sinful man Thy [E]glory may not [A]see;
+[D]Only Thou art [Bm]holy; there is [G]none beside [D]Thee,
+[G]Perfect in [D]power, in [Em]love, and [A]puri[D]ty.
+{end_of_verse}
+{start_of_verse: Verse 4}
+[D]Holy, holy, [Bm]holy! [G]Lord God Al[D]mighty!
+All Thy works shall [Bm]praise Thy name, in [E]earth, and sky, and [A]sea;
+[D]Holy, holy, [Bm]holy; [G]merciful and [D]mighty!
+[G]God in three [D]Persons, [Em]bless[A]ed Trini[D]ty!
+{end_of_verse}
+@@ it-is-well | It Is Well with My Soul | Horatio G. Spafford | 1873 | VILLE DU HAVRE | Philip P. Bliss | 1876 | C | 72 | 4/4
+{start_of_verse: Verse 1}
+When [C]peace, like a [F]river, at[C]tendeth my way,
+When [Am]sorrows like [D7]sea billows [G]roll;
+What[C]ever my [F]lot, Thou hast [C]taught me to [Am]say,
+It is [C]well, it is [G7]well with my [C]soul.
+{end_of_verse}
+{start_of_chorus: Chorus}
+It is [G]well (it is well) with my [C]soul (with my soul),
+It is [G7]well, it is well with my [C]soul.
+{end_of_chorus}
+{start_of_verse: Verse 2}
+Though [C]Satan should [F]buffet, though [C]trials should come,
+Let [Am]this blest as[D7]surance con[G]trol,
+That [C]Christ has re[F]garded my [C]helpless es[Am]tate,
+And hath [C]shed His own [G7]blood for my [C]soul.
+{end_of_verse}
+{start_of_verse: Verse 3}
+My [C]sin, oh, the [F]bliss of this [C]glorious thought!
+My [Am]sin, not in [D7]part but the [G]whole,
+Is [C]nailed to the [F]cross, and I [C]bear it no [Am]more,
+Praise the [C]Lord, praise the [G7]Lord, O my [C]soul!
+{end_of_verse}
+{start_of_verse: Verse 4}
+And, [C]Lord, haste the [F]day when the [C]faith shall be sight,
+The [Am]clouds be rolled [D7]back as a [G]scroll;
+The [C]trump shall re[F]sound, and the [C]Lord shall de[Am]scend,
+Even [C]so, it is [G7]well with my [C]soul.
+{end_of_verse}
+@@ come-thou-fount | Come, Thou Fount of Every Blessing | Robert Robinson | 1758 | NETTLETON | Wyeth's Repository of Sacred Music, Part Second | 1813 | D | 84 | 3/4
+{start_of_verse: Verse 1}
+[D]Come, Thou Fount of [G]every [D]blessing,
+Tune my heart to [A]sing Thy [D]grace;
+Streams of mercy, [G]never [D]ceasing,
+Call for songs of [A]loudest [D]praise.
+[D]Teach me some me[G]lodious [D]sonnet,
+Sung by flaming [A]tongues a[D]bove;
+Praise the mount! I'm [G]fixed up[D]on it,
+Mount of Thy re[A]deeming [D]love.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[D]Here I raise mine [G]Ebe[D]nezer;
+Hither by Thy [A]help I'm [D]come;
+And I hope, by [G]Thy good [D]pleasure,
+Safely to ar[A]rive at [D]home.
+[D]Jesus sought me [G]when a [D]stranger,
+Wandering from the [A]fold of [D]God;
+He, to rescue [G]me from [D]danger,
+Interposed His [A]precious [D]blood.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[D]O to grace how [G]great a [D]debtor
+Daily I'm con[A]strained to [D]be!
+Let Thy goodness, [G]like a [D]fetter,
+Bind my wandering [A]heart to [D]Thee.
+[D]Prone to wander, [G]Lord, I [D]feel it,
+Prone to leave the [A]God I [D]love;
+Here's my heart, O [G]take and [D]seal it,
+Seal it for Thy [A]courts a[D]bove.
+{end_of_verse}
+@@ be-thou-my-vision | Be Thou My Vision | Irish, c. 8th cent.; tr. Mary E. Byrne (1905), versified Eleanor H. Hull (1912) | 1912 | SLANE | Traditional Irish melody | 1909 | D | 76 | 3/4
+{start_of_verse: Verse 1}
+[D]Be Thou my [G]Vision, O [D]Lord of my heart;
+[G]Naught be all [D]else to me, [Em]save that Thou [A]art;
+[Bm]Thou my best [A]thought, by [G]day or by [D]night,
+[G]Waking or [D]sleeping, Thy [A]presence my [D]light.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[D]Be Thou my [G]Wisdom, and [D]Thou my true Word;
+[G]I ever [D]with Thee and [Em]Thou with me, [A]Lord;
+[Bm]Thou my great [A]Father, [G]I Thy true [D]son;
+[G]Thou in me [D]dwelling, and [A]I with Thee [D]one.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[D]Riches I [G]heed not, nor [D]man's empty praise,
+[G]Thou mine in[D]heritance, [Em]now and al[A]ways:
+[Bm]Thou and Thou [A]only, [G]first in my [D]heart,
+[G]High King of [D]Heaven, my [A]Treasure Thou [D]art.
+{end_of_verse}
+{start_of_verse: Verse 4}
+[D]High King of [G]Heaven, my [D]victory won,
+[G]May I reach [D]Heaven's joys, O [Em]bright Heaven's [A]Sun!
+[Bm]Heart of my [A]own heart, what[G]ever be[D]fall,
+[G]Still be my [D]Vision, O [A]Ruler of [D]all.
+{end_of_verse}
+@@ a-mighty-fortress | A Mighty Fortress Is Our God | Martin Luther (1529); tr. Frederick H. Hedge (1853) | 1853 | EIN FESTE BURG | Martin Luther | 1529 | C | 88 | 4/4
+{start_of_verse: Verse 1}
+A [C]mighty fortress [G]is our [C]God, a [F]bulwark [G]never [C]failing;
+Our [C]helper He, a[G]mid the [C]flood of [F]mortal [G]ills pre[C]vailing:
+For [Am]still our ancient [E]foe doth [Am]seek to work us [G]woe;
+His [C]craft and power are [F]great, and, [Dm]armed with [G]cruel [C]hate,
+On [F]earth is [C]not his [G]equal.
+{end_of_verse}
+{start_of_verse: Verse 2}
+Did [C]we in our own [G]strength con[C]fide, our [F]striving [G]would be [C]losing;
+Were [C]not the right Man [G]on our [C]side, the [F]Man of [G]God's own [C]choosing:
+Dost [Am]ask who that may [E]be? Christ [Am]Jesus, it is [G]He;
+Lord [C]Sabaoth His [F]name, from [Dm]age to [G]age the [C]same,
+And [F]He must [C]win the [G]bat[C]tle.
+{end_of_verse}
+{start_of_verse: Verse 3}
+And [C]though this world, with [G]devils [C]filled, should [F]threaten [G]to un[C]do us,
+We [C]will not fear, for [G]God hath [C]willed His [F]truth to [G]triumph [C]through us:
+The [Am]Prince of Darkness [E]grim, we [Am]tremble not for [G]him;
+His [C]rage we can en[F]dure, for [Dm]lo, his [G]doom is [C]sure,
+One [F]little [C]word shall [G]fell [C]him.
+{end_of_verse}
+{start_of_verse: Verse 4}
+That [C]word above all [G]earthly [C]powers, no [F]thanks to [G]them, a[C]bideth;
+The [C]Spirit and the [G]gifts are [C]ours through [F]Him who [G]with us [C]sideth:
+Let [Am]goods and kindred [E]go, this [Am]mortal life [G]also;
+The [C]body they may [F]kill: God's [Dm]truth a[G]bideth [C]still,
+His [F]kingdom [C]is for[G]ev[C]er.
+{end_of_verse}
+@@ how-firm-a-foundation | How Firm a Foundation | "K" in John Rippon's Selection of Hymns | 1787 | FOUNDATION | Funk's Compilation of Genuine Church Music | 1832 | G | 96 | 3/4
+{start_of_verse: Verse 1}
+How [G]firm a foun[C]dation, ye [G]saints of the Lord,
+Is laid for your faith in His [D]excellent word!
+What [G]more can He [C]say than to [G]you He hath said,
+To [C]you who for [G]refuge to [D]Jesus have [G]fled?
+{end_of_verse}
+{start_of_verse: Verse 2}
+"Fear [G]not, I am [C]with thee, O [G]be not dismayed,
+For I am thy God, I will [D]still give thee aid;
+I'll [G]strengthen thee, [C]help thee, and [G]cause thee to stand,
+Up[C]held by My [G]righteous, om[D]nipotent [G]hand."
+{end_of_verse}
+{start_of_verse: Verse 3}
+"When [G]through fiery [C]trials thy [G]pathway shall lie,
+My grace, all sufficient, shall [D]be thy supply;
+The [G]flame shall not [C]hurt thee; I [G]only design
+Thy [C]dross to con[G]sume and thy [D]gold to re[G]fine."
+{end_of_verse}
+{start_of_verse: Verse 4}
+"The [G]soul that on [C]Jesus hath [G]leaned for repose,
+I will not, I will not de[D]sert to his foes;
+That [G]soul, though all [C]hell should en[G]deavor to shake,
+I'll [C]never, no [G]never, no [D]never for[G]sake."
+{end_of_verse}
+@@ doxology | Doxology (Praise God, from Whom All Blessings Flow) | Thomas Ken | 1674 | OLD HUNDREDTH | Louis Bourgeois, Genevan Psalter | 1551 | G | 76 | 4/4
+{start_of_verse: Doxology}
+[G]Praise God, from [D]whom all [Em]bless[C]ings [D]flow;
+[G]Praise Him, all [Em]crea[D]tures [G]here be[D]low;
+[G]Praise Him a[C]bove, ye [D]heav'nly [G]host;
+[Em]Praise Father, [D]Son, and [C]Ho[D]ly [G]Ghost. A[C]men[G].
+{end_of_verse}
+@@ crown-him | Crown Him with Many Crowns | Matthew Bridges (1851), Godfrey Thring (1874) | 1851 | DIADEMATA | George J. Elvey | 1868 | D | 96 | 4/4
+{start_of_verse: Verse 1}
+[D]Crown Him with [G]many [D]crowns, the [Bm]Lamb up[E]on His [A]throne;
+[D]Hark! how the [G]heavenly [D]anthem drowns all [Em]music [A]but its [D]own:
+A[D]wake, my soul, and sing of [G]Him who [D]died for thee,
+And [G]hail Him [D]as thy [A]matchless [Bm]King through [G]all e[A]terni[D]ty.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[D]Crown Him the [G]Lord of [D]life, who [Bm]triumphed [E]o'er the [A]grave,
+And [D]rose victo[G]rious [D]in the strife for [Em]those He [A]came to [D]save;
+His [D]glories now we sing who [G]died, and [D]rose on high,
+Who [G]died, e[D]ternal [A]life to [Bm]bring, and [G]lives that [A]death may [D]die.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[D]Crown Him the [G]Lord of [D]love; be[Bm]hold His [E]hands and [A]side,
+Rich [D]wounds, yet [G]visi[D]ble above, in [Em]beauty [A]glori[D]fied:
+No [D]angel in the sky can [G]fully [D]bear that sight,
+But [G]downward [D]bends his [A]burning [Bm]eye at [G]myster[A]ies so [D]bright.
+{end_of_verse}
+@@ all-hail-the-power | All Hail the Power of Jesus' Name | Edward Perronet | 1779 | CORONATION | Oliver Holden | 1793 | G | 92 | 4/4
+{start_of_verse: Verse 1}
+All [G]hail the power of [C]Jesus' [G]name! Let [D]angels prostrate [G]fall;
+Bring [G]forth the royal [D]diadem, and [G]crown Him, crown Him, [D]crown Him,
+And [G]crown Him [C]Lord [D]of [G]all.
+{end_of_verse}
+{start_of_verse: Verse 2}
+Ye [G]chosen seed of [C]Israel's [G]race, ye [D]ransomed from the [G]fall,
+Hail [G]Him who saves you [D]by His grace, and [G]crown Him, crown Him, [D]crown Him,
+And [G]crown Him [C]Lord [D]of [G]all.
+{end_of_verse}
+{start_of_verse: Verse 3}
+Let [G]every kindred, [C]every [G]tribe, on [D]this terrestrial [G]ball,
+To [G]Him all majes[D]ty ascribe, and [G]crown Him, crown Him, [D]crown Him,
+And [G]crown Him [C]Lord [D]of [G]all.
+{end_of_verse}
+@@ joyful-joyful | Joyful, Joyful, We Adore Thee | Henry van Dyke | 1907 | HYMN TO JOY | Ludwig van Beethoven (1824), arr. Edward Hodges (1864) | 1864 | G | 100 | 4/4
+{start_of_verse: Verse 1}
+[G]Joyful, joyful, [C]we a[G]dore Thee, [G]God of glory, [D]Lord of [G]love;
+[G]Hearts unfold like [C]flowers be[G]fore Thee, [G]opening to the [D]sun a[G]bove.
+[D]Melt the clouds of [G]sin and [D]sadness; [D]drive the dark of [G]doubt a[D]way;
+[G]Giver of im[C]mortal [G]gladness, [G]fill us with the [D]light of [G]day!
+{end_of_verse}
+{start_of_verse: Verse 2}
+[G]All Thy works with [C]joy sur[G]round Thee, [G]earth and heaven re[D]flect Thy [G]rays,
+[G]Stars and angels [C]sing a[G]round Thee, [G]center of un[D]broken [G]praise.
+[D]Field and forest, [G]vale and [D]mountain, [D]flowery meadow, [G]flashing [D]sea,
+[G]Singing bird and [C]flowing [G]fountain [G]call us to re[D]joice in [G]Thee.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[G]Mortals, join the [C]happy [G]chorus, [G]which the morning [D]stars be[G]gan;
+[G]Father love is [C]reigning [G]o'er us, [G]brother love binds [D]man to [G]man.
+[D]Ever singing, [G]march we [D]onward, [D]victors in the [G]midst of [D]strife,
+[G]Joyful music [C]leads us [G]sunward [G]in the triumph [D]song of [G]life.
+{end_of_verse}
+@@ fairest-lord-jesus | Fairest Lord Jesus | German, Münster Gesangbuch (1677); tr. anonymous, Church Chorals and Choir Studies (1850) | 1850 | ST. ELIZABETH | Silesian folk melody, Schlesische Volkslieder | 1842 | D | 72 | 4/4
+{start_of_verse: Verse 1}
+[D]Fairest Lord [A]Jesus, [D]ruler of all [A]nature,
+[Bm]O Thou of [E]God and man the [A]Son,
+[D]Thee will I [G]cherish, [D]Thee will I [A]honor,
+[D]Thou, my soul's [G]glory, [A]joy, and [D]crown.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[D]Fair are the [A]meadows, [D]fairer still the [A]woodlands,
+[Bm]Robed in the [E]blooming garb of [A]spring:
+[D]Jesus is [G]fairer, [D]Jesus is [A]purer,
+[D]Who makes the [G]woeful [A]heart to [D]sing.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[D]Fair is the [A]sunshine, [D]fairer still the [A]moonlight,
+[Bm]And all the [E]twinkling starry [A]host:
+[D]Jesus shines [G]brighter, [D]Jesus shines [A]purer
+[D]Than all the [G]angels [A]heaven can [D]boast.
+{end_of_verse}
+@@ rock-of-ages | Rock of Ages, Cleft for Me | Augustus M. Toplady | 1776 | TOPLADY | Thomas Hastings | 1830 | C | 76 | 3/4
+{start_of_verse: Verse 1}
+[C]Rock of Ages, [F]cleft for [C]me,
+Let me hide my[G7]self in [C]Thee;
+[C]Let the water [G]and the [C]blood,
+From Thy wounded [G]side which [C]flowed,
+[C]Be of sin the [G]double [C]cure,
+Save from wrath and [G7]make me [C]pure.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[C]Not the labors [F]of my [C]hands
+Can fulfill Thy [G7]law's de[C]mands;
+[C]Could my zeal no [G]respite [C]know,
+Could my tears for[G]ever [C]flow,
+[C]All for sin could [G]not a[C]tone;
+Thou must save, and [G7]Thou a[C]lone.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[C]Nothing in my [F]hand I [C]bring,
+Simply to the [G7]cross I [C]cling;
+[C]Naked, come to [G]Thee for [C]dress;
+Helpless, look to [G]Thee for [C]grace;
+[C]Foul, I to the [G]fountain [C]fly;
+Wash me, Savior, [G7]or I [C]die.
+{end_of_verse}
+@@ blessed-assurance | Blessed Assurance | Fanny J. Crosby | 1873 | ASSURANCE | Phoebe P. Knapp | 1873 | D | 88 | 9/8
+{start_of_verse: Verse 1}
+[D]Blessed as[G]surance, [D]Jesus is mine!
+O what a fore[E]taste of [A]glory di[A7]vine!
+[D]Heir of sal[G]vation, [D]purchase of God,
+[G]Born of His [D]Spirit, [A]washed in His [D]blood.
+{end_of_verse}
+{start_of_chorus: Chorus}
+[D]This is my story, [G]this is my [D]song,
+Praising my Savior [E]all the day [A]long;
+[D]This is my [G]story, [D]this is my song,
+[G]Praising my [D]Savior [A]all the day [D]long.
+{end_of_chorus}
+{start_of_verse: Verse 2}
+[D]Perfect sub[G]mission, [D]perfect delight,
+Visions of rap[E]ture now [A]burst on my [A7]sight;
+[D]Angels de[G]scending [D]bring from above
+[G]Echoes of [D]mercy, [A]whispers of [D]love.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[D]Perfect sub[G]mission, [D]all is at rest,
+I in my Sav[E]ior am [A]happy and [A7]blest,
+[D]Watching and [G]waiting, [D]looking above,
+[G]Filled with His [D]goodness, [A]lost in His [D]love.
+{end_of_verse}

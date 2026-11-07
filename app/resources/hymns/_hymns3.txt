@@ -1,0 +1,232 @@
+@@ there-is-a-fountain | There Is a Fountain Filled with Blood | William Cowper | 1772 | CLEANSING FOUNTAIN | American camp-meeting melody (19th cent.) | 1840 | C | 88 | 4/4
+{start_of_verse: Verse 1}
+There [C]is a fountain filled with blood drawn [F]from Im[C]manuel's veins;
+And sinners plunged beneath that flood lose [G]all their guilty [C]stains:
+Lose all their [F]guilty [C]stains, lose all their [G]guilty [C]stains;
+And sinners plunged beneath that flood lose [G]all their guilty [C]stains.
+{end_of_verse}
+{start_of_verse: Verse 2}
+The [C]dying thief rejoiced to see that [F]fountain [C]in his day;
+And there may I, though vile as he, wash [G]all my sins a[C]way:
+Wash all my [F]sins a[C]way, wash all my [G]sins a[C]way;
+And there may I, though vile as he, wash [G]all my sins a[C]way.
+{end_of_verse}
+{start_of_verse: Verse 3}
+E'er [C]since by faith I saw the stream Thy [F]flowing [C]wounds supply,
+Redeeming love has been my theme, and [G]shall be till I [C]die:
+And shall be [F]till I [C]die, and shall be [G]till I [C]die;
+Redeeming love has been my theme, and [G]shall be till I [C]die.
+{end_of_verse}
+@@ o-for-a-thousand-tongues | O for a Thousand Tongues to Sing | Charles Wesley | 1739 | AZMON | Carl G. Gläser (1828), arr. Lowell Mason | 1839 | G | 96 | 4/4
+{start_of_verse: Verse 1}
+O [G]for a [D]thousand [G]tongues to [C]sing
+My [G]great Re[D]deemer's [G]praise[D],
+The [G]glories [D]of my [Em]God and [Bm]King,
+The [C]tri[G]umphs [D]of His [G]grace!
+{end_of_verse}
+{start_of_verse: Verse 2}
+My [G]gracious [D]Master [G]and my [C]God,
+As[G]sist me [D]to pro[G]claim[D],
+To [G]spread through [D]all the [Em]earth a[Bm]broad
+The [C]hon[G]ors [D]of Thy [G]name.
+{end_of_verse}
+{start_of_verse: Verse 3}
+Je[G]sus! the [D]name that [G]charms our [C]fears,
+That [G]bids our [D]sorrows [G]cease[D];
+'Tis [G]music [D]in the [Em]sinner's [Bm]ears,
+'Tis [C]life, [G]and [D]health, and [G]peace.
+{end_of_verse}
+@@ savior-like-a-shepherd | Savior, Like a Shepherd Lead Us | attr. Dorothy A. Thrupp, Hymns for the Young | 1836 | BRADBURY | William B. Bradbury | 1859 | D | 84 | 4/4
+{start_of_verse: Verse 1}
+[D]Savior, like a [G]shepherd [D]lead us, much we need Thy [A]tender [D]care;
+In Thy pleasant [G]pastures [D]feed us, for our use Thy [A]folds pre[D]pare.
+[A]Blessed Jesus, [D]blessed Jesus! [A]Thou hast bought us, [D]Thine we are;
+[D]Blessed Jesus, [G]blessed [D]Jesus! Thou hast bought us, [A]Thine we [D]are.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[D]We are Thine, Thou [G]dost be[D]friend us, be the guardian [A]of our [D]way;
+Keep Thy flock, from [G]sin de[D]fend us, seek us when we [A]go a[D]stray.
+[A]Blessed Jesus, [D]blessed Jesus! [A]Hear, O hear us [D]when we pray;
+[D]Blessed Jesus, [G]blessed [D]Jesus! Hear, O hear us [A]when we [D]pray.
+{end_of_verse}
+@@ just-as-i-am | Just As I Am | Charlotte Elliott | 1835 | WOODWORTH | William B. Bradbury | 1849 | D | 72 | 4/4
+{start_of_verse: Verse 1}
+Just [D]as I am, with[G]out one [D]plea,
+But that Thy blood was [E7]shed for [A]me,
+And [D]that Thou bidd'st me [G]come to [D]Thee,
+O Lamb of [G]God, I [A]come, I [D]come.
+{end_of_verse}
+{start_of_verse: Verse 2}
+Just [D]as I am, and [G]waiting [D]not
+To rid my soul of [E7]one dark [A]blot,
+To [D]Thee whose blood can [G]cleanse each [D]spot,
+O Lamb of [G]God, I [A]come, I [D]come.
+{end_of_verse}
+{start_of_verse: Verse 3}
+Just [D]as I am, Thou [G]wilt re[D]ceive,
+Wilt welcome, pardon, [E7]cleanse, re[A]lieve;
+Be[D]cause Thy promise [G]I be[D]lieve,
+O Lamb of [G]God, I [A]come, I [D]come.
+{end_of_verse}
+@@ jesus-loves-me | Jesus Loves Me | Anna B. Warner | 1860 | JESUS LOVES ME | William B. Bradbury | 1862 | C | 96 | 4/4
+{start_of_verse: Verse 1}
+[C]Jesus loves me! this I know, [F]for the Bible [C]tells me so;
+Little ones to Him belong; [F]they are weak, but [C]He [G]is [C]strong.
+{end_of_verse}
+{start_of_chorus: Chorus}
+[C]Yes, Jesus loves me! [F]Yes, Jesus [C]loves me!
+[C]Yes, Jesus loves me! The [G]Bible tells me [C]so.
+{end_of_chorus}
+{start_of_verse: Verse 2}
+[C]Jesus loves me! He who died [F]heaven's gate to [C]open wide;
+He will wash away my sin, [F]let His little [C]child [G]come [C]in.
+{end_of_verse}
+@@ softly-and-tenderly | Softly and Tenderly Jesus Is Calling | Will L. Thompson | 1880 | THOMPSON | Will L. Thompson | 1880 | G | 72 | 6/8
+{start_of_verse: Verse 1}
+[G]Softly and tenderly [C]Jesus is [G]calling,
+Calling for you and for [D]me;
+[G]See, on the portals He's [C]waiting and [G]watching,
+Watching for [D]you and for [G]me.
+{end_of_verse}
+{start_of_chorus: Chorus}
+[D]Come home, [G]come home, [D]ye who are weary, come [G]home;
+[G]Earnestly, tenderly, [C]Jesus is [G]calling,
+Calling, O [D]sinner, come [G]home!
+{end_of_chorus}
+{start_of_verse: Verse 2}
+[G]Why should we tarry when [C]Jesus is [G]pleading,
+Pleading for you and for [D]me?
+[G]Why should we linger and [C]heed not His [G]mercies,
+Mercies for [D]you and for [G]me?
+{end_of_verse}
+@@ to-god-be-the-glory | To God Be the Glory | Fanny J. Crosby | 1875 | TO GOD BE THE GLORY | William H. Doane | 1875 | G | 104 | 4/4
+{start_of_verse: Verse 1}
+To [G]God be the glory, great [C]things He hath [G]done;
+So loved He the world that He [A]gave us His [D]Son,
+Who [G]yielded His life an a[C]tonement for [G]sin,
+And [C]opened the [G]life gate that [D]all may go [G]in.
+{end_of_verse}
+{start_of_chorus: Chorus}
+[D]Praise the Lord, praise the Lord, let the [G]earth hear His voice!
+[D]Praise the Lord, praise the Lord, let the [G]people rejoice!
+O [G]come to the Father, through [C]Jesus the [G]Son,
+And [C]give Him the [G]glory, great [D]things He hath [G]done.
+{end_of_chorus}
+{start_of_verse: Verse 2}
+O [G]perfect redemption, the [C]purchase of [G]blood,
+To every believer the [A]promise of [D]God;
+The [G]vilest offender who [C]truly be[G]lieves,
+That [C]moment from [G]Jesus a [D]pardon re[G]ceives.
+{end_of_verse}
+{start_of_verse: Verse 3}
+Great [G]things He hath taught us, great [C]things He hath [G]done,
+And great our rejoicing through [A]Jesus the [D]Son;
+But [G]purer, and higher, and [C]greater will [G]be
+Our [C]wonder, our [G]transport, when [D]Jesus we [G]see.
+{end_of_verse}
+@@ joy-to-the-world | Joy to the World | Isaac Watts | 1719 | ANTIOCH | arr. Lowell Mason | 1839 | D | 100 | 2/4
+{start_of_verse: Verse 1}
+[D]Joy to the [G]world! [A]the Lord is [D]come;
+Let earth re[A]ceive her [D]King;
+Let every heart prepare Him room,
+And heaven and nature sing, and heaven and nature sing,
+And [G]heaven, and [D]heaven, and [A]nature [D]sing.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[D]Joy to the [G]earth! [A]the Savior [D]reigns;
+Let men their [A]songs em[D]ploy;
+While fields and floods, rocks, hills, and plains
+Repeat the sounding joy, repeat the sounding joy,
+Re[G]peat, re[D]peat the [A]sounding [D]joy.
+{end_of_verse}
+{start_of_verse: Verse 3}
+[D]He rules the [G]world [A]with truth and [D]grace,
+And makes the [A]nations [D]prove
+The glories of His righteousness,
+And wonders of His love, and wonders of His love,
+And [G]wonders, [D]wonders [A]of His [D]love.
+{end_of_verse}
+@@ o-come-all-ye-faithful | O Come, All Ye Faithful | attr. John F. Wade (c. 1743); tr. Frederick Oakeley (1841) | 1841 | ADESTE FIDELES | attr. John F. Wade | 1751 | G | 92 | 4/4
+{start_of_verse: Verse 1}
+O [G]come, all ye [D]faithful, [G]joyful and tri[D]umphant,
+O [Em]come ye, O [D]come [A]ye to [D]Bethlehem;
+[G]Come and be[C]hold Him, [G]born the King of [D]angels;
+{end_of_verse}
+{start_of_chorus: Chorus}
+O [G]come, let us a[D]dore Him, O [G]come, let us a[D]dore Him,
+O [G]come, let us a[C]dore [G]Him, [D]Christ the [G]Lord.
+{end_of_chorus}
+{start_of_verse: Verse 2}
+[G]Sing, choirs of [D]angels, [G]sing in exul[D]tation,
+O [Em]sing, all ye [D]citi[A]zens of [D]heaven above!
+[G]Glory to [C]God, all [G]glory in the [D]highest;
+{end_of_verse}
+@@ silent-night | Silent Night, Holy Night | Joseph Mohr (1818); tr. John F. Young (1859) | 1859 | STILLE NACHT | Franz X. Gruber | 1818 | C | 66 | 6/8
+{start_of_verse: Verse 1}
+[C]Silent night, holy night,
+[G]All is calm, [C]all is bright
+[F]Round yon virgin [C]mother and child.
+[F]Holy infant so [C]tender and mild,
+[G]Sleep in heavenly [C]peace, sleep in [G]heavenly [C]peace.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[C]Silent night, holy night,
+[G]Shepherds quake [C]at the sight;
+[F]Glories stream from [C]heaven afar,
+[F]Heavenly hosts sing [C]Alleluia!
+[G]Christ, the Savior, is [C]born! Christ, the [G]Savior, is [C]born!
+{end_of_verse}
+{start_of_verse: Verse 3}
+[C]Silent night, holy night,
+[G]Son of God, [C]love's pure light;
+[F]Radiant beams from [C]Thy holy face
+[F]With the dawn of re[C]deeming grace,
+[G]Jesus, Lord, at Thy [C]birth, Jesus, [G]Lord, at Thy [C]birth.
+{end_of_verse}
+@@ hark-the-herald | Hark! The Herald Angels Sing | Charles Wesley (1739), alt. George Whitefield (1753) | 1753 | MENDELSSOHN | Felix Mendelssohn (1840), adapt. William H. Cummings (1856) | 1856 | G | 100 | 4/4
+{start_of_verse: Verse 1}
+[G]Hark! the herald [D]angels [G]sing, "Glory [C]to the [G]new-born [D]King;
+[G]Peace on earth, and [D]mercy [G]mild, God and [D]sinners [A]recon[D]ciled!"
+[G]Joyful, all ye [C]nations, [D]rise, [G]join the [C]triumph [D]of the skies;
+[C]With th'angelic [Am]host pro[D]claim, "Christ is [G]born in [D]Bethle[G]hem!"
+[C]Hark! the herald [Am]angels [D]sing, "Glory [G]to the [D]new-born [G]King."
+{end_of_verse}
+{start_of_verse: Verse 2}
+[G]Christ, by highest [D]heaven a[G]dored; Christ the [C]ever[G]lasting [D]Lord!
+[G]Late in time be[D]hold Him [G]come, offspring [D]of a [A]virgin's [D]womb.
+[G]Veiled in flesh the [C]Godhead [D]see; [G]hail the [C]incarnate [D]Deity,
+[C]Pleased as man with [Am]men to [D]dwell, Jesus, [G]our Em[D]manu[G]el.
+[C]Hark! the herald [Am]angels [D]sing, "Glory [G]to the [D]new-born [G]King."
+{end_of_verse}
+@@ have-thine-own-way | Have Thine Own Way, Lord | Adelaide A. Pollard | 1907 | ADELAIDE | George C. Stebbins | 1907 | D | 72 | 3/4
+{start_of_verse: Verse 1}
+Have Thine own [D]way, Lord! [G]Have Thine own [D]way!
+Thou art the Potter, I am the [A]clay.
+Mold me and [D]make me [G]after Thy [D]will,
+While I am [A]waiting, yielded and [D]still.
+{end_of_verse}
+{start_of_verse: Verse 2}
+Have Thine own [D]way, Lord! [G]Have Thine own [D]way!
+Search me and try me, Master, to[A]day!
+Whiter than [D]snow, Lord, [G]wash me just [D]now,
+As in Thy [A]presence humbly I [D]bow.
+{end_of_verse}
+{start_of_verse: Verse 3}
+Have Thine own [D]way, Lord! [G]Have Thine own [D]way!
+Hold o'er my being absolute [A]sway!
+Fill with Thy [D]Spirit till [G]all shall [D]see
+Christ only, [A]always, living in [D]me!
+{end_of_verse}
+@@ holy-god-we-praise | Holy God, We Praise Thy Name | Ignaz Franz (1771); tr. Clarence A. Walworth (1853) | 1853 | GROSSER GOTT | Katholisches Gesangbuch, Vienna | 1774 | F | 88 | 3/4
+{start_of_verse: Verse 1}
+[F]Holy God, we [C]praise Thy [F]name; Lord of all, we [C]bow be[F]fore Thee!
+[F]All on earth Thy [C]scepter [F]claim, all in heaven a[C]bove a[F]dore Thee;
+[C]Infinite Thy [F]vast do[C]main, [F]everlasting [Bb]is Thy [C]reign.
+[C]Infinite Thy [F]vast do[C]main, [F]everlasting [C]is Thy [F]reign.
+{end_of_verse}
+{start_of_verse: Verse 2}
+[F]Hark! the loud ce[C]lestial [F]hymn angel choirs a[C]bove are [F]raising,
+[F]Cherubim and [C]seraph[F]im, in unceasing [C]chorus [F]praising;
+[C]Fill the heavens with [F]sweet ac[C]cord: [F]Holy, holy, [Bb]holy [C]Lord.
+[C]Fill the heavens with [F]sweet ac[C]cord: [F]Holy, holy, [C]holy [F]Lord.
+{end_of_verse}

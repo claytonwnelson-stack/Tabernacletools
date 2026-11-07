@@ -1,0 +1,42 @@
+name: iOS builds (Guitar + Core Test, unsigned) + core/guitar tests
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build -j
+      - name: Core + guitar test suites (ctest -L not needed: core_* and guitar_* tests)
+        run: ctest --test-dir build --output-on-failure
+      - uses: actions/upload-artifact@v4
+        with: { name: renders, path: build/renders/* }
+  ios:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get JUCE 8
+        run: git clone --depth 1 -b 8.0.4 https://github.com/juce-framework/JUCE.git JUCE
+      - name: Generate Xcode project (iOS)
+        run: cmake -S . -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DWR_BUILD_APP=ON -DWR_BUILD_TESTS=OFF
+      - name: Build Tabernacle Tools - Electric Guitar (app + AUv3, unsigned, device)
+        run: |
+          xcodebuild -project build-ios/WorshipRig.xcodeproj -scheme TabernacleGuitar_Standalone -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -n 60
+      - name: Build Tabernacle Tools Core Test (harness, unsigned, device)
+        run: |
+          xcodebuild -project build-ios/WorshipRig.xcodeproj -scheme TabernacleCoreTest_Standalone -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -n 60
+      - name: Guitar + Share extension (optional, WR_SHARE_EXTENSION=ON)
+        continue-on-error: true
+        run: |
+          cmake -S . -B build-ios-share -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DWR_BUILD_APP=ON -DWR_BUILD_TESTS=OFF -DWR_APP_CORETEST=OFF -DWR_SHARE_EXTENSION=ON
+          xcodebuild -project build-ios-share/WorshipRig.xcodeproj -scheme TabernacleGuitar_Standalone -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -n 60
+      - name: Core tests on macOS too
+        run: cmake -S . -B build-mac -DCMAKE_BUILD_TYPE=Release && cmake --build build-mac -j && ctest --test-dir build-mac --output-on-failure
