@@ -102,7 +102,12 @@ void RigPanel::paint (juce::Graphics& g) {
         }
     };
     auto& ctl = P.store.lib.controllers;
-    auto chName = [&] (const char* role) { for (auto& c : ctl) if (c.role == role) return "MIDI ch " + juce::String (c.channel); return juce::String ("not mapped"); };
+    auto chName = [&] (const char* role) {
+        auto& st = P.store.lib.settings; const bool gtr = std::string (role) == "guitar";
+        const auto& id = gtr ? st.guitarPedalId : st.sectionPedalId; const auto& nm = gtr ? st.guitarPedalName : st.sectionPedalName;
+        if (! id.empty()) return juce::String (nm.empty() ? "USB pedal" : nm);
+        for (auto& c : ctl) if (c.role == role) return "MIDI ch " + juce::String (c.channel);
+        return juce::String ("not mapped"); };
     unitHdr ("FOOTSWITCHES - GUITAR (Chocolate Plus) - " + chName ("guitar"), juce::String (P.midiActivity.load() % 2 ? "* " : "  ") + "USB via hub");
     { juce::String n[4] = { "Tap", "Boost", song && ! song->switchC.label.empty() ? juce::String (song->switchC.label) : juce::String ("-"), song && ! song->switchD.label.empty() ? juce::String (song->switchD.label) : juce::String ("-") };
       juce::String s[4] = { juce::String (L.bpm(), 0) + " BPM - HOLD: TUNER", L.boostOn() ? "FIXED - ON" : "FIXED", "THIS SONG", L.clickMuted() ? "HOLD: UNMUTE CLICK" : "HOLD: MUTE CLICK" };

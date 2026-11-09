@@ -6,6 +6,7 @@
 #include "SeatSession.h"
 #include "store/StoreBridge.h"
 #include <JuceHeader.h>
+#include <mutex>
 #include <set>
 #include "midi/MidiRouter.h"
 #include "midi/MidiClock.h"
@@ -68,6 +69,8 @@ public:
     wr::LiveSession& live() { return *live_; }
     void applySettings();                                         // click/cues + instrument settings + controller profiles
     void pushControllerProfiles();
+    void refreshFootswitchPorts();                            // standalone: open each Chocolate by its USB port id
+    void pushFootMidi (int unit, uint8_t st, uint8_t d1, uint8_t d2, double ms);
     void beginMidiLearn (int unit, int sw, bool longPress);
     bool midiLearning() const { return learning_.load(); }
     // v0.17 MIDI Clock send/receive ports (USB / Bluetooth / network / virtual). Call from the message thread.
@@ -170,6 +173,9 @@ private:
     int lastMidiLocate_ = -1; bool clockWasPlaying_ = false; double clockWasBpm_ = 0;
     struct LearnReq { int unit = -1, sw = 0; bool longPress = false; } learnReq_; std::atomic<bool> learnPending_ { false }, learning_ { false };
     wr::SpscQueue<wr::Action, 256> actions_;
+    struct FootMsg { uint8_t st = 0, d1 = 0, d2 = 0; int unit = -1; double ms = 0; };
+    struct FootPort { std::string id; int unit = 0; std::unique_ptr<juce::MidiInputCallback> cb; std::unique_ptr<juce::MidiInput> input; };
+    std::mutex footMu_; std::vector<FootMsg> footQ_, footDrain_; std::vector<FootPort> footPorts_; std::atomic<bool> footPortsOpen_ { false };
     std::atomic<int> physOuts_ { 4 };
     double sampleCount_ = 0;
     bool practiceMode_ = false; std::string practiceSongId_; std::shared_ptr<const wr::PracticeAudio> practiceAudio_;

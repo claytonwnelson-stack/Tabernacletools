@@ -22,7 +22,7 @@ const char* actionName (Action::Type t);
 class MidiRouter {
 public:
     static constexpr int kMaxUnits = 4, kMaxOut = 16;
-    void setProfiles (const std::vector<ControllerProfile>& p) { nUnits_ = std::min ((int) p.size(), kMaxUnits); for (int i = 0; i < nUnits_; ++i) units_[(size_t) i] = p[(size_t) i]; for (auto& u : held_) for (auto& h : u) h = {}; }
+    void setProfiles (const std::vector<ControllerProfile>& p) { nUnits_ = std::min ((int) p.size(), kMaxUnits); for (int i = 0; i < nUnits_; ++i) units_[(size_t) i] = p[(size_t) i]; for (auto& u : held_) for (auto& h : u) h = {}; for (auto& pnd : pend_) pnd = {}; }
     void setExternal (int channel, int noteBase, bool followClock) { extCh_ = channel; noteBase_ = noteBase; followClock_ = followClock; }
     const ControllerProfile& profile (int i) const { return units_[(size_t) i]; }
     int numProfiles() const { return nUnits_; }
@@ -34,8 +34,11 @@ public:
     bool learning() const { return learnU_ >= 0; }
 
     // feed one short MIDI message. timeMs: monotonic milliseconds.
-    void handle (uint8_t status, uint8_t d1, uint8_t d2, double timeMs);
+    // fromUnit >= 0 means the message came from that USB port (factory Chocolate program changes are
+    // only recognised on a known port, so two identical pedals stay apart). -1 = merged host buffer.
+    void handle (uint8_t status, uint8_t d1, uint8_t d2, double timeMs, int fromUnit = -1);
     void tick (double timeMs);          // call >= every 10 ms so long presses fire while the switch is still held
+    void flushFactory (double timeMs);  // release a lone program-change after the A+B / C+D window (~50 ms)
     // drain generated actions
     int pop (Action* out, int max) { int n = std::min (max, nOut_); for (int i = 0; i < n; ++i) out[i] = out_[(size_t) i]; for (int i = n; i < nOut_; ++i) out_[(size_t) (i - n)] = out_[(size_t) i]; nOut_ -= n; return n; }
     double clockBpm() const { return clockBpm_; }
@@ -43,12 +46,17 @@ public:
 private:
     void emit (Action a) { if (nOut_ < kMaxOut) out_[(size_t) nOut_++] = a; }
     void fire (int u, int sw, bool longP);
+    void fireNamed (int u, const std::string& name);
+    void noteFactory (int u, int pc, double t);
+    bool unitMessage (int u, uint8_t st, uint8_t d1, uint8_t d2, double t, bool ignoreChannel);
     const std::string& act (int u, int sw, bool longP) const { const auto& p = units_[(size_t) u];   // v0.8: the active bank's action
         if (! p.banks.empty()) { const auto& b = p.banks[(size_t) std::clamp (p.bank, 0, (int) p.banks.size() - 1)]; return longP ? b.longAction[sw] : b.action[sw]; }
         return longP ? p.sw[sw].longAction : p.sw[sw].action; }
     struct Held { bool down = false, fired = false; double t = 0; };
     std::array<ControllerProfile, kMaxUnits> units_ {}; int nUnits_ = 0;
     std::array<std::array<Held, 4>, kMaxUnits> held_ {};
+    struct Pend { bool on = false; int pc = 0; double t = 0; };
+    std::array<Pend, kMaxUnits> pend_ {};
     std::array<Action, kMaxOut> out_ {}; int nOut_ = 0;
     int learnU_ = -1, learnSw_ = 0; bool learnLong_ = false;
     int extCh_ = 16, noteBase_ = 36; bool followClock_ = true;

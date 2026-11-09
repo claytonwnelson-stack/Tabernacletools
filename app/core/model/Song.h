@@ -80,7 +80,7 @@ struct Setlist { std::string name, date; std::vector<SetlistEntry> entries; std:
 
 // ---------------------------------------------------------------- MIDI controllers
 struct MidiBinding { enum Kind { None, CC, PC, Note } kind = None; int number = -1; int channel = 0; // channel 1..16, 0 = profile channel
-                     bool matches (int st, int d1, int profileCh) const; };
+                     bool matches (int st, int d1, int profileCh, bool ignoreChannel = false) const; };
 struct SwitchBinding { MidiBinding press, longPress; std::string action, longAction; int longMs = 0; }; // longMs 0 = profile default
 struct ControllerProfile {
     std::string name, role;       // role: "guitar" | "section"
@@ -91,6 +91,8 @@ struct ControllerProfile {
     // "bankNext" / "bankPrev" actions step through them. Saved in the library (per device / user).
     struct Bank { std::string name; std::string action[4], longAction[4]; };
     std::vector<Bank> banks; int bank = 0;
+    // Factory Chocolate: E is A+B together, F is C+D together. Empty means the user cleared it.
+    std::string comboE, comboF;
 };
 void enableDefaultBanks (ControllerProfile&);   // bank 1 = the current mapping, bank 2 = a template (guitar: click/transport, section: songs)
 
@@ -144,6 +146,8 @@ struct AppSettings {
     int ampOversampling = 4;                  // v0.12 amp/drive anti-aliasing: 1 (Off), 2, 4 (default), 8
     bool autoOversampling = true;
     int trackJumpAt = 0;                      // v0.14 backing tracks: section jumps land 0 = on the next bar line, 1 = at the end of the section             // v0.12 step it down automatically when the DSP gets close to the audio deadline
+    // Two factory Chocolates send the same messages. These CoreMIDI identifiers say which USB port is which.
+    std::string guitarPedalId, sectionPedalId, guitarPedalName, sectionPedalName;
 };
 // v0.15 CCLI song-usage log: one row per song per day per setlist (live sets only, never practice); flags are OR-ed
 struct UsageEntry { std::string date, songId, title, ccliNumber, authors, setlist; bool publicDomain = false, projected = false, chart = false; };

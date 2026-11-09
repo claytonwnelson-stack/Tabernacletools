@@ -42,14 +42,28 @@ std::vector<int> SetlistView::filteredSongs() const {
 }
 
 void SetlistView::importChart() {
-    chooser_ = std::make_unique<juce::FileChooser> ("Import chart", juce::File(), "*.cho;*.chopro;*.chordpro;*.txt;*.pdf;*.crd");
-    chooser_->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [this] (const juce::FileChooser& fc) {
-        auto f = fc.getResult(); if (! f.existsAsFile()) return;
-        juce::String text;
-        if (f.hasFileExtension ("pdf")) { text = platform::extractPdfText (f);
-            if (text.trim().isEmpty()) { juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Import", "This PDF has no text layer (it's a scan or photo). Photo/OCR import is on the to-do list - for now use a text PDF, text or ChordPro."); return; } }
-        else text = f.loadFileAsString();
-        ed.openImportPreview (text, f.getFileNameWithoutExtension(), [this] (juce::String id) { working_.entries.push_back ({ id.toStdString(), "", 0, "lead" }); repaint(); }); });
+    // Parent is this view so iPad presents a page sheet. A top-level chooser becomes an unanchored popover and UIKit throws before the picker appears.
+    chooser_ = std::make_unique<juce::FileChooser> ("Import chart", juce::File(), "*.cho;*.chopro;*.chordpro;*.txt;*.pdf;*.crd", true, false, this);
+    juce::Component::SafePointer<SetlistView> safe (this);
+    chooser_->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [safe] (const juce::FileChooser& fc) {
+        if (safe == nullptr) return;
+        auto fail = [] (const juce::String& m) { juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Import", m); };
+        try {
+            auto url = fc.getURLResult();
+            if (url.isEmpty()) { if (! fc.getResult().existsAsFile()) return; url = juce::URL (fc.getResult()); }
+            juce::String text; juce::String title = url.getFileName().upToLastOccurrenceOf (".", false, false);
+            const bool pdf = url.getFileName().endsWithIgnoreCase (".pdf");
+            if (pdf && url.isLocalFile()) text = platform::extractPdfText (url.getLocalFile());
+            else if (auto in = url.createInputStream (juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress))) {
+                if (in->getTotalLength() > 4 * 1024 * 1024) { fail ("That file is larger than 4 MB."); return; }
+                text = in->readEntireStreamAsString();
+            } else if (url.isLocalFile()) text = url.getLocalFile().loadFileAsString();
+            if (text.trim().isEmpty()) { fail (pdf ? "This PDF has no text layer (it's a scan or photo). Use a text PDF, a .txt or a ChordPro file." : "Couldn't read that file. Use ChordPro, plain text, or a text PDF."); return; }
+            safe->ed.openImportPreview (text, title.isEmpty() ? juce::String ("Imported chart") : title, [safe] (juce::String id) {
+                if (safe != nullptr) { safe->working_.entries.push_back ({ id.toStdString(), "", 0, "lead" }); safe->repaint(); } });
+        } catch (const std::exception& ex) { fail (juce::String (ex.what())); }
+        catch (...) { fail ("Couldn't read that file."); }
+    });
 }
 
 void SetlistView::pasteChart() {   // v0.7: only what the user copied - nothing is fetched from the web

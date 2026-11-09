@@ -44,6 +44,15 @@ void wr::ui::addFootswitchMenu (CoreEditor& ed, juce::PopupMenu& m, int u, int s
             for (int i = 0; i < 4; ++i) { cc.sw[i].action = cc.banks[0].action[i]; cc.sw[i].longAction = cc.banks[0].longAction[i]; } cc.banks.clear(); cc.bank = 0; commit(); });
     }
     m.addSubMenu ("Banks / modes" + (banks ? juce::String (" (") + juce::String ((int) c.banks.size()) + ")" : juce::String()), bm);
+    auto combo = [&] (const char* title, bool isE) {
+        const std::string cur = isE ? c.comboE : c.comboF;
+        juce::PopupMenu cm;
+        for (auto* a : kAssignable) { std::string an = a; if (an == "bankNext" || an == "bankPrev") continue;
+            cm.addItem (actionLabel (an), true, cur == an, [e, u, isE, an, commit] {
+                auto& cc = e->core.store.lib.controllers[(size_t) u]; (isE ? cc.comboE : cc.comboF) = an; commit(); }); }
+        m.addSubMenu (juce::String (title) + ": " + actionLabel (cur), cm);
+    };
+    combo ("E  (A+B together)", true); combo ("F  (C+D together)", false);
 }
 
 void wr::ui::addV08Settings (CoreEditor& ed, juce::PopupMenu& m, juce::Component* anchor) {
@@ -89,11 +98,49 @@ void wr::ui::addV08Settings (CoreEditor& ed, juce::PopupMenu& m, juce::Component
     bk.addItem ("Export everything (one file -> Files / AirDrop)...", [e, sp] { auto f = e->core.exportEverything(); wr::platform::shareFiles ({ f }, sp.getComponent()); });
     for (int mode = 0; mode < 2; ++mode)
         bk.addItem (mode == 0 ? "Import a backup - add missing songs / setlists / rigs..." : "Import a backup - REPLACE everything...", [e, mode] {
-            auto ch = std::make_shared<juce::FileChooser> ("Tabernacle Tools backup", juce::File(), "*.json;*.wrbackup");
+            auto ch = std::make_shared<juce::FileChooser> ("Tabernacle Tools backup", juce::File(), "*.json;*.wrbackup", true, false, e);
             ch->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [e, mode, ch] (const juce::FileChooser& fc) {
                 auto f = fc.getResult(); if (! f.existsAsFile()) return; auto r = e->core.importEverything (f, mode == 0 ? ImportMode::Merge : ImportMode::Replace);
                 juce::AlertWindow::showMessageBoxAsync (r.ok ? juce::MessageBoxIconType::InfoIcon : juce::MessageBoxIconType::WarningIcon, "Import backup",
                     r.ok ? "Added " + juce::String (r.songs) + " songs, " + juce::String (r.setlists) + " setlists, " + juce::String (r.rigs) + " rigs" + (r.skipped ? " (" + juce::String (r.skipped) + " already here, kept)" : juce::String()) + ".\nThe previous library is in Backups."
                          : juce::String (r.error)); e->repaint(); }); });
     m.addSubMenu ("Backup / restore everything", bk);
+    { juce::PopupMenu pd; auto& st = e->core.store.lib.settings;
+      auto shortId = [] (const std::string& id) { return id.size() <= 4 ? id : id.substr (id.size() - 4); };
+      auto label = [&] (const std::string& name, const std::string& id, const char* fallback) {
+          if (id.empty()) return juce::String (fallback);
+          auto n = name.empty() ? juce::String ("USB pedal") : juce::String (name);
+          return n + "  " + juce::String (shortId (id));
+      };
+      pd.addItem ("Guitar pedal: " + label (st.guitarPedalName, st.guitarPedalId, "first one plugged in"), false, false, [] {});
+      pd.addItem ("Sections pedal: " + label (st.sectionPedalName, st.sectionPedalId, "second one plugged in"), false, false, [] {});
+      pd.addSeparator();
+      juce::Array<juce::MidiDeviceInfo> devs = juce::MidiInput::getAvailableDevices();
+      auto pick = [&] (bool guitar) {
+          juce::PopupMenu sub;
+          for (auto& d : devs) {
+              auto id = d.identifier.toStdString(); auto nm = d.name.toStdString();
+              int dup = 0; for (auto& o : devs) if (o.name == d.name) ++dup;
+              auto shown = d.name + (dup > 1 ? "  " + juce::String (shortId (id)) : juce::String());
+              bool on = (guitar ? st.guitarPedalId : st.sectionPedalId) == id;
+              sub.addItem (shown, true, on, [e, id, nm, guitar] {
+                  auto& s2 = e->core.store.lib.settings;
+                  auto& mine = guitar ? s2.guitarPedalId : s2.sectionPedalId;
+                  auto& other = guitar ? s2.sectionPedalId : s2.guitarPedalId;
+                  auto& myName = guitar ? s2.guitarPedalName : s2.sectionPedalName;
+                  auto& otherName = guitar ? s2.sectionPedalName : s2.guitarPedalName;
+                  if (other == id) { std::swap (mine, other); std::swap (myName, otherName); }
+                  else { mine = id; myName = nm; }
+                  e->core.refreshFootswitchPorts(); e->core.store.save(); });
+          }
+          if (devs.isEmpty()) sub.addItem ("(no USB MIDI inputs yet)", false, false, [] {});
+          return sub;
+      };
+      pd.addSubMenu ("Guitar pedal is...", pick (true));
+      pd.addSubMenu ("Sections pedal is...", pick (false));
+      pd.addItem ("Swap the two pedals", st.guitarPedalId != st.sectionPedalId, false, [e] {
+          auto& s2 = e->core.store.lib.settings; std::swap (s2.guitarPedalId, s2.sectionPedalId); std::swap (s2.guitarPedalName, s2.sectionPedalName);
+          e->core.refreshFootswitchPorts(); e->core.store.save(); });
+      pd.addItem ("Both pedals on U, through a powered hub. First one listed is guitar until you swap.", false, false, [] {});
+      m.addSubMenu ("Foot pedals (two Chocolates)", pd); }
 }

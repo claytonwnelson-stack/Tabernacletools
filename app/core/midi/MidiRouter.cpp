@@ -16,7 +16,62 @@ void MidiRouter::fire (int u, int sw, bool longP) {
     if (a.type != Action::None && a.type != Action::BankNext && a.type != Action::BankPrev) emit (a);
 }
 
-void MidiRouter::handle (uint8_t st, uint8_t d1, uint8_t d2, double t) {
+void MidiRouter::fireNamed (int u, const std::string& name) {
+    auto& p = units_[(size_t) u]; Action a; a.unit = u; a.sw = -1; a.type = actionFromName (name);
+    if ((a.type == Action::BankNext || a.type == Action::BankPrev) && ! p.banks.empty()) {
+        const int n = (int) p.banks.size(); p.bank = ((p.bank + (a.type == Action::BankNext ? 1 : -1)) % n + n) % n;
+        a.type = Action::BankChanged; a.value = p.bank; emit (a); return; }
+    if (a.type != Action::None && a.type != Action::BankNext && a.type != Action::BankPrev) emit (a);
+}
+
+void MidiRouter::noteFactory (int u, int pc, double t) {
+    if (u < 0 || u >= nUnits_) return;
+    auto& slot = pend_[(size_t) u];
+    const int sw = ((pc % 4) + 4) % 4;
+    if (slot.on && t >= slot.t && t - slot.t <= 50.0) {
+        const int a = ((slot.pc % 4) + 4) % 4;
+        slot.on = false;
+        const bool e = (a == 0 && sw == 1) || (a == 1 && sw == 0);
+        const bool f = (a == 2 && sw == 3) || (a == 3 && sw == 2);
+        if (e || f) { fireNamed (u, e ? units_[(size_t) u].comboE : units_[(size_t) u].comboF); return; }
+        fire (u, a, false);
+    } else if (slot.on) fire (u, ((slot.pc % 4) + 4) % 4, false);
+    slot.on = true; slot.pc = pc; slot.t = t;
+}
+
+void MidiRouter::flushFactory (double t) {
+    for (int u = 0; u < nUnits_; ++u) {
+        auto& slot = pend_[(size_t) u];
+        if (slot.on && t - slot.t >= 50.0) { const int sw = ((slot.pc % 4) + 4) % 4; slot.on = false; fire (u, sw, false); }
+    }
+}
+
+bool MidiRouter::unitMessage (int u, uint8_t st, uint8_t d1, uint8_t d2, double t, bool ignoreChannel) {
+    auto& p = units_[(size_t) u];
+    const int type = st & 0xF0;
+    const bool noteOn = type == 0x90 && d2 > 0;
+    for (int s = 0; s < 4; ++s) {
+        auto& sw = p.sw[s];
+        if (sw.longPress.matches (st, d1, p.channel, ignoreChannel)) { if (type == 0xC0 || noteOn || (type == 0xB0 && d2 >= 64)) fire (u, s, true); return true; }
+        if (! sw.press.matches (st, d1, p.channel, ignoreChannel)) continue;
+        const bool hasRelease = sw.press.kind == MidiBinding::CC || sw.press.kind == MidiBinding::Note;
+        const bool down = type == 0xC0 || noteOn || (type == 0xB0 && d2 >= 64);
+        auto& h = held_[(size_t) u][(size_t) s];
+        const std::string& pa = act (u, s, false), & la = act (u, s, true);
+        const bool needsHold = hasRelease && ! la.empty() && sw.longPress.kind == MidiBinding::None && la != pa;
+        if (! needsHold) { if (down) fire (u, s, false); return true; }
+        const bool instant = pa == "tap";
+        if (down) { h.down = true; h.fired = false; h.t = t; if (instant) fire (u, s, false); }
+        else if (h.down) { h.down = false; if (! h.fired && ! instant) fire (u, s, false); }
+        return true;
+    }
+    // Factory Chocolate program change (display 000-003 is PC 0-3; later groups wrap with % 4).
+    // Only on a known USB port — a merged buffer cannot tell two identical pedals apart.
+    if (ignoreChannel && type == 0xC0) { noteFactory (u, d1, t); return true; }
+    return false;
+}
+
+void MidiRouter::handle (uint8_t st, uint8_t d1, uint8_t d2, double t, int fromUnit) {
     // ---- system realtime: MIDI clock (24 ppqn)
     if (st == 0xF8) {
         // a gap > 250 ms (slower than 10 BPM) means the clock stopped and restarted: start measuring afresh
@@ -49,25 +104,9 @@ void MidiRouter::handle (uint8_t st, uint8_t d1, uint8_t d2, double t) {
         Action a; a.type = Action::Learned; a.unit = learnU_; a.sw = learnSw_; a.value = learnLong_ ? 1 : 0; emit (a); learnU_ = -1; return;
     }
 
-    // ---- footswitch units
-    for (int u = 0; u < nUnits_; ++u) {
-        auto& p = units_[(size_t) u];
-        for (int s = 0; s < 4; ++s) {
-            auto& sw = p.sw[s];
-            if (sw.longPress.matches (st, d1, p.channel)) { if (type == 0xC0 || noteOn || (type == 0xB0 && d2 >= 64)) fire (u, s, true); return; }
-            if (! sw.press.matches (st, d1, p.channel)) continue;
-            const bool hasRelease = sw.press.kind == MidiBinding::CC || sw.press.kind == MidiBinding::Note;
-            const bool down = type == 0xC0 || noteOn || (type == 0xB0 && d2 >= 64);
-            auto& h = held_[(size_t) u][(size_t) s];
-            const std::string& pa = act (u, s, false), & la = act (u, s, true);
-            const bool needsHold = hasRelease && ! la.empty() && sw.longPress.kind == MidiBinding::None && la != pa;
-            if (! needsHold) { if (down) fire (u, s, false); return; }
-            const bool instant = pa == "tap"; // tap must fire on the press itself; the hold action comes on top
-            if (down) { h.down = true; h.fired = false; h.t = t; if (instant) fire (u, s, false); }
-            else if (h.down) { h.down = false; if (! h.fired && ! instant) fire (u, s, false); }
-            return;
-        }
-    }
+    // ---- footswitch units (a known USB port never falls through onto the other pedal)
+    if (fromUnit >= 0 && fromUnit < nUnits_) { unitMessage (fromUnit, st, d1, d2, t, true); return; }
+    for (int u = 0; u < nUnits_; ++u) if (unitMessage (u, st, d1, d2, t, false)) return;
 
     // ---- external (Cubase): PC n / note (noteBase + n) => go to section n; CC 102/103 = next/prev section
     if (ch == extCh_) {

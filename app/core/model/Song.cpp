@@ -12,10 +12,10 @@ const Scene* Song::sceneForSection (const Section& s) const {
     return defaultScene.empty() ? nullptr : scene (defaultScene);
 }
 
-bool MidiBinding::matches (int st, int d1, int profileCh) const {
+bool MidiBinding::matches (int st, int d1, int profileCh, bool ignoreChannel) const {
     if (kind == None) return false;
     int ch = (st & 0x0F) + 1, type = st & 0xF0, want = channel > 0 ? channel : profileCh;
-    if (ch != want) return false;
+    if (! ignoreChannel && ch != want) return false;
     if (kind == CC && type == 0xB0) {
         if (d1 == number) return true;
         // Chocolate "Manufacturer Control" (CubeSuite) sends CC 20-23. The built-in
@@ -143,6 +143,7 @@ Json toJson (const ControllerProfile& c) {
     Json j = Json::object(); j.set ("name", c.name).set ("role", c.role).set ("channel", c.channel).set ("longPressMs", c.longPressMs);
     Json a = Json::array(); for (auto& s : c.sw) { Json o = Json::object(); o.set ("press", bind (s.press)).set ("long", bind (s.longPress)).set ("action", s.action).set ("longAction", s.longAction).set ("longMs", s.longMs); a.push (o); }
     j.set ("switches", a);
+    j.set ("comboE", c.comboE).set ("comboF", c.comboF);
     if (! c.banks.empty()) { Json bk = Json::array(); for (auto& b : c.banks) { Json o = Json::object(), x = Json::array(), y = Json::array(); for (int i = 0; i < 4; ++i) { x.push (b.action[i]); y.push (b.longAction[i]); }
         o.set ("name", b.name).set ("actions", x).set ("long", y); bk.push (o); } j.set ("banks", bk).set ("bank", c.bank); }
     return j;
@@ -159,6 +160,11 @@ ControllerProfile controllerFromJson (const Json& j) {
         if (c.sw[0].longAction == "stop" && c.sw[0].longMs <= 0) c.sw[0].longMs = 700;
         for (auto& b : c.banks) fix (b.action[0], b.longAction[0]);
     }
+    // Missing keys (libraries saved before E/F) get the factory combo. A stored empty string stays empty.
+    if (j.has ("comboE")) c.comboE = j["comboE"].str();
+    else c.comboE = c.role == "section" ? "prevSection" : "tunerToggle";
+    if (j.has ("comboF")) c.comboF = j["comboF"].str();
+    else c.comboF = c.role == "section" ? "stop" : "clickMute";
     return c;
 }
 Json toJson (const Library& l) {
@@ -177,7 +183,9 @@ Json toJson (const Library& l) {
         .set ("deviceName", l.settings.deviceName).set ("leaderHost", l.settings.lastLeaderHost).set ("leaderPort", l.settings.lastLeaderPort).set ("link", l.settings.useLink).set ("projector", toJson (l.settings.projector));
     { Json sc = Json::object(); for (auto& kv : l.settings.sectionColors) sc.set (kv.first, kv.second); st.set ("sectionColors", sc); }
     st.set ("stageMode", l.settings.stageMode).set ("autoScroll", l.settings.autoScroll).set ("recordClick", l.settings.recordClick).set ("repeatWarnDays", l.settings.repeatWarnDays).set ("trackJumpAt", l.settings.trackJumpAt)
-        .set ("oversampling", l.settings.ampOversampling).set ("osAuto", l.settings.autoOversampling);
+        .set ("oversampling", l.settings.ampOversampling).set ("osAuto", l.settings.autoOversampling)
+        .set ("guitarPedal", l.settings.guitarPedalId).set ("sectionPedal", l.settings.sectionPedalId)
+        .set ("guitarPedalName", l.settings.guitarPedalName).set ("sectionPedalName", l.settings.sectionPedalName);
     { Json pl = Json::array(); for (auto& e : l.playLog) pl.push (Json::object().set ("song", e.songId).set ("date", e.date)); j.set ("playLog", pl); }
     { Json ul = Json::array(); for (auto& e : l.usageLog) ul.push (Json::object().set ("date", e.date).set ("song", e.songId).set ("title", e.title).set ("ccli", e.ccliNumber)
           .set ("authors", e.authors).set ("setlist", e.setlist).set ("pd", e.publicDomain).set ("projected", e.projected).set ("chart", e.chart)); j.set ("usageLog", ul); }
@@ -200,6 +208,8 @@ Library libraryFromJson (const Json& j) {
     l.settings.deviceName = st["deviceName"].str ("Tabernacle Tools"); l.settings.lastLeaderHost = st["leaderHost"].str(); l.settings.lastLeaderPort = st["leaderPort"].integer(); l.settings.useLink = st["link"].boolean (false);
     l.settings.projector = projectorSettingsFromJson (st["projector"]);
     { int o = st["oversampling"].integer (4); l.settings.ampOversampling = o >= 8 ? 8 : o >= 4 ? 4 : o >= 2 ? 2 : 1; l.settings.autoOversampling = st["osAuto"].boolean (true); }
+    l.settings.guitarPedalId = st["guitarPedal"].str(); l.settings.sectionPedalId = st["sectionPedal"].str();
+    l.settings.guitarPedalName = st["guitarPedalName"].str(); l.settings.sectionPedalName = st["sectionPedalName"].str();
     l.settings.stageMode = false; // saved "dark stage mode" is ignored; the app has one dark look
     l.settings.autoScroll = st["autoScroll"].boolean (true); l.settings.recordClick = st["recordClick"].boolean (false); l.settings.repeatWarnDays = st["repeatWarnDays"].integer (21); l.settings.trackJumpAt = std::clamp (st["trackJumpAt"].integer (0), 0, 1);
     for (auto& e : j["playLog"].items()) l.playLog.push_back ({ e["song"].str(), e["date"].str() });
@@ -214,6 +224,8 @@ Library libraryFromJson (const Json& j) {
 static ControllerProfile chocolate (const std::string& name, const std::string& role, int ch, const char* a[4], const char* la[4]) {
     ControllerProfile c; c.name = name; c.role = role; c.channel = ch;
     for (int i = 0; i < 4; ++i) { c.sw[i].press.kind = MidiBinding::CC; c.sw[i].press.number = 80 + i; c.sw[i].action = a[i]; c.sw[i].longAction = la[i]; }
+    if (role == "section") { c.comboE = "prevSection"; c.comboF = "stop"; }
+    else { c.comboE = "tunerToggle"; c.comboF = "clickMute"; }
     return c;
 }
 void enableDefaultBanks (ControllerProfile& c) {

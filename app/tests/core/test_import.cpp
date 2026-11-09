@@ -42,6 +42,10 @@ int main() {
     CHECK_EQ (guessKey (Chart{}), std::string ());
     { auto p = previewImport ("[Verse 2]\n[ch]D[/ch]   [ch]A/C#[/ch]  [ch]Bm[/ch]\nWords go here\n[Bridge]\n[ch]G[/ch] [ch]A[/ch]\nMore\n");   // slash chords, no header
       CHECK_EQ (p.chart.sections[0].label, std::string ("V2")); CHECK_EQ (p.chart.sections[1].label, std::string ("BR")); CHECK_EQ (p.chart.key, std::string ("D")); }
+    { auto p = previewImport ("Key:\n\nnot a chart\n"); CHECK (p.chart.title.size() < 200); }
+    { std::string junk (300, '\0'); junk += "\xff\xfe<<<>>>"; auto p = previewImport (junk, "Bad"); CHECK (p.chart.title.size() < 500); }
+    { auto p = previewImport ("", "Empty"); CHECK_EQ (p.chart.title, std::string ("Empty")); CHECK (! p.ok()); }
+    { auto p = previewImport (std::string (8000, 'A') + "\n[Verse]\nG C\nhello\n"); CHECK (p.chordCount >= 1); }
     std::printf ("%d/%d import checks passed\n", checks - fails, checks);
     return fails ? 1 : 0;
 }

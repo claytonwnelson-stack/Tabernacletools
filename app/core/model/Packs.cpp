@@ -7,6 +7,7 @@ const std::vector<SoundPack>& packManifest() {
     static const std::vector<SoundPack> m = {
         { "guitar.starter", "Guitar Starter", "Everything a Sunday needs: comp, boost, drives, fuzz, chorus, trem, delays, reverbs, shimmer, freeze, swell, 2 amps + direct-to-PA", Rig::Guitar, true,
           { "comp", "boost", "overdrive", "distortion", "fuzz", "chorus", "tremolo", "phaser", "delay", "dotted8", "reverb", "shimmer", "freeze", "swell", "eq", "gate", "octdown",
+            "hall", "room", "plate", "chamber", "church", "reverse", "gated", "modverb", "bloom",
             "amp", "cab", "amp:Clean American", "amp:British Chime", "cab:1x12 Open Back", "cab:2x12 Open Back", "cab:User IR" } },
         { "guitar.ambient", "Ambient Worship", "Cloud reverb, swells, poly octave, harmonizer, pad synths from your guitar", Rig::Guitar, false,
           { "cloud", "polyoct", "harmonizer", "synth9", "key9", "preset:Swell Pad", "preset:Shimmer Wash", "preset:Cathedral Lead" } },

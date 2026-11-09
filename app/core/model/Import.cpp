@@ -59,7 +59,7 @@ std::string normalizeSharedText (const std::string& raw, std::vector<std::string
     for (int i = 0; i < first; ++i) {
         auto t = trimS (lines[(size_t) i]); if (t.empty()) continue; auto lt = lowerS (t);
         auto val = [&] (size_t from) { return trimS (t.substr (from)); };
-        if (startsWithI (t, "key:")) head += "{key: " + words (val (4)).front() + "}\n";
+        if (startsWithI (t, "key:")) { auto w = words (val (4)); if (! w.empty()) head += "{key: " + w.front() + "}\n"; }
         else if (startsWithI (t, "capo:")) { int c = std::atoi (val (5).c_str()); if (c == 0 && lt.find ("no capo") == std::string::npos) { for (char ch : t) if (std::isdigit ((unsigned char) ch)) { c = ch - '0'; break; } } if (c > 0) head += "{capo: " + std::to_string (c) + "}\n"; }
         else if (startsWithI (t, "tempo:") || startsWithI (t, "bpm:")) head += "{tempo: " + val (t.find (':') + 1) + "}\n";
         else if (startsWithI (t, "time:") || startsWithI (t, "time signature:")) head += "{time: " + val (t.find (':') + 1) + "}\n";

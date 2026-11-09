@@ -255,7 +255,7 @@ public:
 class SpringVerb : public Pedal {
 public:
     DelayLine dl; float ap[6] {}; DelayLine apd[6]; OnePole lp;
-    SpringVerb() { type = "spring"; displayName = "Spring Tank"; category = PedalCategory::Ambient; hasTails = true;
+    SpringVerb() { type = "spring"; displayName = "Spring"; category = PedalCategory::Ambient; hasTails = true;
         addParam ("dwell", "Dwell", 0, 1, 0.5f); addParam ("mix", "Mix", 0, 1, 0.3f); addParam ("tone", "Tone", 0, 1, 0.5f); }
     void onPrepare() override { dl.init ((int) (fs_ * 0.1f)); for (auto& d : apd) d.init (64); }
     void onParamsChanged() override { lp.set (fs_, 2000 + 4000 * p (2)); }

@@ -13,6 +13,8 @@ public:
     void mouseDown (const juce::MouseEvent&) override;
     void mouseDrag (const juce::MouseEvent&) override;
     void mouseUp (const juce::MouseEvent&) override;
+    void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
+    std::unique_ptr<juce::ComponentTraverser> createKeyboardFocusTraverser() override;
     bool isInterestedInDragSource (const SourceDetails&) override { return true; }
     void itemDragMove (const SourceDetails&) override;
     void itemDragExit (const SourceDetails&) override { dropLane_ = -1; repaint(); }
@@ -26,7 +28,8 @@ private:
     int dropIndex (int lane, juce::Point<int> p) const;
     TabernacleGuitarEditor& ed;
     wr::RigPreset work_; std::string selected_; int dropLane_ = -1, dropIdx_ = -1;
-    juce::Rectangle<int> libArea_, laneArea_[2], ampBar_, edArea_;
+    juce::Rectangle<int> libArea_, laneArea_[2], ampBar_, edArea_, laneLeft_[2], laneRight_[2];
+    int laneScroll_[2] {}, laneMaxScroll_[2] {}, scrollLane_ = -1, scrollGrab_ = 0;
     std::vector<std::pair<juce::Rectangle<int>, std::string>> libItems_;       // type
     std::vector<std::tuple<juce::Rectangle<int>, int, int>> tiles_;             // lane, index
     juce::OwnedArray<juce::Slider> knobs_; juce::OwnedArray<juce::Label> knobLabels_; juce::OwnedArray<juce::ComboBox> choices_;

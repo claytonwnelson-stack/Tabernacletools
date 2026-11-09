@@ -5,6 +5,7 @@ using namespace wr; using namespace wr::theme;
 void showBackupsMenu (CoreEditor& ed, juce::Component* anchor, std::function<void()> after);
 
 WorkshopView::WorkshopView (TabernacleGuitarEditor& e) : ed (e) {
+    setFocusContainerType (juce::Component::FocusContainerType::keyboardFocusContainer);
     addAndMakeVisible (search_); search_.setTextToShowWhenEmpty ("Search pedals...", dimmer); search_.setFont (font (14)); search_.onTextChange = [this] { repaint(); };
     for (auto* b : { &onOff_, &remove_, &reset_, &saveScene_, &assign_, &saveRig_, &backups_ }) addAndMakeVisible (*b);
     addChildComponent (realAmp_); addChildComponent (loadIr_); addChildComponent (removeIr_);
@@ -15,7 +16,9 @@ WorkshopView::WorkshopView (TabernacleGuitarEditor& e) : ed (e) {
     backups_.onClick = [this] { showBackupsMenu (ed, &backups_, [this] { refresh(); }); };
     onOff_.setClickingTogglesState (false);
     onOff_.onClick = [this] { if (selected_.empty()) return; bool on = ! ed.proc.pedalOn (selected_); ed.proc.setPedal (selected_, on); for (auto& l : work_.lanes) for (auto& d : l) if (d.uid == selected_) d.enabled = on; buildEditor(); repaint(); };
-    remove_.onClick = [this] { for (auto& l : work_.lanes) l.erase (std::remove_if (l.begin(), l.end(), [this] (const PedalDef& d) { return d.uid == selected_; }), l.end()); selected_.clear(); rebuild(); };
+    remove_.onClick = [this] {
+        juce::Component::unfocusAllComponents(); // deleting the pedal's knobs must not move focus onto the search field
+        for (auto& l : work_.lanes) l.erase (std::remove_if (l.begin(), l.end(), [this] (const PedalDef& d) { return d.uid == selected_; }), l.end()); selected_.clear(); rebuild(); };
     reset_.onClick = [this] { for (auto& l : work_.lanes) for (auto& d : l) if (d.uid == selected_) d.params.clear(); rebuild(); };
     saveScene_.setColour (juce::TextButton::buttonColourId, orange); saveScene_.setColour (juce::TextButton::textColourOffId, juce::Colour (0xff111111));
     saveScene_.onClick = [this] { saveScene(); };
@@ -64,7 +67,7 @@ void WorkshopView::rebuild() {
     ed.proc.rebuildRig (work_); buildEditor(); repaint();
 }
 void WorkshopView::loadIrFile() {
-    irChooser_ = std::make_unique<juce::FileChooser> ("Load a cab impulse response (WAV)", juce::File(), "*.wav");
+    irChooser_ = std::make_unique<juce::FileChooser> ("Load a cab impulse response (WAV)", juce::File(), "*.wav", true, false, this);
     // iOS: the Files picker hands back a security-scoped URL outside the sandbox. JUCE's URL::createInputStream opens it with
     // startAccessingSecurityScopedResource / stopAccessing..., so read the bytes through the URL (not File) and copy them into
     // the app container (<data>/IRs) - the original URL stops working after this call.
@@ -88,7 +91,15 @@ void WorkshopView::loadIrFile() {
 
 void WorkshopView::select (const std::string& uid) { selected_ = uid; buildEditor(); repaint(); }
 
+std::unique_ptr<juce::ComponentTraverser> WorkshopView::createKeyboardFocusTraverser() {
+    struct Quiet : juce::KeyboardFocusTraverser {
+        juce::Component* getDefaultComponent (juce::Component*) override { return nullptr; } // never auto-focus the search field
+    };
+    return std::make_unique<Quiet>();
+}
 void WorkshopView::buildEditor() {
+    if (auto* f = juce::Component::getCurrentlyFocusedComponent())
+        if (f != &search_ && f != &tempo_ && isParentOf (f)) juce::Component::unfocusAllComponents();
     for (auto* c : knobs_) removeChildComponent (c); for (auto* c : knobLabels_) removeChildComponent (c); for (auto* c : choices_) removeChildComponent (c);
     knobs_.clear(); knobLabels_.clear(); choices_.clear();
     const Chain* chain = ed.proc.layout(); const PedalSlot* slot = chain ? const_cast<Chain*> (chain)->find (selected_) : nullptr;
@@ -133,11 +144,17 @@ void WorkshopView::buildEditor() {
 }
 
 void WorkshopView::resized() {
-    auto r = getLocalBounds().reduced (18, 14);
+    auto r = getLocalBounds();
+    if (auto* disp = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
+        auto in = disp->safeAreaInsets;
+        r.removeFromLeft (in.getLeft()); r.removeFromRight (in.getRight()); r.removeFromBottom (in.getBottom());
+    }
+    r = r.reduced (18, 14);
     libArea_ = r.removeFromLeft (250); r.removeFromLeft (14); edArea_ = r.removeFromRight (330); r.removeFromRight (14);
+    { auto tempoZone = libArea_.removeFromBottom (56);
+      tempoL_.setBounds (tempoZone.removeFromTop (16));
+      tempoMinus_.setBounds (tempoZone.removeFromLeft (44)); tempoPlus_.setBounds (tempoZone.removeFromRight (44)); tempo_.setBounds (tempoZone.reduced (6, 0)); }
     search_.setBounds (libArea_.getX(), libArea_.getY() + 24, libArea_.getWidth(), 38);
-    { auto t = libArea_; auto row = t.removeFromBottom (36); tempoL_.setBounds (t.removeFromBottom (18));
-      tempoMinus_.setBounds (row.removeFromLeft (44)); tempoPlus_.setBounds (row.removeFromRight (44)); tempo_.setBounds (row.reduced (6, 0)); }
     auto lanes = r.withTrimmedTop (24); int lh = (lanes.getHeight() - 60) / 2;
     laneArea_[0] = lanes.removeFromTop (lh); ampBar_ = lanes.removeFromTop (60).reduced (0, 14); laneArea_[1] = lanes;
     auto e = edArea_.reduced (14, 12); e.removeFromTop (54);
@@ -167,7 +184,12 @@ void WorkshopView::paintTopBar (juce::Graphics& g, juce::Rectangle<int> r) {
 }
 
 int WorkshopView::dropIndex (int lane, juce::Point<int> p) const {
-    int idx = 0; for (auto& t : tiles_) if (std::get<1> (t) == lane && p.x > std::get<0> (t).getCentreX()) idx = std::get<2> (t) + 1; return idx;
+    int idx = 0, best = 1 << 30;
+    for (auto& t : tiles_) if (std::get<1> (t) == lane) {
+        auto r = std::get<0> (t); int d = std::abs (p.x - r.getCentreX()) + std::abs (p.y - r.getCentreY()) * 3;
+        if (d < best) { best = d; bool after = p.y > r.getBottom() - 8 || (p.y >= r.getY() && p.x > r.getCentreX()); idx = std::get<2> (t) + (after ? 1 : 0); }
+    }
+    return idx;
 }
 
 void WorkshopView::paint (juce::Graphics& g) {
@@ -195,24 +217,49 @@ void WorkshopView::paint (juce::Graphics& g) {
     for (int l = 0; l < 2; ++l) {
         auto a = laneArea_[l]; pill (g, a.toFloat(), panel, l == dropLane_ ? pink : cardBorder, 12);
         g.setColour (dim); g.setFont (font (11, true)); g.drawText (titles[l], a.reduced (12, 8).removeFromTop (16), juce::Justification::left, true);
-        auto row = a.reduced (12, 0).withTrimmedTop (34).withTrimmedBottom (12);
+        auto row = a.reduced (12, 0).withTrimmedTop (28).withTrimmedBottom (8);
         auto endBox = [&] (juce::Rectangle<int> b, const char* t) { pill (g, b.toFloat(), well, cardBorder, 8); g.setColour (dimmer); g.setFont (font (11, true)); g.drawText (t, b, juce::Justification::centred); };
-        endBox (row.removeFromLeft (52).withSizeKeepingCentre (52, 40), ends[l][0]); endBox (row.removeFromRight (64).withSizeKeepingCentre (64, 40), ends[l][1]);
-        row.reduce (8, 0);
-        int n = (int) work_.lanes[l].size(); for (auto& dd : work_.lanes[l]) if (dd.uid == kAmpUid) --n; int tw = n ? std::min (130, (row.getWidth() - 6 * n) / std::max (1, n)) : 130; int x = row.getX();
-        for (int i = 0; i < n; ++i) {
-            auto& d = work_.lanes[l][(size_t) i]; if (d.uid == kAmpUid) continue; juce::Rectangle<int> t (x, row.getCentreY() - 40, tw, 80);
-            if (l == dropLane_ && i == dropIdx_) { g.setColour (pink); g.fillRect (x - 5, t.getY(), 3, t.getHeight()); }
-            bool sel = d.uid == selected_, on = ed.proc.pedalOn (d.uid); auto p = createPedal (d.type);
-            pill (g, t.toFloat(), sel ? juce::Colour (0xff2b2210) : card, sel ? orange : cardBorder, 10);
-            led (g, { (float) t.getX() + 12, (float) t.getY() + 14 }, on);
-            g.setColour (text); g.setFont (font (13, true)); g.drawText (p ? juce::String (p->displayName) : juce::String (d.type), t.withTrimmedLeft (22).withHeight (28), juce::Justification::centredLeft, true);
-            if (p && p->numParams() > 0) { auto& sp = p->specs()[0]; g.setColour (dim); g.setFont (font (10)); g.drawText (juce::String (sp.name) + " " + juce::String (ed.proc.paramValue (d.uid, sp.id), 2), t.withTrimmedTop (30).withHeight (16).reduced (8, 0), juce::Justification::centredLeft, true); }
-            if (p && ! p->implemented) { g.setColour (orange); g.setFont (font (9, true)); g.drawText ("STUB - TODO", t.withTrimmedTop (50).reduced (8, 0), juce::Justification::centredLeft); }
-            if (p && p->hasTails) { g.setColour (blue); g.setFont (font (9, true)); g.drawText ("TAILS", t.withTrimmedTop (60).reduced (8, 0), juce::Justification::centredRight); }
-            tiles_.push_back ({ t, l, i }); x += tw + 6;
+        endBox (row.removeFromLeft (44).withSizeKeepingCentre (44, 36), ends[l][0]); endBox (row.removeFromRight (52).withSizeKeepingCentre (52, 36), ends[l][1]);
+        row.reduce (6, 0);
+        std::vector<int> idx; for (int i = 0; i < (int) work_.lanes[l].size(); ++i) if (work_.lanes[l][(size_t) i].uid != kAmpUid) idx.push_back (i);
+        const int n = (int) idx.size(), gap = 6, minW = 108, th = 72;
+        const int per = std::max (1, (row.getWidth() + gap) / (minW + gap));
+        const int needRows = n == 0 ? 1 : (n + per - 1) / per;
+        const int maxRows = std::max (1, (row.getHeight() + gap) / (th + gap));
+        const bool scroll = needRows > maxRows;
+        int tw = scroll ? minW : std::min (148, std::max (minW, (row.getWidth() - gap * (per - 1)) / std::max (1, std::min (per, std::max (1, n)))));
+        const int content = scroll ? n * (tw + gap) : row.getWidth();
+        laneMaxScroll_[l] = std::max (0, content - row.getWidth());
+        laneScroll_[l] = std::clamp (laneScroll_[l], 0, laneMaxScroll_[l]);
+        laneLeft_[l] = laneRight_[l] = {};
+        if (scroll) {
+            auto hdr = a.reduced (12, 6).removeFromTop (18).removeFromRight (52);
+            laneRight_[l] = hdr.removeFromRight (22); laneLeft_[l] = hdr.removeFromLeft (22);
+            g.setColour (laneScroll_[l] > 0 ? text : dimmer); g.setFont (font (14, true)); g.drawText ("<", laneLeft_[l], juce::Justification::centred);
+            g.setColour (laneScroll_[l] < laneMaxScroll_[l] ? text : dimmer); g.drawText (">", laneRight_[l], juce::Justification::centred);
         }
-        if (l == dropLane_ && dropIdx_ >= n) { g.setColour (pink); g.fillRect (x - 4, row.getCentreY() - 40, 3, 80); }
+        g.saveState(); g.reduceClipRegion (row);
+        const int x0 = row.getX() - (scroll ? laneScroll_[l] : 0);
+        for (int k = 0; k < n; ++k) {
+            int i = idx[(size_t) k]; auto& d = work_.lanes[l][(size_t) i];
+            int col = scroll ? k : k % per, rr = scroll ? 0 : k / per;
+            juce::Rectangle<int> full (x0 + col * (tw + gap), row.getY() + rr * (th + gap), tw, std::min (th, row.getHeight()));
+            if (l == dropLane_ && i == dropIdx_) { g.setColour (pink); g.fillRect (full.getX() - 4, full.getY(), 3, full.getHeight()); }
+            auto look = pedalLook (d.type); juce::Colour hue ((juce::uint32) look.argb);
+            bool sel = d.uid == selected_, on = ed.proc.pedalOn (d.uid);
+            const PedalInfo* info = nullptr; for (auto& pi : pedalCatalog()) if (pi.type == d.type) { info = &pi; break; }
+            juce::String name = info ? juce::String (info->name) : juce::String (d.type);
+            pill (g, full.toFloat(), juce::Colour (0xff141820), sel ? orange : hue.withAlpha (0.85f), 10);
+            g.setColour (hue); g.fillRoundedRectangle ((float) full.getX() + 1, (float) full.getY() + 8, 5.0f, (float) full.getHeight() - 16, 2.0f);
+            auto body = full.reduced (10, 4);
+            auto tag = body.removeFromTop (16).removeFromLeft (34);
+            g.setColour (hue.withAlpha (0.28f)); g.fillRoundedRectangle (tag.toFloat(), 4);
+            g.setColour (hue.brighter (0.45f)); g.setFont (font (10, true)); g.drawText (look.tag, tag, juce::Justification::centred);
+            led (g, { (float) full.getRight() - 12, (float) full.getY() + 12 }, on);
+            g.setColour (on ? text : dim); g.setFont (font (13, true)); g.drawFittedText (name, body.reduced (2, 1), juce::Justification::centredLeft, 2);
+            tiles_.push_back ({ full, l, i });
+        }
+        g.restoreState();
     }
     pill (g, ampBar_.toFloat(), juce::Colour (0xff1a1810), orange.withAlpha (0.5f), 10); g.setColour (orange); g.setFont (font (12, true));
     g.drawText ("v  AMP: " + juce::String (ampSummary (work_)) + "   (tap to edit)  v", ampBar_, juce::Justification::centred, true);
@@ -234,19 +281,37 @@ void WorkshopView::paint (juce::Graphics& g) {
     } else label (g, "Select a pedal to edit it", e.removeFromTop (16));
 }
 
-void WorkshopView::mouseDown (const juce::MouseEvent&) {}
+void WorkshopView::mouseDown (const juce::MouseEvent& e) {
+    scrollLane_ = -1;
+    for (int l = 0; l < 2 && scrollLane_ < 0; ++l) if (laneArea_[l].contains (e.getPosition()) && laneMaxScroll_[l] > 0) {
+        bool onTile = false; for (auto& t : tiles_) if (std::get<1> (t) == l && std::get<0> (t).contains (e.getPosition())) onTile = true;
+        if (! onTile && ! laneLeft_[l].contains (e.getPosition()) && ! laneRight_[l].contains (e.getPosition())) { scrollLane_ = l; scrollGrab_ = laneScroll_[l]; }
+    }
+}
+void WorkshopView::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& w) {
+    for (int l = 0; l < 2; ++l) if (laneArea_[l].contains (e.getPosition()) && laneMaxScroll_[l] > 0) {
+        laneScroll_[l] = std::clamp (laneScroll_[l] - (int) ((w.deltaX + w.deltaY) * 140), 0, laneMaxScroll_[l]); repaint(); }
+}
 void WorkshopView::mouseDrag (const juce::MouseEvent& e) {
+    if (scrollLane_ >= 0 && ! isDragAndDropActive()) {
+        laneScroll_[scrollLane_] = std::clamp (scrollGrab_ - e.getDistanceFromDragStartX(), 0, laneMaxScroll_[scrollLane_]); repaint(); return; }
     if (e.getDistanceFromDragStart() < 8 || isDragAndDropActive()) return;
     auto p = e.getMouseDownPosition();
     for (auto& it : libItems_) if (it.first.contains (p)) { juce::Image img (juce::Image::ARGB, it.first.getWidth(), it.first.getHeight(), true); { juce::Graphics g (img); pill (g, img.getBounds().toFloat(), orange, orange, 8); }
         startDragging ("new:" + juce::String (it.second), this, juce::ScaledImage (img)); return; }
-    for (auto& t : tiles_) if (std::get<0> (t).contains (p)) { juce::Image img (juce::Image::ARGB, std::get<0> (t).getWidth(), std::get<0> (t).getHeight(), true); { juce::Graphics g (img); pill (g, img.getBounds().toFloat(), pink.withAlpha (0.6f), pink, 10); }
+    for (auto& t : tiles_) if (laneArea_[std::get<1> (t)].contains (p) && std::get<0> (t).contains (p)) { juce::Image img (juce::Image::ARGB, std::get<0> (t).getWidth(), std::get<0> (t).getHeight(), true); { juce::Graphics g (img); pill (g, img.getBounds().toFloat(), pink.withAlpha (0.6f), pink, 10); }
         startDragging ("move:" + juce::String (std::get<1> (t)) + ":" + juce::String (std::get<2> (t)), this, juce::ScaledImage (img)); return; }
 }
 void WorkshopView::mouseUp (const juce::MouseEvent& e) {
+    if (scrollLane_ >= 0 && e.getDistanceFromDragStart() > 8) { scrollLane_ = -1; return; }
+    scrollLane_ = -1;
+    for (int l = 0; l < 2; ++l) {
+        if (laneLeft_[l].contains (e.getPosition())) { laneScroll_[l] = std::max (0, laneScroll_[l] - 120); repaint(); return; }
+        if (laneRight_[l].contains (e.getPosition())) { laneScroll_[l] = std::min (laneMaxScroll_[l], laneScroll_[l] + 120); repaint(); return; }
+    }
     if (e.getDistanceFromDragStart() > 8) return;
     if (ampBar_.contains (e.getPosition())) { select (kAmpUid); return; }
-    for (auto& t : tiles_) if (std::get<0> (t).contains (e.getPosition())) {
+    for (auto& t : tiles_) if (laneArea_[std::get<1> (t)].contains (e.getPosition()) && std::get<0> (t).contains (e.getPosition())) {
         auto& d = work_.lanes[std::get<1> (t)][(size_t) std::get<2> (t)];
         if (e.getNumberOfClicks() >= 2) { bool on = ! ed.proc.pedalOn (d.uid); ed.proc.setPedal (d.uid, on); d.enabled = on; }
         select (d.uid); return;

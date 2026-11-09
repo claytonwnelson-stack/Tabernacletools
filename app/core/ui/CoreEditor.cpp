@@ -64,14 +64,14 @@ void CoreEditor::openLiveArrangement() {
 }
 void CoreEditor::chooseStems() {
     if (! requireAccess (wr::Feature::Import)) return;
-    chooser_ = std::make_unique<juce::FileChooser> ("Backing-track stems for this song (files or a folder)", juce::File(), "*.wav;*.aif;*.aiff;*.m4a;*.mp3;*.caf;*.aac");
+    chooser_ = std::make_unique<juce::FileChooser> ("Backing-track stems for this song (files or a folder)", juce::File(), "*.wav;*.aif;*.aiff;*.m4a;*.mp3;*.caf;*.aac", true, false, this);
     chooser_->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::canSelectDirectories
                            | juce::FileBrowserComponent::canSelectMultipleItems, [this] (const juce::FileChooser& fc) {
         auto files = fc.getResults(); if (files.isEmpty()) return; auto err = core.importStems (files);
         if (err.isNotEmpty()) juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Backing tracks", err); });
 }
 void CoreEditor::choosePracticeTrack() {
-    chooser_ = std::make_unique<juce::FileChooser> ("Practice track for this song", juce::File(), "*.mp3;*.m4a;*.aac;*.wav;*.aif;*.aiff;*.caf");
+    chooser_ = std::make_unique<juce::FileChooser> ("Practice track for this song", juce::File(), "*.mp3;*.m4a;*.aac;*.wav;*.aif;*.aiff;*.caf", true, false, this);
     chooser_->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [this] (const juce::FileChooser& fc) {
         auto f = fc.getResult(); if (! f.existsAsFile()) return; auto err = core.attachPracticeTrack (f);
         if (err.isNotEmpty()) juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Practice track", err);
@@ -92,7 +92,7 @@ void CoreEditor::askText (const juce::String& title, const juce::String& msg, co
     w->enterModalState (true, juce::ModalCallbackFunction::create ([w, done] (int r) { if (r == 1) done (w->getTextEditorContents ("t")); }), true);
 }
 void CoreEditor::chooseImage (bool logo) {
-    chooser_ = std::make_unique<juce::FileChooser> (logo ? "Logo image" : "Background image", juce::File(), "*.jpg;*.jpeg;*.png;*.heic");
+    chooser_ = std::make_unique<juce::FileChooser> (logo ? "Logo image" : "Background image", juce::File(), "*.jpg;*.jpeg;*.png;*.heic", true, false, this);
     chooser_->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [this, logo] (const juce::FileChooser& fc) {
         auto f = fc.getResult(); if (! f.existsAsFile()) return;
         auto dst = core.store.file().getParentDirectory().getChildFile (logo ? "projector-logo" + f.getFileExtension() : "projector-bg" + f.getFileExtension()); // copy in: iOS picks are temporary

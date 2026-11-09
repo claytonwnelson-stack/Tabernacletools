@@ -5,6 +5,7 @@
 using namespace wr; using namespace wr::theme;
 
 void TopBar::paint (juce::Graphics& g, juce::Rectangle<int> r, int rightReserve) {
+    g.saveState(); g.reduceClipRegion (r);
     auto& L = ed.core.live(); const Song* s = L.song(); const Chart& c = L.chart();
     auto x = r.getX();
     g.setColour (dim); g.setFont (font (13)); g.drawText ("Setlist - " + juce::String (L.songIndex() + 1) + " of " + juce::String ((int) L.setlist().entries.size()), x, 12, 240, 16, juce::Justification::left);
@@ -14,7 +15,10 @@ void TopBar::paint (juce::Graphics& g, juce::Rectangle<int> r, int rightReserve)
     auto badge = [&] (const juce::String& k, const juce::String& v, int w) { juce::Rectangle<int> b (x, 15, w, 34); pill (g, b.toFloat(), btn, btnBorder, 8); g.setColour (dim); g.setFont (font (11));
         g.drawText (k, b.withTrimmedLeft (9), juce::Justification::centredLeft); g.setColour (text); g.setFont (font (14, true)); g.drawText (v, b.withTrimmedRight (9), juce::Justification::centredRight); x += w + 8; return b; };
     keyR_ = badge ("KEY", c.key.empty() ? juce::String ("-") : juce::String (c.key) + (c.capo > 0 ? " c" + juce::String (c.capo) : juce::String()), c.capo > 0 ? 92 : 70);
-    { // tempo: [-] BPM [+] TAP, then MIDI CLOCK (external clock in control) or SAVE (live change not yet in the song)
+    { // tempo: [-] BPM [+] TAP. Keep the cluster inside the bar so it cannot cover the tuner or the settings button.
+        const int cluster = 30 + 4 + 84 + 4 + 30 + 4 + 44 + 8;
+        const int limit = r.getRight() - rightReserve;
+        if (x + cluster > limit) x = std::max (r.getX() + 160, limit - cluster);
         const bool clk = L.clockActive(); const bool clkSend = ed.core.store.lib.settings.midiClockMode == 1 && ! L.following();
         auto small = [&] (const juce::String& t, int w, juce::Colour fill, juce::Colour border, juce::Colour fg) {
             juce::Rectangle<int> b (x, 15, w, 34); pill (g, b.toFloat(), fill, border, 8); g.setColour (fg); g.setFont (font (13, true)); g.drawText (t, b, juce::Justification::centred); x += w + 4; return b; };
@@ -48,6 +52,7 @@ void TopBar::paint (juce::Graphics& g, juce::Rectangle<int> r, int rightReserve)
         g.setColour (cur ? inkOn (sc) : nx ? sc.brighter (0.3f) : done ? juce::Colour (0xff9aa3b8) : dimmer); g.setFont (font (12, true)); g.drawText (t, b, juce::Justification::centred);
         chipR_.push_back ({ b, i }); x += w + 4;
     }
+    g.restoreState();
 }
 
 void TopBar::click (juce::Point<int> p) {

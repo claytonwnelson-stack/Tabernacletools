@@ -405,7 +405,7 @@ public:
 
 class Shimmer : public ReverbBase {
 public:
-    Shimmer() { type = "shimmer"; displayName = "Shimmer"; category = PedalCategory::Ambient; hasTails = true;
+    Shimmer() { type = "shimmer"; displayName = "Ambient Shimmer"; category = PedalCategory::Ambient; hasTails = true;
         addParam ("mix", "Mix", 0, 1, 0.4f); addParam ("decay", "Decay", 2, 20, 8, "s"); addParam ("shimmer", "Shimmer", 0, 1, 0.6f); addParam ("damp", "Tone", 0, 1, 0.4f); }
     void render (float* L, float* R, int n, const ProcessContext&) override {
         rp.reverbOn = true; rp.revMix = p (0); rp.revDecay = p (1); rp.revSize = 0.95f; rp.revPredelay = 40; rp.revDamp = p (3); rp.revShimmer = p (2); runWet (L, R, n);
@@ -475,6 +475,7 @@ public:
 
 #include "PedalsV09.inc"
 #include "AmpV09.inc"
+#include "Reverbs.inc"
 
 using Maker = std::function<std::unique_ptr<Pedal>()>;
 struct Entry { PedalInfo info; Maker make; };
@@ -489,6 +490,8 @@ const std::vector<Entry>& registry() {
         E<GermaniumFuzz> (false), E<TriStageFuzz> (false), E<TrebleBooster> (false), E<BluesDrive> (false), E<AmpInBox> (false), E<OctaveFuzz> (false),
         E<OtaComp> (false), E<NoiseGate> (true), E<Flanger> (false), E<Vibrato> (false), E<Wah> (false), E<EnvFilter> (false),
         E<AnalogDelay> (false), E<TapeEcho> (false), E<WorshipDelay> (true), E<CloudVerb> (true), E<SpringVerb> (false),
+        E<HallReverb> (true), E<RoomReverb> (true), E<PlateReverb> (true), E<ChamberReverb> (true), E<ChurchReverb> (true),
+        E<ReverseVerb> (true), E<GatedVerb> (true), E<ModReverb> (true), E<BloomVerb> (true),
         E<AmpModel> (true), E<CabSim> (false) };
     return r;
 }

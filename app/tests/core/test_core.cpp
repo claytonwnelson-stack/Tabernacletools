@@ -122,6 +122,22 @@ static void testMidi() {
     n = r.pop (a, 16); CHECK (n >= 1 && a[n - 1].type == Action::ClockBpm); CHECK (std::abs (r.clockBpm() - 72.0) < 0.2);
     // tap tempo
     TapTempo tt; tt.tap (0); double b = 0; for (int i = 1; i < 5; ++i) b = tt.tap (i * 0.5); CHECK (std::abs (b - 120) < 0.01);
+    // two factory Chocolates: same PC numbers, told apart by USB port. E = A+B, F = C+D, within 50 ms.
+    { MidiRouter f; f.setProfiles ({ defaultGuitarUnit(), defaultSectionUnit() }); Action fa[8];
+      f.handle (0xC0, 0, 0, 0, 0); f.flushFactory (60); int n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::Tap);
+      f.handle (0xC0, 0, 0, 0, 1); f.flushFactory (60); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::PlayStart);
+      f.handle (0xC0, 0, 0, 1000, 0); f.handle (0xC0, 1, 0, 1020, 0); f.flushFactory (1100); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::TunerToggle);
+      f.handle (0xC0, 2, 0, 2000, 1); f.handle (0xC0, 3, 0, 2010, 1); f.flushFactory (2100); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::TransportStop);
+      f.handle (0xC0, 4, 0, 3000, 0); f.flushFactory (3060); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::Tap); // PC 4 is still switch A
+      f.handle (0xC0, 0, 0, 4000); f.flushFactory (4100); CHECK_EQ (f.pop (fa, 8), 0); // merged buffer: no factory map
+      f.handle (0xB5, 80, 127, 5000, 0); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::Tap); // port known: channel ignored
+      f.handle (0xB0, 80, 0, 5100, 0); CHECK_EQ (f.pop (fa, 8), 0);
+      f.handle (0xB0, 20, 127, 5200, 1); f.handle (0xB0, 20, 0, 5300, 1); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::PlayStart); // CC 20 on the section port
+      bool jok = false;
+      auto bare = controllerFromJson (Json::parse ("{\"role\":\"section\",\"switches\":[]}", &jok)); CHECK (jok); CHECK_EQ (bare.comboE, std::string ("prevSection")); CHECK_EQ (bare.comboF, std::string ("stop"));
+      auto cleared = controllerFromJson (Json::parse ("{\"role\":\"guitar\",\"comboE\":\"\",\"comboF\":\"tap\",\"switches\":[]}", &jok)); CHECK (cleared.comboE.empty()); CHECK_EQ (cleared.comboF, std::string ("tap"));
+      CHECK_EQ (defaultGuitarUnit().comboE, std::string ("tunerToggle")); CHECK_EQ (defaultSectionUnit().comboF, std::string ("stop"));
+      auto saved = libraryFromJson (toJson (seedLibrary())); CHECK (saved.settings.guitarPedalId.empty()); CHECK_EQ (saved.controllers[0].comboF, std::string ("clickMute")); }
 }
 
 struct MockSink : RigSink {
