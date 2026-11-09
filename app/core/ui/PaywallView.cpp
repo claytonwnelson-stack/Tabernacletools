@@ -67,8 +67,8 @@ void PaywallView::resized() {
 #endif
 }
 void PaywallView::paint (juce::Graphics& g) {
-    g.fillAll (juce::Colours::black.withAlpha (0.7f));
-    g.setColour (juce::Colour (0xff1c1f26)); g.fillRoundedRectangle (box_.toFloat(), 16);
+    g.fillAll (wr::theme::bg.withAlpha (0.72f));
+    g.setColour (wr::theme::panel); g.fillRoundedRectangle (box_.toFloat(), 16);
     auto r = box_.reduced (28);
     g.setColour (juce::Colours::white); g.setFont (juce::FontOptions (28.0f, juce::Font::bold)); g.drawText ("Tabernacle Tools", r.removeFromTop (36), juce::Justification::left);
     g.setColour (juce::Colour (0xffffd166)); g.setFont (juce::FontOptions (17.0f));
@@ -78,7 +78,7 @@ void PaywallView::paint (juce::Graphics& g) {
     r.removeFromTop (18);
     auto cols = r.removeFromTop (168); auto L = cols.removeFromLeft (cols.getWidth() / 2).reduced (8, 0), R = cols.reduced (8, 0);
     auto card = [&] (juce::Rectangle<int> c, const char* title, const juce::String& lines) {
-        g.setColour (juce::Colour (0xff262b35)); g.fillRoundedRectangle (c.toFloat().withHeight (220), 12);
+        g.setColour (wr::theme::card); g.fillRoundedRectangle (c.toFloat().withHeight (220), 12);
         auto t = c.reduced (14, 12); g.setColour (juce::Colours::white); g.setFont (juce::FontOptions (20.0f, juce::Font::bold)); g.drawText (title, t.removeFromTop (28), juce::Justification::left);
         g.setColour (juce::Colours::lightgrey); g.setFont (juce::FontOptions (14.0f)); g.drawFittedText (lines, t, juce::Justification::topLeft, 6); };
     card (L, "Individual", "One person, all your iPads\nGuitar, Keys, Bass + Charts apps, pedal, amp and cab\nClick, cues, live view, projector, band sync\n" + juce::String (trialShown() ? "2-week free trial (once per person, all apps)" : "Cancel anytime"));
@@ -87,7 +87,7 @@ void PaywallView::paint (juce::Graphics& g) {
         auto msg = wr::coveredMessage (proc_.entitlements, cov_, (int64_t) juce::Time::currentTimeMillis() / 1000);
         if (mode_ == wr::PaywallMode::UpgradeOnly) msg += " Upgrade to Church only if your whole team needs it.";
         auto b = L.withHeight (200); g.setColour (juce::Colour (0xf0262b35)); g.fillRoundedRectangle (b.toFloat(), 12);
-        g.setColour (juce::Colour (0xff7bd88f)); g.setFont (juce::FontOptions (18.0f, juce::Font::bold)); g.drawFittedText (msg, b.reduced (14), juce::Justification::centredLeft, 6); }
+        g.setColour (wr::theme::accentText); g.setFont (juce::FontOptions (18.0f, juce::Font::bold)); g.drawFittedText (msg, b.reduced (14), juce::Justification::centredLeft, 6); }
     if (status_.isNotEmpty()) { g.setColour (juce::Colour (0xffffd166)); g.setFont (juce::FontOptions (15.0f)); g.drawFittedText (status_, box_.reduced (28).removeFromBottom (64).removeFromTop (34), juce::Justification::left, 2); }
     g.setColour (juce::Colours::grey); g.setFont (juce::FontOptions (11.0f));
     g.drawFittedText ("Payment is charged to your Apple ID. Subscriptions renew monthly unless cancelled at least 24 hours before the end of the period, in "

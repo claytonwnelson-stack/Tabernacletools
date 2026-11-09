@@ -6,7 +6,7 @@ using namespace wr; using namespace wr::theme;
 static const float kLyric = 20.0f, kChord = 14.0f;
 
 // ================================================================== chart
-static juce::Colour hlColour (const std::string& h) { return h == "pink" ? pink.withAlpha (0.20f) : h.empty() ? juce::Colours::transparentBlack : accent (h).withAlpha (0.18f); }
+static juce::Colour hlColour (const std::string& h) { return h.empty() ? juce::Colours::transparentBlack : accent (juce::String (h)).withAlpha (0.18f); }
 
 float ChartView::sectionHeight (const Section& s, float w, bool compact) const {
     float h = 34; int shown = 0;
@@ -23,8 +23,8 @@ float ChartView::drawSection (juce::Graphics& g, const Section& s, int idx, juce
     auto& L = ed.core.live(); const Song* song = L.song();
     float h = sectionHeight (s, a.getWidth(), compact); auto box = a.withHeight (h);
     g.setOpacity (1.0f);
-    if (cur) { g.setColour (orange.withAlpha (0.08f)); g.fillRoundedRectangle (box.expanded (4), 14); pill (g, box, juce::Colour (0xff1a1810), orange, 12); g.setColour (orange); g.drawRoundedRectangle (box.reduced (1), 12, 2); }
-    else pill (g, box, panel, juce::Colour (0xff222838), 12);
+    if (cur) { g.setColour (accentFill.withAlpha (0.18f)); g.fillRoundedRectangle (box.expanded (4), 14); pill (g, box, card, accentText, 12); g.setColour (accentText); g.drawRoundedRectangle (box.reduced (1), 12, 2); }
+    else pill (g, box, panel, line, 12);
     const float alpha = dimmed ? 0.45f : 1.0f;
     const auto secCol = accent (juce::String (s.color));   // v0.8 editable section colour
     g.setColour (secCol.withMultipliedAlpha (alpha)); g.fillRoundedRectangle (box.getX() + 3, box.getY() + 8, 4, std::max (8.0f, h - 16), 2);
@@ -32,10 +32,10 @@ float ChartView::drawSection (juce::Graphics& g, const Section& s, int idx, juce
     g.setColour (secCol.interpolatedWith (juce::Colour (0xffaab2c6), 0.25f).withMultipliedAlpha (alpha)); g.setFont (font (14, true));
     juce::String nm = juce::String (s.name).toUpperCase(); if (s.repeat > 1) nm << "  x" << s.repeat << (cur ? "  (" + juce::String (L.pass()) + "/" + juce::String (s.repeat) + ")" : juce::String());
     g.drawText (nm, hdr, juce::Justification::centredLeft); float hx = hdr.getX() + juce::GlyphArrangement::getStringWidth (font (14, true), nm) + 10;
-    auto cue = [&] (const juce::String& t, juce::Colour c) { float w = juce::GlyphArrangement::getStringWidth (font (12, true), t) + 18; juce::Rectangle<float> r (hx, hdr.getY(), w, 20); g.setColour (c.withMultipliedAlpha (alpha)); g.fillRoundedRectangle (r, 10); g.setColour (juce::Colour (0xff111111)); g.setFont (font (12, true)); g.drawText (t, r, juce::Justification::centred); hx += w + 6; };
+    auto cue = [&] (const juce::String& t, juce::Colour c) { float w = juce::GlyphArrangement::getStringWidth (font (12, true), t) + 18; juce::Rectangle<float> r (hx, hdr.getY(), w, 20); g.setColour (c.withMultipliedAlpha (alpha)); g.fillRoundedRectangle (r, 10); g.setColour (inkOn (c)); g.setFont (font (12, true)); g.drawText (t, r, juce::Justification::centred); hx += w + 6; };
     if (song) if (auto* sc = song->sceneForSection (s)) cue ("Scene - " + juce::String (sc->name), accent (s.color));
-    auto pc = L.performerCue (idx); if (! pc.empty()) cue (pc, blue);
-    if (cur) { g.setColour (orange); g.setFont (font (12, true)); g.drawText ("NOW", hdr, juce::Justification::centredRight); }
+    auto pc = L.performerCue (idx); if (! pc.empty()) cue (pc, accentText);
+    if (cur) { g.setColour (accentText); g.setFont (font (12, true)); g.drawText ("NOW", hdr, juce::Justification::centredRight); }
 
     float y = box.getY() + 36; const float x0 = box.getX() + 16; int shown = 0;
     for (auto& it : s.items) {
@@ -48,7 +48,7 @@ float ChartView::drawSection (juce::Graphics& g, const Section& s, int idx, juce
                 for (auto& ch : ln.chords) {
                     float cx = x0 + juce::GlyphArrangement::getStringWidth (lf, juce::String (ln.lyric).substring (0, ch.pos));
                     if (ln.lyric.empty()) cx = x0 + (float) ch.pos * 9.0f; cx = std::max (cx, lastEnd + 6);
-                    g.setColour ((s.color == "pink" ? juce::Colour (0xffff8fc8) : s.color == "blue" ? juce::Colour (0xff7dd3fc) : orange).withMultipliedAlpha (alpha)); g.setFont (cf);
+                    g.setColour (accent (juce::String (s.color)).withMultipliedAlpha (alpha)); g.setFont (cf);
                     g.drawText (ch.chord, juce::Rectangle<float> (cx, y, 200, 17), juce::Justification::topLeft); lastEnd = cx + juce::GlyphArrangement::getStringWidth (cf, ch.chord);
                 }
                 y += 17;
@@ -64,9 +64,9 @@ float ChartView::drawSection (juce::Graphics& g, const Section& s, int idx, juce
             juce::Rectangle<float> tr (x0, y + 4, std::min (tw + 22, box.getRight() - x0 - 12), th);
             g.setColour (well); g.fillRoundedRectangle (tr, 8); g.setColour (col.withMultipliedAlpha (alpha)); g.drawRoundedRectangle (tr, 8, 2);
             g.setFont (font (10, true)); g.drawText ("TAB - " + juce::String (it.tab.title).toUpperCase(), tr.reduced (10, 4).removeFromTop (14), juce::Justification::left);
-            g.setColour ((it.tab.color == "pink" ? juce::Colour (0xffffc0df) : juce::Colour (0xffffd08a)).withMultipliedAlpha (alpha)); g.setFont (mono (13));
+            g.setColour ((it.tab.color.empty() ? accentText : accent (juce::String (it.tab.color))).withMultipliedAlpha (alpha)); g.setFont (mono (13));
             float ly = tr.getY() + 20; for (auto& l : it.tab.strings) { g.drawText (l, juce::Rectangle<float> (tr.getX() + 10, ly, tr.getWidth() - 12, 15), juce::Justification::left, false); ly += 15; }
-            if (! it.tab.note.empty()) { g.setColour (blue); g.setFont (font (11, true)); g.drawText (it.tab.note, juce::Rectangle<float> (tr.getX() + 10, ly, tr.getWidth(), 14), juce::Justification::left); }
+            if (! it.tab.note.empty()) { g.setColour (accentText); g.setFont (font (11, true)); g.drawText (it.tab.note, juce::Rectangle<float> (tr.getX() + 10, ly, tr.getWidth(), 14), juce::Justification::left); }
             y += th + 8;
         } else if (it.kind == ChartItem::Comment) { g.setColour (dim.withMultipliedAlpha (alpha)); g.setFont (font (14).italicised()); g.drawText (it.text, juce::Rectangle<float> (x0, y, box.getWidth() - 30, 18), juce::Justification::left); y += 20; }
     }
@@ -89,13 +89,12 @@ void ChartView::paintChart (juce::Graphics& g) {
     // NEXT banner with the switch to press
     Cue cue = L.nextCue();
     juce::Rectangle<float> ban = area.removeFromTop (40); area.removeFromTop (12);
-    juce::ColourGradient gr (juce::Colour (0xff3a1630), ban.getX(), 0, juce::Colour (0xff1c1424), ban.getRight(), 0, false); g.setGradientFill (gr); g.fillRoundedRectangle (ban, 10);
-    g.setColour (pink); g.drawRoundedRectangle (ban, 10, 1);
+    pill (g, ban, card, accentText, 10);
     if (L.sectionPending() && L.pendingSection() < (int) c.sections.size()) cue.text = "ON THE BAR LINE: " + c.sections[(size_t) L.pendingSection()].name; // queued, being announced
     { const int ni = L.sectionPending() ? L.pendingSection() : L.sectionIndex() + 1;   // v0.8 next section's colour
       if (ni >= 0 && ni < (int) c.sections.size()) { g.setColour (accent (juce::String (c.sections[(size_t) ni].color))); g.fillRoundedRectangle (ban.getX() + 6, ban.getY() + 8, 5, ban.getHeight() - 16, 2); } }
     g.setColour (text); g.setFont (font (15, true)); g.drawText (cue.text, ban.reduced (14, 0).withTrimmedRight (90), juce::Justification::centredLeft, true);
-    if (cue.sw) { juce::Rectangle<float> sw (ban.getRight() - 84, ban.getY() + 9, 70, 22); g.setColour (pink); g.fillRoundedRectangle (sw, 6); g.setColour (juce::Colour (0xff111111)); g.setFont (font (12, true));
+    if (cue.sw) { juce::Rectangle<float> sw (ban.getRight() - 84, ban.getY() + 9, 70, 22); g.setColour (accentFill); g.fillRoundedRectangle (sw, 6); g.setColour (onAccent); g.setFont (font (12, true));
                   g.drawText ((cue.unit == "section" ? "SEC " : "GTR ") + juce::String::charToString ((juce::juce_wchar) cue.sw), sw, juce::Justification::centred); }
     if (c.sections.empty()) { g.setColour (dim); g.setFont (font (16)); g.drawText ("Add songs on the SETLIST screen, then Go Live.", area, juce::Justification::centred); return; }
 

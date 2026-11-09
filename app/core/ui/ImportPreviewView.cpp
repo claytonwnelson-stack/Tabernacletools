@@ -7,7 +7,7 @@ ImportPreviewView::ImportPreviewView() {
     title_.setTextToShowWhenEmpty ("Title", dimmer); artist_.setTextToShowWhenEmpty ("Artist", dimmer); key_.setTextToShowWhenEmpty ("Key", dimmer); capo_.setTextToShowWhenEmpty ("0", dimmer);
     capo_.setInputRestrictions (2, "0123456789");
     addAndMakeVisible (import_); addAndMakeVisible (cancel_);
-    import_.setColour (juce::TextButton::buttonColourId, orange); import_.setColour (juce::TextButton::textColourOffId, juce::Colour (0xff111111));
+    import_.setColour (juce::TextButton::buttonColourId, accentFill); import_.setColour (juce::TextButton::textColourOffId, onAccent);
     cancel_.onClick = [this] { setVisible (false); done_ = nullptr; };
     import_.onClick = [this] {
         if (! p_.ok()) return;
@@ -38,7 +38,7 @@ void ImportPreviewView::resized() {
 
 void ImportPreviewView::paint (juce::Graphics& g) {
     g.fillAll (juce::Colour (0xcc000000));
-    pill (g, box_.toFloat(), bg, juce::Colour (0xff3a4050), 14);
+    pill (g, box_.toFloat(), bg, line, 14);
     auto r = box_.reduced (22);
     g.setColour (juce::Colours::white); g.setFont (font (20, true)); g.drawText (p_.urlOnly ? "Only a link was shared" : "Import chart - check before adding", r.removeFromTop (30), juce::Justification::left);
     r.removeFromTop (10 + 36 + 10);
@@ -46,7 +46,7 @@ void ImportPreviewView::paint (juce::Graphics& g) {
     g.setColour (dim); g.setFont (font (13));
     g.drawText (p_.keyGuessed ? "KEY (guessed)" : "KEY", kr.getX() + 118, kr.getY(), 100, 36, juce::Justification::left);   // between key and capo fields
     g.drawText ("CAPO", kr.getX() + 290, kr.getY(), 60, 36, juce::Justification::left);
-    if (p_.keyGuessed) { g.setColour (orange); g.drawText ("from the chords - fix it if wrong", kr.getX() + 360, kr.getY(), 300, 36, juce::Justification::left); }
+    if (p_.keyGuessed) { g.setColour (warn); g.drawText ("from the chords - fix it if wrong", kr.getX() + 360, kr.getY(), 300, 36, juce::Justification::left); }
     r.removeFromTop (14); r.removeFromBottom (56);
     g.setColour (dim); g.setFont (font (12, true)); g.drawText ("SECTIONS (" + juce::String ((int) p_.chart.sections.size()) + ")  -  " + juce::String (p_.chordCount) + " chords, " + juce::String (p_.lyricLines) + " lyric lines", r.removeFromTop (20), juce::Justification::left);
     float x = (float) r.getX(), y = (float) r.getY() + 4;
@@ -55,7 +55,7 @@ void ImportPreviewView::paint (juce::Graphics& g) {
         const float w = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), t) + 22;   // JUCE 8
         if (x + w > (float) r.getRight()) { x = (float) r.getX(); y += 36; }
         if (y + 30 > (float) r.getY() + r.getHeight() * 0.55f) break;
-        pill (g, { x, y, w, 28 }, well, juce::Colour (0xff3a4050), 8); g.setColour (juce::Colours::white); g.drawText (t, juce::Rectangle<float> (x, y, w, 28), juce::Justification::centred);
+        pill (g, { x, y, w, 28 }, well, line, 8); g.setColour (juce::Colours::white); g.drawText (t, juce::Rectangle<float> (x, y, w, 28), juce::Justification::centred);
         x += w + 8;
     }
     auto nr = r.withTop ((int) (r.getY() + r.getHeight() * 0.6f));

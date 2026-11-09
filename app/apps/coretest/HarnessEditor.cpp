@@ -26,7 +26,7 @@ void HarnessEditor::paint (juce::Graphics& g) {
     pill (g, juce::Rectangle<float> (18, 14, 172, 36), bg, cardBorder, 10);
     const char* names[] = { "LIVE", "SETLIST" };
     for (int i = 0; i < 2; ++i) { auto r = tabRect (i).toFloat(); bool on = page_ == i; if (on) { g.setColour (orange); g.fillRoundedRectangle (r, 7); }
-        g.setColour (on ? juce::Colour (0xff111111) : dim); g.setFont (font (12, true)); g.drawText (names[i], r, juce::Justification::centred); }
+        g.setColour (on ? onAccent : dim); g.setFont (font (12, true)); g.drawText (names[i], r, juce::Justification::centred); }
     juce::Rectangle<int> info (210, 0, getWidth() - 210 - 150, 64);
     if (page_ == 1) { setlist_->paintTopBar (g, info); return; }
     top_.paint (g, info, 8);
@@ -37,9 +37,9 @@ void HarnessEditor::paint (juce::Graphics& g) {
     auto button = [&] (int i, const juce::String& t, bool lit, juce::Colour c) { auto b = cell (i); pill (g, b.toFloat(), lit ? c.withAlpha (0.18f) : btn, lit ? c : btnBorder, 10);
         g.setColour (lit ? c : text); g.setFont (font (14, true)); g.drawText (t, b, juce::Justification::centred); btns_.push_back ({ b, i }); };
     button (0, "<  PREV SECTION", false, orange); button (1, "NEXT SECTION  >", L.sectionPending(), pink);
-    button (2, L.clickOn() ? "CLICK ON" : "CLICK OFF", L.clickOn(), accent ("blue"));
+    button (2, L.clickOn() ? "CLICK ON" : "CLICK OFF", L.clickOn(), accentText);
     { auto c = cell (2); const int bpb = std::min (12, L.beatsPerBar()), beat = proc.click.clickBeat.load();
-      for (int b = 0; b < bpb; ++b) { float x = (float) c.getCentreX() - (float) bpb * 5.5f + (float) b * 11; g.setColour (L.clickOn() && b == beat ? (b == 0 ? orange : juce::Colours::white) : juce::Colour (0xff3a4258)); g.fillEllipse (x, (float) c.getBottom() - 12, 7, 7); } }
+      for (int b = 0; b < bpb; ++b) { float x = (float) c.getCentreX() - (float) bpb * 5.5f + (float) b * 11; g.setColour (L.clickOn() && b == beat ? (b == 0 ? accentText : juce::Colours::white) : line); g.fillEllipse (x, (float) c.getBottom() - 12, 7, 7); } }
     button (3, L.clickMuted() ? "CLICK MUTED" : "MUTE CLICK", L.clickMuted(), juce::Colour (0xffe05050));
     button (4, proc.click.countingIn.load() ? juce::String ("COUNT-IN") : L.playing() ? juce::String ("STOP") : juce::String ("PLAY"), L.playing(), green);
     auto ban = proc.sync().banner (proc.nowSec());

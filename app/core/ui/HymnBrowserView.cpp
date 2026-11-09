@@ -7,7 +7,7 @@ HymnBrowserView::HymnBrowserView() {
     search_.setColour (juce::TextEditor::backgroundColourId, well); search_.onTextChange = [this] { runSearch(); };
     addAndMakeVisible (list_); list_.setRowHeight (44); list_.setColour (juce::ListBox::backgroundColourId, panel);
     addAndMakeVisible (copyBtn_); addAndMakeVisible (close_);
-    copyBtn_.setColour (juce::TextButton::buttonColourId, orange); copyBtn_.setColour (juce::TextButton::textColourOffId, juce::Colour (0xff111111));
+    copyBtn_.setColour (juce::TextButton::buttonColourId, accentFill); copyBtn_.setColour (juce::TextButton::textColourOffId, onAccent);
     close_.onClick = [this] { setVisible (false); copy_ = nullptr; };
     copyBtn_.onClick = [this] { if (sel_ && copy_) { auto id = sel_->id; setVisible (false); auto c = std::move (copy_); c (id); } };
 }
@@ -39,7 +39,7 @@ void HymnBrowserView::resized() {
     list_.setBounds (r.removeFromLeft (r.getWidth() * 2 / 5)); r.removeFromLeft (16); previewArea_ = r;
 }
 void HymnBrowserView::paint (juce::Graphics& g) {
-    g.fillAll (juce::Colour (0xcc000000)); pill (g, box_.toFloat(), bg, juce::Colour (0xff3a4050), 14);
+    g.fillAll (bg.withAlpha (0.8f)); pill (g, box_.toFloat(), panel, line, 14);
     auto r = box_.reduced (22);
     g.setColour (juce::Colours::white); g.setFont (font (20, true)); g.drawText ("Hymnal - " + juce::String ((int) hymnLibrary().size()) + " public-domain hymns", r.removeFromTop (30), juce::Justification::left);
     label (g, "Read-only. Copy a hymn to your library to edit it, change the key, or arrange it.", juce::Rectangle<int> (r.getX(), r.getY() - 30, r.getWidth(), 30), dim, 12, juce::Justification::centredRight);

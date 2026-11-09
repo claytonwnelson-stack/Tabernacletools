@@ -15,7 +15,7 @@ std::string ArrangementEditor::tokenFor (int i) const {   // label if unique, el
 }
 int ArrangementEditor::chipAt (juce::Point<int> p) const { for (int i = 0; i < (int) chips_.size(); ++i) if (chips_[(size_t) i].expanded (3).contains (p)) return i; return -1; }
 void ArrangementEditor::paint (juce::Graphics& g) {
-    g.fillAll (juce::Colours::black.withAlpha (0.6f));
+    g.fillAll (bg.withAlpha (0.72f));
     box_ = getLocalBounds().withSizeKeepingCentre (std::min (900, getWidth() - 40), std::min (520, getHeight() - 40));
     pill (g, box_.toFloat(), bar, cardBorder, 14);
     auto r = box_.reduced (22, 16);
@@ -29,7 +29,7 @@ void ArrangementEditor::paint (juce::Graphics& g) {
         juce::Rectangle<int> c (x, y, w, h); chips_.push_back (c); x += w + 8;
         const bool bad = idx < 0, drag = i == dragFrom_ && dragged_;
         auto col = bad ? juce::Colour (0xffff4d4d) : accent (juce::String (written_.sections[(size_t) idx].color));
-        pill (g, c.toFloat(), drag ? col.withAlpha (0.35f) : juce::Colour (0xff1d2230), col, 10);
+        pill (g, c.toFloat(), drag ? col.withAlpha (0.35f) : card, col, 10);
         g.setColour (bad ? juce::Colour (0xffff8080) : text); g.setFont (font (14, true)); g.drawText (t, c, juce::Justification::centred);
         g.setColour (dimmer); g.setFont (font (9, true)); g.drawText (juce::String (i + 1), c.withTrimmedLeft (4).withHeight (12), juce::Justification::topLeft);
     }
@@ -64,7 +64,7 @@ void ArrangementEditor::paint (juce::Graphics& g) {
     buttons_.clear(); auto row = box_.reduced (22, 16).removeFromBottom (40); const char* names[] = { "CANCEL", "WRITTEN ORDER", "SAVE TO SONG", "SAVE FOR THIS SETLIST" };
     int bx = row.getRight();
     for (int i = 3; i >= 0; --i) { if (i == 3 && ! setlistScope_) continue; int w = (int) juce::GlyphArrangement::getStringWidth (font (13, true), names[i]) + 30; bx -= w; juce::Rectangle<int> b (bx, row.getY(), w, 40); bx -= 10;
-        const bool primary = i >= 2; pill (g, b.toFloat(), primary ? orange : btn, primary ? orange : btnBorder, 8); g.setColour (primary ? juce::Colour (0xff111111) : text); g.setFont (font (13, true)); g.drawText (names[i], b, juce::Justification::centred); buttons_.push_back ({ b, i }); }
+        const bool primary = i >= 2; pill (g, b.toFloat(), primary ? accentFill : btn, primary ? accentFill : btnBorder, 8); g.setColour (primary ? onAccent : text); g.setFont (font (13, true)); g.drawText (names[i], b, juce::Justification::centred); buttons_.push_back ({ b, i }); }
     g.setColour (dim); g.setFont (font (12)); g.drawText ("ChordPro: {arrangement: " + juce::String (formatArrangement (tok_)) + "}", row.withRight (bx), juce::Justification::centredLeft, true);
 }
 void ArrangementEditor::mouseDown (const juce::MouseEvent& e) { dragFrom_ = chipAt (e.getPosition()); dragTo_ = dragFrom_; dragged_ = false; }
@@ -109,7 +109,7 @@ void ArrangementEditor::mouseUp (const juce::MouseEvent& e) {
 static juce::String mmss (double s) { if (s < 0) s = 0; int t = (int) s; return juce::String (t / 60) + ":" + juce::String (t % 60).paddedLeft ('0', 2); }
 void PracticeBar::paint (juce::Graphics& g) {
     auto& P = ed.core; auto& pl = P.practice; btn_.clear();
-    g.fillAll (juce::Colour (0xff121a24)); g.setColour (blue.withAlpha (0.6f)); g.drawHorizontalLine (0, 0, (float) getWidth());
+    g.fillAll (panel); g.setColour (accentText.withAlpha (0.6f)); g.drawHorizontalLine (0, 0, (float) getWidth());
     auto r = getLocalBounds().reduced (10, 8); int x = r.getX();
     auto button = [&] (const juce::String& t, int id, bool lit = false, int w = 0) { if (w == 0) w = (int) juce::GlyphArrangement::getStringWidth (font (12, true), t) + 22;
         juce::Rectangle<int> b (x, r.getY(), w, r.getHeight()); pill (g, b.toFloat(), lit ? blue.withAlpha (0.25f) : btn, lit ? blue : btnBorder, 8);

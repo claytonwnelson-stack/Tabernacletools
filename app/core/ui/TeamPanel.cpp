@@ -2,6 +2,7 @@
 #include "SeatSession.h"
 #include "Platform.h"
 #include "Theme.h"
+using namespace wr::theme;
 
 TeamPanel::TeamPanel (SeatSession& s) : seats_ (s) {
     for (auto* b : { &signIn_, &join_, &create_, &invite_, &revoke_, &remove_, &leave_, &delete_, &close_ }) addAndMakeVisible (*b);
@@ -104,8 +105,8 @@ void TeamPanel::layout() {
     resized(); repaint();
 }
 void TeamPanel::paint (juce::Graphics& g) {
-    g.fillAll (juce::Colours::black.withAlpha (0.6f));
-    g.setColour (juce::Colour (0xff1c1f26)); g.fillRoundedRectangle (box_.toFloat(), 14.0f);
+    g.fillAll (bg.withAlpha (0.72f));
+    g.setColour (panel); g.fillRoundedRectangle (box_.toFloat(), 14.0f);
     auto r = box_.reduced (24); g.setColour (juce::Colours::white); g.setFont (juce::FontOptions (26.0f, juce::Font::bold));
     g.drawText (hasTeam_ ? juce::String (info_.churchName) + " - church team" : "Join your church team", r.removeFromTop (36), juce::Justification::left);
     g.setFont (juce::FontOptions (16.0f)); g.setColour (juce::Colours::lightgrey);
@@ -123,7 +124,7 @@ void TeamPanel::paint (juce::Graphics& g) {
 }
 void TeamPanel::paintListBoxItem (int row, juce::Graphics& g, int w, int h, bool sel) {
     if (row < 0 || row >= (int) info_.members.size()) return; auto& m = info_.members[(size_t) row];
-    if (sel) g.fillAll (juce::Colour (0xff2e3440));
+    if (sel) g.fillAll (card);
     g.setColour (juce::Colours::white); g.setFont (juce::FontOptions (18.0f));
     g.drawText (juce::String (m.displayName) + (m.you ? "  (you)" : ""), 12, 0, w - 140, h, juce::Justification::left);
     g.setColour (m.role == "leader" ? juce::Colour (0xffffd166) : juce::Colours::grey); g.drawText (m.role == "leader" ? "LEADER" : "member", w - 130, 0, 120, h, juce::Justification::right);

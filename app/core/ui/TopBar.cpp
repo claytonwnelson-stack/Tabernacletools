@@ -28,9 +28,9 @@ void TopBar::paint (juce::Graphics& g, juce::Rectangle<int> r, int rightReserve)
         bpmPlusR_ = small ("+", 30, btn, btnBorder, clk ? dimmer : text);
         tapR_ = small ("TAP", 44, btn, btnBorder, text);
         tempoSaveR_ = {};
-        if (clk) small ("MIDI CLOCK", 86, juce::Colour (0xff0f1a12), green, green);
-        else if (clkSend && L.playing()) small ("MIDI OUT", 72, juce::Colour (0xff0f1a12), juce::Colour (0xff4aa3ff), juce::Colour (0xff4aa3ff));
-        else if (L.tempoEdited()) tempoSaveR_ = small ("SAVE " + juce::String ((int) std::round (L.storedSongBpm())) + juce::String::fromUTF8 ("â") + v, 96, orange, orange, juce::Colour (0xff111111));
+        if (clk) small ("MIDI CLOCK", 86, card, accentText, accentText);
+        else if (clkSend && L.playing()) small ("MIDI OUT", 72, card, accentText, accentText);
+        else if (L.tempoEdited()) tempoSaveR_ = small ("SAVE " + juce::String ((int) std::round (L.storedSongBpm())) + juce::String::fromUTF8 ("→") + v, 96, accentFill, accentFill, onAccent);
         x += 4;
     }
     bandR_ = {};
@@ -47,7 +47,7 @@ void TopBar::paint (juce::Graphics& g, juce::Rectangle<int> r, int rightReserve)
         if (x + w > r.getRight() - rightReserve) break;
         juce::Rectangle<int> b (x, 20, w, 24); bool cur = i == L.sectionIndex(), nx = i == L.sectionIndex() + 1, done = i < L.sectionIndex();
         const auto sc = accent (juce::String (sec.color));   // v0.8 section colour: current = filled, next = bold ring, others = thin ring
-        pill (g, b.toFloat(), cur ? sc : juce::Colour (0xff1d2230), cur || nx ? sc : sc.withAlpha (done ? 0.35f : 0.6f), 12);
+        pill (g, b.toFloat(), cur ? sc : card, cur || nx ? sc : sc.withAlpha (done ? 0.35f : 0.6f), 12);
         if (nx) { g.setColour (sc); g.drawRoundedRectangle (b.toFloat().reduced (1), 12, 2.5f); }
         g.setColour (cur ? inkOn (sc) : nx ? sc.brighter (0.3f) : done ? juce::Colour (0xff9aa3b8) : dimmer); g.setFont (font (12, true)); g.drawText (t, b, juce::Justification::centred);
         chipR_.push_back ({ b, i }); x += w + 4;

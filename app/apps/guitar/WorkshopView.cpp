@@ -20,7 +20,7 @@ WorkshopView::WorkshopView (TabernacleGuitarEditor& e) : ed (e) {
         juce::Component::unfocusAllComponents(); // deleting the pedal's knobs must not move focus onto the search field
         for (auto& l : work_.lanes) l.erase (std::remove_if (l.begin(), l.end(), [this] (const PedalDef& d) { return d.uid == selected_; }), l.end()); selected_.clear(); rebuild(); };
     reset_.onClick = [this] { for (auto& l : work_.lanes) for (auto& d : l) if (d.uid == selected_) d.params.clear(); rebuild(); };
-    saveScene_.setColour (juce::TextButton::buttonColourId, orange); saveScene_.setColour (juce::TextButton::textColourOffId, juce::Colour (0xff111111));
+    saveScene_.setColour (juce::TextButton::buttonColourId, accentFill); saveScene_.setColour (juce::TextButton::textColourOffId, onAccent);
     saveScene_.onClick = [this] { saveScene(); };
     assign_.onClick = [this] { assignMenu(); };
     saveRig_.onClick = [this] { auto& rigs = ed.proc.store.lib.rigs; bool found = false; for (auto& r : rigs) if (r.name == work_.name) { r = work_; found = true; } if (! found) rigs.push_back (work_); ed.proc.store.save(); msg_ = "Rig \"" + juce::String (work_.name) + "\" saved"; repaint(); };
@@ -204,7 +204,7 @@ void WorkshopView::paint (juce::Graphics& g) {
         int x = libArea_.getX();
         for (auto* pi : items) {
             int w = (int) juce::GlyphArrangement::getStringWidth (font (12, true), pi->name) + 20; if (x + w > libArea_.getRight()) { x = libArea_.getX(); y += 30; }
-            juce::Rectangle<int> b (x, y, w, 26); pill (g, b.toFloat(), card, pi->implemented ? cardBorder : juce::Colour (0xff3a3a3a), 8);
+            juce::Rectangle<int> b (x, y, w, 26); pill (g, b.toFloat(), card, pi->implemented ? cardBorder : line, 8);
             g.setColour (pi->implemented ? text : dimmer); g.setFont (font (12, true)); g.drawText (pi->name, b, juce::Justification::centred); libItems_.push_back ({ b, pi->type }); x += w + 6;
         }
         y += 34;
@@ -249,7 +249,7 @@ void WorkshopView::paint (juce::Graphics& g) {
             bool sel = d.uid == selected_, on = ed.proc.pedalOn (d.uid);
             const PedalInfo* info = nullptr; for (auto& pi : pedalCatalog()) if (pi.type == d.type) { info = &pi; break; }
             juce::String name = info ? juce::String (info->name) : juce::String (d.type);
-            pill (g, full.toFloat(), juce::Colour (0xff141820), sel ? orange : hue.withAlpha (0.85f), 10);
+            pill (g, full.toFloat(), card, sel ? accentText : hue.withAlpha (0.9f), 10);
             g.setColour (hue); g.fillRoundedRectangle ((float) full.getX() + 1, (float) full.getY() + 8, 5.0f, (float) full.getHeight() - 16, 2.0f);
             auto body = full.reduced (10, 4);
             auto tag = body.removeFromTop (16).removeFromLeft (34);
@@ -261,7 +261,7 @@ void WorkshopView::paint (juce::Graphics& g) {
         }
         g.restoreState();
     }
-    pill (g, ampBar_.toFloat(), juce::Colour (0xff1a1810), orange.withAlpha (0.5f), 10); g.setColour (orange); g.setFont (font (12, true));
+    pill (g, ampBar_.toFloat(), panel, accentText.withAlpha (0.7f), 10); g.setColour (accentText); g.setFont (font (12, true));
     g.drawText ("v  AMP: " + juce::String (ampSummary (work_)) + "   (tap to edit)  v", ampBar_, juce::Justification::centred, true);
     g.setColour (dimmer); g.setFont (font (10)); g.drawText ("tap = select - double-tap = bypass - drag tiles between lanes - " + msg_, laneArea_[1].translated (0, laneArea_[1].getHeight() + 2).withHeight (14), juce::Justification::left);
     // ---- editor panel

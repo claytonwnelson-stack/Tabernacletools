@@ -105,7 +105,7 @@ void CoreProcessor::tracksTick() {
 // ------------------------------------------------------------------ Live view transport bar
 void TracksBar::paint (juce::Graphics& g) {
     auto& P = ed.core; auto& t = P.tracks; btn_.clear(); const auto& L = P.live();
-    g.fillAll (juce::Colour (0xff10161f)); g.setColour (purple.withAlpha (0.6f)); g.drawHorizontalLine (0, 0, (float) getWidth());
+    g.fillAll (panel); g.setColour (accentText.withAlpha (0.6f)); g.drawHorizontalLine (0, 0, (float) getWidth());
     auto r = getLocalBounds().reduced (10, 8); int x = r.getX();
     auto button = [&] (const juce::String& s, int id, bool lit = false, int w = 0) { if (w == 0) w = (int) juce::GlyphArrangement::getStringWidth (font (12, true), s) + 22;
         juce::Rectangle<int> b (x, r.getY(), w, r.getHeight()); pill (g, b.toFloat(), lit ? purple.withAlpha (0.25f) : btn, lit ? purple : btnBorder, 8);
@@ -174,7 +174,7 @@ public:
             p->setValue (s->multitrack.stems[(size_t) i].pan, juce::dontSendNotification); p->onValueChange = [this, i, p] { edit (i, [p] (mt::Stem& st) { st.pan = (float) p->getValue(); }); }; addAndMakeVisible (p); }
         setSize (620, 44 * std::max (1, n_) + 40); }
     void paint (juce::Graphics& g) override {
-        g.fillAll (juce::Colour (0xff121822)); auto* s = ed.core.tracksSong(); if (! s) return; btn_.clear();
+        g.fillAll (panel); auto* s = ed.core.tracksSong(); if (! s) return; btn_.clear();
         g.setColour (dim); g.setFont (font (11)); g.drawText ("Mutes are remembered for this song. IN-EARS = Out 2 click/cue bus only.", 10, getHeight() - 30, getWidth() - 20, 24, juce::Justification::centredLeft);
         for (int i = 0; i < n_; ++i) { const auto& st = s->multitrack.stems[(size_t) i]; auto row = juce::Rectangle<int> (0, i * 44, getWidth(), 44).reduced (8, 6);
             g.setColour (accent (juce::String (st.color))); g.fillRoundedRectangle (row.removeFromLeft (6).toFloat(), 3); row.removeFromLeft (6);

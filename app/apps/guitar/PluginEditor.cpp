@@ -36,7 +36,7 @@ void TabernacleGuitarEditor::paint (juce::Graphics& g) {
     pill (g, juce::Rectangle<float> (18, 14, 246, 36), bg, cardBorder, 10);
     const char* names[] = { "LIVE", "SETLIST", "WORKSHOP" };
     for (int i = 0; i < 3; ++i) { auto r = tabRect (i).toFloat(); bool on = (int) page_ == i; if (on) { g.setColour (orange); g.fillRoundedRectangle (r, 7); }
-        g.setColour (on ? juce::Colour (0xff111111) : dim); g.setFont (font (12, true)); g.drawText (names[i], r, juce::Justification::centred); }
+        g.setColour (on ? onAccent : dim); g.setFont (font (12, true)); g.drawText (names[i], r, juce::Justification::centred); }
     juce::Rectangle<int> info (280, 0, getWidth() - 280 - 150, 64);
     if (page_ == Page::Live) live_->paintTopBar (g, info);
     else if (page_ == Page::Setlist) setlist_->paintTopBar (g, info);
@@ -97,7 +97,7 @@ void TunerOverlay::resized() {
 }
 void TunerOverlay::tick() { float hz = ed.proc.rig.tunerHz.load(); hzSm_ = hz > 0 ? (hzSm_ > 0 && std::abs (hz - hzSm_) < hzSm_ * 0.03f ? hzSm_ * 0.75f + hz * 0.25f : hz) : 0; repaint(); }
 void TunerOverlay::paint (juce::Graphics& g) {
-    using namespace wr::theme; g.fillAll (juce::Colour (0xf20b0e14));
+    using namespace wr::theme; g.fillAll (bg.withAlpha (0.94f));
     const float ref = ed.proc.store.lib.settings.tunerRefHz; auto rd = wr::tunerReading (hzSm_, ed.proc.rig.tunerConf.load(), ref);
     auto r = getLocalBounds(); const bool inTune = rd.valid && std::abs (rd.cents) < 3.0f;
     g.setColour (dim); g.setFont (font (16, true)); g.drawText ("TUNER - RIG MUTED", 30, 30, 400, 30, juce::Justification::left);
@@ -107,9 +107,9 @@ void TunerOverlay::paint (juce::Graphics& g) {
     g.drawText (rd.valid ? juce::String (rd.note) : juce::String ("-"), juce::Rectangle<float> (c.x - 200, c.y - 230, 400, 200), juce::Justification::centred);
     if (rd.valid) { g.setFont (font (28, true)); g.setColour (dim); g.drawText (juce::String (rd.octave), juce::Rectangle<float> (c.x + 120, c.y - 90, 60, 40), juce::Justification::left); }
     // cents meter -50..+50
-    juce::Rectangle<float> meter (c.x - 330, c.y + 10, 660, 70); g.setColour (juce::Colour (0xff161b26)); g.fillRoundedRectangle (meter, 12);
+    juce::Rectangle<float> meter (c.x - 330, c.y + 10, 660, 70); g.setColour (card); g.fillRoundedRectangle (meter, 12);
     for (int k = -50; k <= 50; k += 10) { float x = meter.getCentreX() + (float) k / 50.0f * (meter.getWidth() / 2 - 20); g.setColour (k == 0 ? green : dimmer); g.fillRect (x - (k == 0 ? 1.5f : 0.5f), meter.getY() + (k == 0 ? 6.0f : 18.0f), k == 0 ? 3.0f : 1.0f, meter.getHeight() - (k == 0 ? 12.0f : 36.0f)); }
-    if (rd.valid) { float x = meter.getCentreX() + juce::jlimit (-1.0f, 1.0f, rd.cents / 50.0f) * (meter.getWidth() / 2 - 20); g.setColour (inTune ? green : orange); g.fillRoundedRectangle (x - 5, meter.getY() - 8, 10, meter.getHeight() + 16, 5); }
+    if (rd.valid) { float x = meter.getCentreX() + juce::jlimit (-1.0f, 1.0f, rd.cents / 50.0f) * (meter.getWidth() / 2 - 20); g.setColour (inTune ? green : warn); g.fillRoundedRectangle (x - 5, meter.getY() - 8, 10, meter.getHeight() + 16, 5); }
     g.setColour (inTune ? green : text); g.setFont (font (30, true));
     g.drawText (rd.valid ? (rd.cents > 0 ? "+" : "") + juce::String (rd.cents, 1) + " cents   " + juce::String (rd.hz, 1) + " Hz" : juce::String ("play a string"), juce::Rectangle<float> (c.x - 300, c.y + 100, 600, 40), juce::Justification::centred);
     // A reference

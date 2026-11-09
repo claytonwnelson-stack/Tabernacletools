@@ -102,11 +102,11 @@ void CoreEditor::showBandPanel() { band_->setVisible (true); band_->toFront (fal
 void CoreEditor::paintOverChildren (juce::Graphics& g) {
     using namespace theme;
     { const auto w = wr::sync::healthWarning (core.health());   // v0.7: this device low / hot
-      if (! w.empty()) { auto r = juce::Rectangle<int> (0, 0, 360, 26).withCentre ({ getWidth() / 2, 78 }); pill (g, r.toFloat(), juce::Colour (0xee3a1010), juce::Colour (0xffff4d4d), 8);
+      if (! w.empty()) { auto r = juce::Rectangle<int> (0, 0, 360, 26).withCentre ({ getWidth() / 2, 78 }); pill (g, r.toFloat(), panel, clip, 8);
           g.setColour (juce::Colours::white); g.setFont (font (13, true)); g.drawText ("THIS IPAD: " + juce::String (w), r, juce::Justification::centred); } }
     if (toast_.isEmpty() || core.nowSec() > toastUntil_) return;
     auto r = juce::Rectangle<int> (0, 0, 420, 40).withCentre ({ getWidth() / 2, 96 });
-    pill (g, r.toFloat(), juce::Colour (0xee1d2230), toastSev_ ? juce::Colour (0xffff4d4d) : green, 12);
+    pill (g, r.toFloat(), panel, toastSev_ ? clip : accentText, 12);
     g.setColour (juce::Colours::white); g.setFont (font (15, true)); g.drawText (toast_, r, juce::Justification::centred);
 }
 void CoreEditor::coreTick() {

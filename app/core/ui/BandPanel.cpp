@@ -7,7 +7,7 @@ using namespace wr; using namespace wr::sync; using namespace wr::theme;
 juce::Colour BandPanel::statusColour (Member::Status s) { return s == Member::Green ? green : s == Member::Yellow ? juce::Colour (0xffffd23f) : juce::Colour (0xffff4d4d); }
 
 void BandPanel::paint (juce::Graphics& g) {
-    g.fillAll (juce::Colours::black.withAlpha (0.55f));
+    g.fillAll (bg.withAlpha (0.55f));
     auto ms = proc.sync().roster().members(); kick_.clear();
     const int rowH = 46, h = 96 + std::max (1, (int) ms.size()) * rowH;
     box_ = getLocalBounds().withSizeKeepingCentre (std::min (760, getWidth() - 40), std::min (h, getHeight() - 40));
@@ -35,7 +35,7 @@ void BandPanel::paint (juce::Graphics& g) {
         { auto pr = row.withX (row.getX() + 370).withWidth (96); const auto& h = m.health;   // v0.7 battery / thermal
           juce::String t = h.batteryPct >= 0 ? juce::String (h.batteryPct) + "%" + (h.charging ? " +" : "") : juce::String ("-");
           if (h.thermal >= 1) t << (h.thermal >= 3 ? "  CRIT" : h.thermal == 2 ? "  HOT" : "  warm");
-          g.setColour (m.healthSev >= 2 ? juce::Colour (0xffff4d4d) : m.healthSev == 1 ? orange : text); g.drawText (t, pr.withTrimmedBottom (m.warning().empty() ? 0 : 16), juce::Justification::centredLeft);
+          g.setColour (m.healthSev >= 2 ? clip : m.healthSev == 1 ? warn : text); g.drawText (t, pr.withTrimmedBottom (m.warning().empty() ? 0 : 16), juce::Justification::centredLeft);
           if (! m.warning().empty()) { g.setFont (font (10)); g.drawText (juce::String (m.warning()), pr.withTrimmedTop (24).withWidth (200), juce::Justification::centredLeft, true); g.setFont (font (13)); }
           g.setColour (text); }
         g.drawText (m.connected ? juce::String (m.section.empty() ? "-" : m.section) : juce::String (m.reason), row.withX (row.getX() + 470).withWidth (row.getWidth() - 470 - 96).withTrimmedBottom (m.reason.empty() ? 0 : 16), juce::Justification::centredLeft, true);

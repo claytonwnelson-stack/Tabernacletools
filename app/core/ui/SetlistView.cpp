@@ -12,7 +12,7 @@ SetlistView::SetlistView (CoreEditor& e) : ed (e) {
     date_.setTextToShowWhenEmpty ("YYYY-MM-DD", dimmer); name_.setTextToShowWhenEmpty ("Set name", dimmer);
     for (auto* b : { &save_, &goLive_, &import_, &paste_, &hymnal_, &sets_, &export_, &players_, &backups_ }) addAndMakeVisible (*b);
     export_.onClick = [this] { if (ed.requireAccess (wr::Feature::ShareSetlist)) exportMenu(); }; players_.onClick = [this] { if (ed.requireAccess (wr::Feature::Edit)) playersMenu(); }; backups_.onClick = [this] { backupsMenu(); };
-    goLive_.setColour (juce::TextButton::buttonColourId, orange); goLive_.setColour (juce::TextButton::textColourOffId, juce::Colour (0xff111111));
+    goLive_.setColour (juce::TextButton::buttonColourId, accentFill); goLive_.setColour (juce::TextButton::textColourOffId, onAccent);
     save_.onClick = [this] { if (ed.requireAccess (wr::Feature::Edit)) saveSet(); };
     goLive_.onClick = [this] { if (! ed.requireAccess (wr::Feature::LiveView)) return; saveSet(); ed.core.goLive (working_.date, 0); ed.showLive(); };
     import_.onClick = [this] { if (ed.requireAccess (wr::Feature::Import)) importChart(); };
@@ -100,7 +100,7 @@ void SetlistView::paint (juce::Graphics& g) {
         g.setColour (text); g.setFont (font (15, true)); g.drawText (s.chart.title, row.reduced (12, 0).withTrimmedRight (120), juce::Justification::centredLeft, true);
         g.setColour (dim); g.setFont (font (11, true)); g.drawText ("KEY " + juce::String (s.chart.key) + "  BPM " + juce::String ((int) s.chart.bpm), row.reduced (12, 0).withTrimmedRight (30), juce::Justification::centredRight);
         bool inSet = std::any_of (working_.entries.begin(), working_.entries.end(), [&] (const SetlistEntry& e) { return e.songId == s.id; });
-        g.setColour (inSet ? green : orange); g.setFont (font (18, true)); g.drawText (inSet ? "v" : "+", row.withTrimmedLeft (row.getWidth() - 30), juce::Justification::centred);
+        g.setColour (inSet ? accentText : accentFill); g.setFont (font (18, true)); g.drawText (inSet ? "v" : "+", row.withTrimmedLeft (row.getWidth() - 30), juce::Justification::centred);
         libRows_.push_back ({ row, i }); y += 52;
     }
     // ---- set
@@ -109,7 +109,7 @@ void SetlistView::paint (juce::Graphics& g) {
     for (int i = 0; i < (int) working_.entries.size(); ++i) {
         auto& e = working_.entries[(size_t) i]; auto* s = lib.song (e.songId); juce::Rectangle<int> row (setArea_.getX(), y, setArea_.getWidth(), 58);
         bool dragging = i == dragFrom_; if (dragTo_ >= 0 && dragFrom_ >= 0 && i == dragTo_) { g.setColour (pink); g.fillRect (row.getX(), row.getY() - 2, row.getWidth(), 3); }
-        pill (g, row.toFloat().reduced (0, 4), dragging ? juce::Colour (0xff2b2210) : card, dragging ? orange : cardBorder, 12);
+        pill (g, row.toFloat().reduced (0, 4), dragging ? accentFill.withAlpha (0.35f) : card, dragging ? accentText : cardBorder, 12);
         g.setColour (dimmer); g.setFont (font (18, true)); g.drawText ("=", row.withWidth (34), juce::Justification::centred);
         g.setColour (dim); g.setFont (font (14, true)); g.drawText (juce::String (i + 1), row.withX (row.getX() + 34).withWidth (24), juce::Justification::centred);
         g.setColour (text); g.setFont (font (16, true)); g.drawText (s ? juce::String (s->chart.title) : juce::String ("(missing song)"), row.withTrimmedLeft (66).withTrimmedRight (300), juce::Justification::centredLeft, true);
@@ -117,7 +117,7 @@ void SetlistView::paint (juce::Graphics& g) {
         auto tags = row.withTrimmedLeft (row.getWidth() - 300).reduced (8, 16); auto pl = [&] (const juce::String& k, const juce::String& v, int w, juce::Colour c) { auto b = tags.removeFromLeft (w); tags.removeFromLeft (6); pill (g, b.toFloat(), btn, btnBorder, 7); g.setColour (dim); g.setFont (font (11)); g.drawText (k, b.withTrimmedLeft (6), juce::Justification::centredLeft); g.setColour (c); g.setFont (font (12, true)); g.drawText (v, b.withTrimmedRight (6), juce::Justification::centredRight); };
         pl ("KEY", juce::String (key) + (e.keyOverride.empty() ? "" : "*"), 70, e.keyOverride.empty() ? text : orange);
         pl ("BPM", juce::String ((int) (e.bpmOverride > 0 ? e.bpmOverride : (s ? s->chart.bpm : 0))), 74, text);
-        pl ("", e.role == "sing" ? "Sing+Play" : "Lead/Tabs", 100, e.role == "sing" ? blue : pink);
+        pl ("", e.role == "sing" ? "Sing+Play" : "Lead/Tabs", 100, e.role == "sing" ? accentText : accentFill);
         { auto rt = wr::recentText (lib, e.songId, working_.date.empty() ? CoreProcessor::today() : working_.date);   // v0.8 song stats: played recently
           if (! rt.empty()) { g.setColour (orange); g.setFont (font (11, true)); g.drawText (juce::String (rt).toUpperCase(), row.withTrimmedLeft (66).withTrimmedRight (300).withTrimmedTop (34).withHeight (16), juce::Justification::centredLeft, true); } }
         setRows_.push_back ({ row, i }); y += 58;
@@ -134,7 +134,7 @@ void SetlistView::paint (juce::Graphics& g) {
         float w = (row.getWidth() - 18) / 4.0f;
         for (int s = 0; s < 4; ++s) {
             auto& sw = ctl[(size_t) u].sw[s]; juce::Rectangle<int> b ((int) (row.getX() + s * (w + 6)), row.getY(), (int) w, row.getHeight());
-            pill (g, b.toFloat(), juce::Colour (0xff171b25), cardBorder, 10);
+            pill (g, b.toFloat(), card, cardBorder, 10);
             juce::String bind = sw.press.kind == MidiBinding::CC ? "CC " + juce::String (sw.press.number) : sw.press.kind == MidiBinding::PC ? "PC " + juce::String (sw.press.number) : sw.press.kind == MidiBinding::Note ? "Note " + juce::String (sw.press.number) : juce::String ("unmapped");
             g.setColour (orange); g.setFont (font (12, true)); g.drawText (juce::String::charToString ((juce::juce_wchar) ('A' + s)) + "  " + juce::String (sw.action), b.reduced (8, 4).removeFromTop (22), juce::Justification::centredLeft, true);
             g.setColour (dim); g.setFont (font (10, true)); g.drawText (bind + (sw.longAction.empty() || sw.longAction == sw.action ? juce::String() : "  - long: " + juce::String (sw.longAction)), b.reduced (8, 4).removeFromBottom (18), juce::Justification::centredLeft, true);
