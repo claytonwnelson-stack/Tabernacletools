@@ -109,8 +109,8 @@ void RigPanel::paint (juce::Graphics& g) {
       bool lit[4] = { false, L.boostOn(), L.switchCOn(), L.switchDOn() }; Action::Type a[4] = { Action::Tap, Action::Boost, Action::SwitchC, Action::SwitchD }; drawUnit ("guitar", n, s, lit, a); }
     unitHdr ("SECTIONS (Chocolate Plus) - " + chName ("section"), "spare in bag");
     { const auto& c = L.chart(); int i = L.sectionIndex(); juce::String nx = i + 1 < (int) c.sections.size() ? "-> " + juce::String (c.sections[(size_t) i + 1].name).toUpperCase() : juce::String ("LAST SECTION");
-      juce::String n[4] = { "< Prev", "Next >", "Chorus", "Next Song" }; juce::String s[4] = { "SECTION", nx, "JUMP / LONG", "HOLD = PREV" };
-      bool lit[4] = { false, false, false, false }; Action::Type a[4] = { Action::PrevSection, Action::NextSection, Action::JumpChorus, Action::NextSong };
+      juce::String n[4] = { "Play", "Next >", "Chorus", "Next Song" }; juce::String s[4] = { "HOLD: STOP", nx, "JUMP / LONG", "HOLD = PREV" };
+      bool lit[4] = { false, false, false, false }; Action::Type a[4] = { Action::PlayStart, Action::NextSection, Action::JumpChorus, Action::NextSong };
       const auto tg = wr::sectionSwitchTargets (c, i, L.pass()); uint32_t col[4] = { 0, 0, 0, 0 }; const int idx[3] = { tg.prev, tg.next, tg.chorus };
       for (int k = 0; k < 3; ++k) if (idx[k] >= 0) col[k] = wr::colorArgbOr (wr::effectiveSectionColor (c.sections[(size_t) idx[k]], P.store.lib.settings.sectionColors), 0xff8a93a6);
       if (tg.chorus < 0) s[2] = "NO CHORUS";
@@ -124,11 +124,31 @@ void RigPanel::paint (juce::Graphics& g) {
     bar ("Input", std::sqrt (P.rig.inLevel.load()), m.removeFromLeft (m.getWidth() / 2)); bar ("Output", std::sqrt (std::max (P.rig.outPeakPre.load(), P.rig.outPeakPost.load())), m);
 }
 
+void RigPanel::mouseDown (const juce::MouseEvent& e) {
+    held_ = -1; heldLong_ = false;
+    for (int i = 0; i < (int) switches_.size(); ++i)
+        if (switches_[(size_t) i].first.contains (e.position) && switches_[(size_t) i].second == wr::Action::PlayStart) {
+            held_ = i; heldAt_ = juce::Time::getMillisecondCounterHiRes(); startTimerHz (20); return;
+        }
+}
+void RigPanel::timerCallback() {
+    if (held_ < 0 || heldLong_) return;
+    if (juce::Time::getMillisecondCounterHiRes() - heldAt_ >= 700.0) { // same 0.7 s as the section footswitch
+        heldLong_ = true; wr::Action a; a.type = wr::Action::TransportStop; ed.proc.live().handle (a, ed.proc.nowSec()); repaint();
+    }
+}
 void RigPanel::mouseUp (const juce::MouseEvent& e) {
+    stopTimer();
     auto& P = ed.proc; auto p = e.position;
-    for (auto& t : tiles_) if (t.first.contains (p)) { P.setPedal (t.second, ! P.pedalOn (t.second)); repaint(); return; } // tap tile = toggle
+    for (auto& t : tiles_) if (t.first.contains (p)) { P.setPedal (t.second, ! P.pedalOn (t.second)); held_ = -1; repaint(); return; } // tap tile = toggle
     for (auto& c : ctl_) if (c.first.contains (p)) { auto& L = P.live();
         if (c.second == 0) L.setClickOn (! L.clickOn()); else if (c.second == 1) L.toggleClickMute(); else if (c.second == 2) L.setTunerOpen (true); else P.sync().requestPlay (! L.playing(), P.nowSec());
-        repaint(); return; }
-    for (auto& s : switches_) if (s.first.contains (p)) { Action a; a.type = s.second; P.live().handle (a, P.nowSec()); repaint(); return; } // on-screen footswitch
+        held_ = -1; repaint(); return; }
+    for (int i = 0; i < (int) switches_.size(); ++i) if (switches_[(size_t) i].first.contains (p)) {
+        if (switches_[(size_t) i].second == wr::Action::PlayStart) {
+            if (! heldLong_) { wr::Action a; a.type = wr::Action::PlayStart; P.live().handle (a, P.nowSec()); } // a long hold already sent Stop
+        } else { wr::Action a; a.type = switches_[(size_t) i].second; P.live().handle (a, P.nowSec()); }
+        held_ = -1; repaint(); return;
+    }
+    held_ = -1;
 }

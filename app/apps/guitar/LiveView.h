@@ -4,13 +4,16 @@
 #include "TopBar.h"
 
 // Rig (right): pedal tiles with LEDs + the two Chocolate Plus units with cues and next-switch highlight.
-class RigPanel : public juce::Component {
+class RigPanel : public juce::Component, private juce::Timer {
 public:
     explicit RigPanel (TabernacleGuitarEditor& e) : ed (e) {}
     void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
     void mouseUp (const juce::MouseEvent&) override;
+    void timerCallback() override;
 private:
     TabernacleGuitarEditor& ed;
+    int held_ = -1; double heldAt_ = 0; bool heldLong_ = false;
     std::vector<std::pair<juce::Rectangle<float>, std::string>> tiles_;
     std::vector<std::pair<juce::Rectangle<float>, wr::Action::Type>> switches_;
     std::vector<std::pair<juce::Rectangle<float>, int>> ctl_; // 0 click on/off, 1 click mute, 2 tuner, 3 play/stop

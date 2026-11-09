@@ -82,8 +82,8 @@ void ChartView::paint (juce::Graphics& g) {
 }
 void ChartView::paintChart (juce::Graphics& g) {
     auto& L = ed.core.live(); const Chart& c = L.chart(); const auto& st = ed.core.store.lib.settings;
-    const float k = stageTextScale (st);   // v0.8 dark stage mode: black, larger text (everything drawn at k x)
-    g.fillAll (st.stageMode ? juce::Colours::black : bg);
+    const float k = stageTextScale (st);
+    g.fillAll (bg);
     if (k != 1.0f) g.addTransform (juce::AffineTransform::scale (k));
     auto area = (getLocalBounds().toFloat() / k).reduced (18, 14);
     // NEXT banner with the switch to press

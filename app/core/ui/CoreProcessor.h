@@ -178,6 +178,6 @@ private:
     void tracksTick();
     wr::mt::MultitrackLive tracksLive_ { tracks }; std::string tracksSongId_; int tracksArrVersion_ = -1; std::vector<float> cueBuf_;
     juce::File lastTake_; bool wasPlaying_ = false; std::string loggedKey_;
-    std::set<std::string> ttsRequested_; int cueSeqSent_ = -1; double cueSentAt_ = 0; int prerenderTick_ = 0, saveCounter_ = 0;
+    std::set<std::string> ttsRequested_; int cueSeqSent_ = -1; double cueSentAt_ = 0; int prerenderTick_ = 0, saveCounter_ = 0, midiScan_ = 50;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CoreProcessor)
 };

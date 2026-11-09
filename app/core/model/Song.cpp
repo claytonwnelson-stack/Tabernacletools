@@ -16,7 +16,12 @@ bool MidiBinding::matches (int st, int d1, int profileCh) const {
     if (kind == None) return false;
     int ch = (st & 0x0F) + 1, type = st & 0xF0, want = channel > 0 ? channel : profileCh;
     if (ch != want) return false;
-    if (kind == CC) return type == 0xB0 && d1 == number;
+    if (kind == CC && type == 0xB0) {
+        if (d1 == number) return true;
+        // Chocolate "Manufacturer Control" (CubeSuite) sends CC 20-23. The built-in
+        // map is CC 80-83. Treat those as the same four switches.
+        return number >= 80 && number <= 83 && d1 == number - 60;
+    }
     if (kind == PC) return type == 0xC0 && d1 == number;
     return (type == 0x90 || type == 0x80) && d1 == number;
 }
@@ -147,6 +152,13 @@ ControllerProfile controllerFromJson (const Json& j) {
     for (int i = 0; i < 4; ++i) { auto& o = j["switches"][(size_t) i]; c.sw[i].press = bindFrom (o["press"]); c.sw[i].longPress = bindFrom (o["long"]); c.sw[i].action = o["action"].str(); c.sw[i].longAction = o["longAction"].str(); c.sw[i].longMs = o["longMs"].integer (0); }
     for (auto& o : j["banks"].items()) { ControllerProfile::Bank b; b.name = o["name"].str(); for (int i = 0; i < 4; ++i) { b.action[i] = o["actions"][(size_t) i].str(); b.longAction[i] = o["long"][(size_t) i].str(); } c.banks.push_back (b); }
     c.bank = c.banks.empty() ? 0 : std::clamp (j["bank"].integer (0), 0, (int) c.banks.size() - 1);
+    // Saved libraries still have section switch A as "previous section". That button is Play, hold = Stop.
+    if (c.role == "section") {
+        auto fix = [] (std::string& act, std::string& lng) { if (act == "prevSection" && lng.empty()) { act = "playStart"; lng = "stop"; } };
+        fix (c.sw[0].action, c.sw[0].longAction);
+        if (c.sw[0].longAction == "stop" && c.sw[0].longMs <= 0) c.sw[0].longMs = 700;
+        for (auto& b : c.banks) fix (b.action[0], b.longAction[0]);
+    }
     return c;
 }
 Json toJson (const Library& l) {
@@ -188,7 +200,8 @@ Library libraryFromJson (const Json& j) {
     l.settings.deviceName = st["deviceName"].str ("Tabernacle Tools"); l.settings.lastLeaderHost = st["leaderHost"].str(); l.settings.lastLeaderPort = st["leaderPort"].integer(); l.settings.useLink = st["link"].boolean (false);
     l.settings.projector = projectorSettingsFromJson (st["projector"]);
     { int o = st["oversampling"].integer (4); l.settings.ampOversampling = o >= 8 ? 8 : o >= 4 ? 4 : o >= 2 ? 2 : 1; l.settings.autoOversampling = st["osAuto"].boolean (true); }
-    l.settings.stageMode = st["stageMode"].boolean (false); l.settings.autoScroll = st["autoScroll"].boolean (true); l.settings.recordClick = st["recordClick"].boolean (false); l.settings.repeatWarnDays = st["repeatWarnDays"].integer (21); l.settings.trackJumpAt = std::clamp (st["trackJumpAt"].integer (0), 0, 1);
+    l.settings.stageMode = false; // saved "dark stage mode" is ignored; the app has one dark look
+    l.settings.autoScroll = st["autoScroll"].boolean (true); l.settings.recordClick = st["recordClick"].boolean (false); l.settings.repeatWarnDays = st["repeatWarnDays"].integer (21); l.settings.trackJumpAt = std::clamp (st["trackJumpAt"].integer (0), 0, 1);
     for (auto& e : j["playLog"].items()) l.playLog.push_back ({ e["song"].str(), e["date"].str() });
     for (auto& e : j["usageLog"].items()) { UsageEntry u; u.date = e["date"].str(); u.songId = e["song"].str(); u.title = e["title"].str(); u.ccliNumber = e["ccli"].str();
         u.authors = e["authors"].str(); u.setlist = e["setlist"].str(); u.publicDomain = e["pd"].boolean(); u.projected = e["projected"].boolean(); u.chart = e["chart"].boolean(); l.usageLog.push_back (u); }
@@ -213,7 +226,11 @@ void enableDefaultBanks (ControllerProfile& c) {
         for (int i = 0; i < 4; ++i) { b.action[i] = x[i]; b.longAction[i] = y[i]; } a.longAction[2] = "bankNext"; }
     c.banks = { a, b }; c.bank = 0;
 }
-ControllerProfile defaultSectionUnit() { const char* a[4] = { "prevSection", "nextSection", "jumpChorus", "nextSong" }; const char* la[4] = { "", "", "jumpChorus", "prevSong" }; return chocolate ("Chocolate Plus - Sections", "section", 2, a, la); }
+ControllerProfile defaultSectionUnit() {
+    const char* a[4] = { "playStart", "nextSection", "jumpChorus", "nextSong" }; const char* la[4] = { "stop", "", "jumpChorus", "prevSong" };
+    auto c = chocolate ("Chocolate Plus - Sections", "section", 2, a, la); c.sw[0].longMs = 700; // tap = start, hold ~0.7 s = stop (release does not also start)
+    return c;
+}
 ControllerProfile defaultGuitarUnit() { const char* a[4] = { "tap", "boost", "switchC", "switchD" }; const char* la[4] = { "tunerToggle", "", "", "clickMute" };
     // A: tap fires on press (tempo-accurate), hold 1 s opens the tuner. D: short = per-song D (on release), hold 0.6 s = click mute.
     auto c = chocolate ("Chocolate Plus - Guitar", "guitar", 1, a, la); c.sw[0].longMs = 1000; c.sw[3].longMs = 600; return c; }

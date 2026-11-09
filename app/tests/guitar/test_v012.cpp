@@ -117,6 +117,22 @@ static void testRigIntegration() {
     if (auto* c = rig.currentChain()) for (auto& lane : c->lanes) for (auto& s : lane) if (s.pedal->oversamples()) CHECK (s.pedal->oversampling() == 8);
 }
 
+// Direct-to-PA amp at 48 kHz (iPad rate). The old safety limiter hard-clipped at this
+// rate, after the oversampler, so a loud model left inharmonic energy near the harmonics.
+static void testAmpDirectAlias() {
+    auto measure = [] (int factor) {
+        auto p = createPedal ("amp");
+        p->setParam ("model", 5.0f); p->setParam ("gain", 1.0f); p->setParam ("master", 0.85f);
+        p->setParam ("output", 0.0f); p->setParam ("level", 0.0f); p->setParam ("cab", 1.0f);
+        return aliasing (*p, factor, 400, 0.2f); // ~1.2 kHz, guitar-like level, full modern gain
+    };
+    const auto off = measure (1), at4 = measure (4);
+    const double rel1 = off.inharmDb - off.harmDb, rel4 = at4.inharmDb - at4.harmDb;
+    std::printf ("  amp direct-to-PA @48 kHz: aliasing %.1f dB below harmonics at 1x, %.1f dB at 4x\n", -rel1, -rel4);
+    CHECK (rel4 < rel1 - 6.0);          // oversampling still helps the preamp
+    CHECK (rel4 < -20.0);               // and the output is not a base-rate hard clip
+}
+
 static void testSettingsJson() {
     Library l; CHECK (l.settings.ampOversampling == 4); CHECK (l.settings.autoOversampling);
     l.settings.ampOversampling = 8; l.settings.autoOversampling = false;
@@ -139,7 +155,7 @@ static void testCpu() {
 }
 
 int main() {
-    testOversamplerFilters(); testAliasReduction(); testCleanBlendAligned(); testGovernor(); testRigIntegration(); testSettingsJson(); testCpu();
+    testOversamplerFilters(); testAliasReduction(); testAmpDirectAlias(); testCleanBlendAligned(); testGovernor(); testRigIntegration(); testSettingsJson(); testCpu();
     std::printf ("v0.12: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

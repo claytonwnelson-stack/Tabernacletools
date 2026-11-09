@@ -2,6 +2,7 @@
 #include "model/Ccli.h"
 #include "Platform.h"
 #include "ProjectorView.h"
+#include <juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h>
 
 using namespace wr;
 #if __has_include (<VoiceData.h>)
@@ -214,6 +215,15 @@ void CoreProcessor::practiceTick() {
 
 // ------------------------------------------------------------------ message thread
 void CoreProcessor::timerCallback() {
+    // Standalone iOS/macOS: open every USB MIDI input, including one plugged in after launch.
+    // The AUv3 host delivers MIDI itself (no standalone holder). Empty-id callback in JUCE
+    // already feeds processBlock once a device is enabled, so this does not double-fire.
+    if (++midiScan_ >= 50) { midiScan_ = 0;
+        if (auto* holder = juce::StandalonePluginHolder::getInstance())
+            for (auto& d : juce::MidiInput::getAvailableDevices())
+                if (! holder->deviceManager.isMidiInputDeviceEnabled (d.identifier))
+                    holder->deviceManager.setMidiInputDeviceEnabled (d.identifier, true);
+    }
     Action a; const double now = nowSec();
     { static int t = 0; if (++t >= 100) { t = 0; refreshAccess();   // ~1 s: trial / subscription expiry
         if (! fullAccess() && projector_ && projector_->externalOn()) projector_->showExternal (false); } }   // v0.12: projector locks on lapse

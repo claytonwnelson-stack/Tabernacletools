@@ -6,12 +6,13 @@
 using namespace wr;
 
 static const char* kAssignable[] = { "", "prevSection", "nextSection", "jumpChorus", "nextSong", "prevSong", "tap", "boost", "switchC", "switchD",
-                                     "tunerToggle", "toggleView", "clickMute", "clickToggle", "play", "bankNext", "bankPrev",
+                                     "tunerToggle", "toggleView", "clickMute", "clickToggle", "play", "playStart", "stop", "bankNext", "bankPrev",
                                      "tracksPlay", "tracksNext", "tracksLoop", "tracksStop" };
 static juce::String actionLabel (const std::string& a) {
     static const std::pair<const char*, const char*> n[] = { { "", "(nothing)" }, { "prevSection", "Previous section" }, { "nextSection", "Next section" }, { "jumpChorus", "Jump to chorus" },
         { "nextSong", "Next song" }, { "prevSong", "Previous song" }, { "tap", "Tap tempo" }, { "boost", "Boost" }, { "switchC", "Song switch C" }, { "switchD", "Song switch D" },
         { "tunerToggle", "Tuner" }, { "toggleView", "Full / section view" }, { "clickMute", "Mute click" }, { "clickToggle", "Click on / off" }, { "play", "Play / stop" },
+        { "playStart", "Start / play" }, { "stop", "Stop" },
         { "bankNext", "Next bank" }, { "bankPrev", "Previous bank" },
         { "tracksPlay", "Tracks: play / stop" }, { "tracksNext", "Tracks: next section" }, { "tracksLoop", "Tracks: loop section (vamp)" }, { "tracksStop", "Tracks: stop" } };
     for (auto& p : n) if (a == p.first) return p.second; return juce::String (a);
@@ -48,7 +49,6 @@ void wr::ui::addFootswitchMenu (CoreEditor& ed, juce::PopupMenu& m, int u, int s
 void wr::ui::addV08Settings (CoreEditor& ed, juce::PopupMenu& m, juce::Component* anchor) {
     CoreEditor* e = &ed; auto& s = ed.core.store.lib.settings; juce::Component::SafePointer<juce::Component> sp (anchor);
     juce::PopupMenu v;
-    v.addItem ("Dark stage mode (black, high contrast, larger chart text)", true, s.stageMode, [e] { auto& st = e->core.store.lib.settings; st.stageMode = ! st.stageMode; e->core.store.save(); e->repaint(); });
     v.addItem ("Auto-scroll the chart with the bar position while playing", true, s.autoScroll, [e] { auto& st = e->core.store.lib.settings; st.autoScroll = ! st.autoScroll; e->core.store.save(); });
     m.addSubMenu ("Stage view", v);
     { juce::PopupMenu c;   // v0.15 CCLI song-usage log (manual entry on CCLI's site; nothing is sent automatically)

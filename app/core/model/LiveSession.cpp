@@ -62,7 +62,8 @@ void LiveSession::followCue (int idx, int pass, bool speak) {
 void LiveSession::followPlay (bool on, int ci, double now) {
     if (playing_ && ! on && inLastSection()) songEnded_ = true;   // the leader's song ran off its end
     playing_ = on; lastTick_ = now;
-    if (on) { beatPos_ = -(double) ci; if (ci > 0) sink_.countIn (ci, lib_.settings.countInSpoken); }
+    if (on) { if (! clickOn_) { clickHeldOff_ = true; setClickOn (true); } beatPos_ = -(double) ci; if (ci > 0) sink_.countIn (ci, lib_.settings.countInSpoken); }
+    else { sink_.countIn (0, false); if (clickHeldOff_) { clickHeldOff_ = false; setClickOn (false); } }
     ++version_;
 }
 int LiveSession::countInBeatsForSong() const {
@@ -155,7 +156,10 @@ void LiveSession::toggleClickMute() { lib_.settings.clickMuted = ! lib_.settings
 void LiveSession::setTunerOpen (bool open) { if (open == tunerOpen_) return; tunerOpen_ = open; sink_.setTunerOpen (open); ++version_; }
 void LiveSession::setPlaying (bool p, double now) {
     playing_ = p; lastTick_ = now;
-    if (p) { const int ci = countInBeatsForSong(); beatPos_ = -(double) ci; sink_.restartBeat(); if (ci > 0) sink_.countIn (ci, lib_.settings.countInSpoken); } // auto-advance starts after the count-in
+    // Count-in clicks even when the metronome switch is off, then that override ends.
+    // If the switch was off, Play turns it on for the song and Stop puts it back.
+    if (p) { if (! clickOn_) { clickHeldOff_ = true; setClickOn (true); } const int ci = countInBeatsForSong(); beatPos_ = -(double) ci; sink_.restartBeat(); if (ci > 0) sink_.countIn (ci, lib_.settings.countInSpoken); }
+    else { sink_.countIn (0, false); if (clickHeldOff_) { clickHeldOff_ = false; setClickOn (false); } }
     ++version_;
 }
 
@@ -163,7 +167,7 @@ void LiveSession::handle (const Action& a, double now) {
     const Song* s = song(); const int nSec = (int) chart_.sections.size();
     if (following_) switch (a.type) { // the leader drives position, tempo and transport
         case Action::NextSection: case Action::PrevSection: case Action::JumpChorus: case Action::GotoSection: case Action::NextSong:
-        case Action::PrevSong: case Action::Tap: case Action::Play: case Action::TransportStart: case Action::ClockBpm: return;
+        case Action::PrevSong: case Action::Tap: case Action::Play: case Action::PlayStart: case Action::TransportStart: case Action::ClockBpm: return;
         default: break; }
     switch (a.type) {
         case Action::NextSection: {
@@ -194,6 +198,7 @@ void LiveSession::handle (const Action& a, double now) {
         case Action::ClickMute: toggleClickMute(); break;
         case Action::ClickToggle: setClickOn (! clickOn_); break;
         case Action::Play: setPlaying (! playing_, now); break;
+        case Action::PlayStart: if (! playing_) setPlaying (true, now); break; // short press starts; it does not stop
         case Action::TransportStart: // external MIDI Start/Continue: follow transport + align the click
             if (! playing_) setPlaying (true, now); else { sink_.restartBeat(); if (beatPos_ < 0) beatPos_ = 0; lastTick_ = now; }
             break;

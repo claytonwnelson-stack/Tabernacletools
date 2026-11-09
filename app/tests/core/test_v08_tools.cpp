@@ -83,7 +83,7 @@ static void testBundle() {
     auto txt = exportBundle (L, "Tabernacle Tools - Electric Guitar", 1790000000);
     CHECK (txt.find ("\"format\":\"worship-rig-backup\"") != S::npos || txt.find ("worship-rig-backup") != S::npos);
     Library R = seedLibrary(); auto rep = importBundle (txt, R, ImportMode::Replace); CHECK (rep.ok); CHECK_EQ (rep.songs, (int) L.songs.size());
-    CHECK (R.settings.stageMode); CHECK (! R.settings.autoScroll); CHECK_EQ (R.settings.sectionColors["verse"], S ("teal")); CHECK_EQ ((int) R.playLog.size(), 1); CHECK_EQ ((int) R.controllers[0].banks.size(), 2);
+    CHECK (! R.settings.stageMode); CHECK (! R.settings.autoScroll); CHECK_EQ (R.settings.sectionColors["verse"], S ("teal")); CHECK_EQ ((int) R.playLog.size(), 1); CHECK_EQ ((int) R.controllers[0].banks.size(), 2);
     CHECK_EQ (R.setlists[0].entries[0].keyOverride, S ("Bb"));
     // merge keeps local, adds missing, skips existing
     Library M = seedLibrary(); M.settings.stageMode = false; Song mine; mine.id = "m"; mine.chart.title = "Mine"; M.songs.push_back (mine);
@@ -94,7 +94,7 @@ static void testBundle() {
     Library J = seedLibrary(); auto bad = importBundle ("{\"hello\":1}", J, ImportMode::Replace); CHECK (! bad.ok); CHECK (! bad.error.empty()); CHECK (! importBundle ("not json", J, ImportMode::Merge).ok);
     CHECK (! importBundle ("{\"format\":\"worship-rig-backup\",\"bundleVersion\":9,\"library\":{}}", J, ImportMode::Merge).ok);
     CHECK_EQ ((int) J.songs.size(), (int) seedLibrary().songs.size());   // failed import leaves the library alone
-    CHECK_EQ (stageTextScale (L.settings), 1.35f); CHECK_EQ (stageTextScale (AppSettings()), 1.0f);
+    CHECK_EQ (stageTextScale (L.settings), 1.0f); CHECK_EQ (stageTextScale (AppSettings()), 1.0f);
 }
 static unsigned rd (FILE* f, int n) { unsigned v = 0; for (int i = 0; i < n; ++i) v |= (unsigned) std::fgetc (f) << (8 * i); return v; }
 static void testRecorder() {

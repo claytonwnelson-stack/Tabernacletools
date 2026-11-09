@@ -33,5 +33,5 @@ float autoScrollOffset (float sectionTop, float sectionHeight, double progress, 
 double sectionProgress (double beatInSection, int beatsPerBar, int bars, int repeat = 1); // 0..1 (0 when bars unknown)
 
 // ---- stage mode
-inline float stageTextScale (const AppSettings& s) { return s.stageMode ? 1.35f : 1.0f; }
+inline float stageTextScale (const AppSettings&) { return 1.0f; } // dark stage-mode zoom removed; one appearance
 } // namespace wr

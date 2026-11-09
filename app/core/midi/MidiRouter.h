@@ -12,7 +12,8 @@ struct Action {
                           GotoSection, ClockBpm, TransportStart, TransportStop, Learned, ClickMute, ClickToggle, Play,
                           BankNext, BankPrev, BankChanged /* v0.8: value = new bank, unit = unit */,
                           TracksPlay, TracksNext, TracksLoop, TracksStop /* v0.14 backing tracks */,
-                          SongPosition /* v0.17: MIDI SPP -> value = MIDI beats (16ths) */ } type = None;
+                          SongPosition /* v0.17: MIDI SPP -> value = MIDI beats (16ths) */,
+                          PlayStart /* short press: start if stopped; does not stop */ } type = None;
     int value = 0; double bpm = 0; int unit = -1, sw = -1;
 };
 Action::Type actionFromName (const std::string& n);

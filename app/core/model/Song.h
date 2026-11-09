@@ -137,7 +137,7 @@ struct AppSettings {
     bool useLink = false;                     // Ableton Link (off: Clayton chose MIDI clock + Wi-Fi sync; WR_WITH_LINK defaults OFF)
     ProjectorSettings projector;
     SectionColorMap sectionColors;            // v0.8 per-kind default colours (only kinds changed from the built-ins)
-    bool stageMode = false;                   // v0.8 dark stage mode: extra-dim, high-contrast, larger chart text
+    bool stageMode = false;                   // ignored: one dark appearance (old libraries may still contain the key)
     bool autoScroll = true;                   // v0.8 full-song view scrolls with the bar position (not only per section)
     bool recordClick = false;                 // v0.8 rehearsal recorder: add the click as a 2nd channel
     int repeatWarnDays = 21;                  // v0.8 song stats: flag a song played within this many days

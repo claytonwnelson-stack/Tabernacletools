@@ -151,7 +151,7 @@ private:
     bool following_ = false;
     bool followColors_ = false; SectionColorMap followDefaults_; std::map<std::string, std::vector<std::string>> followSongColors_;
     int pendingIdx_ = -1, pendingPass_ = 1, cueSeq_ = 0;
-    bool clickOn_ = false, tunerOpen_ = false, playing_ = false, settingsDirty_ = false; double beatPos_ = 0, lastTick_ = -1;
+    bool clickOn_ = false, clickHeldOff_ = false, tunerOpen_ = false, playing_ = false, settingsDirty_ = false; double beatPos_ = 0, lastTick_ = -1;
     double songBpm_ = kDefaultBpm, clockBpm_ = 0, lastClockT_ = -1; View view_ = View::Full; double lastSectionCmd_ = -1e9;
     bool songEnded_ = false, tracksDrive_ = false;
     bool boost_ = false, swC_ = false, swD_ = false; std::string sceneName_; TapTempo tap_; int version_ = 0;

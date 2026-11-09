@@ -110,8 +110,18 @@ public:
                 else x = room.process (x);
             } else x *= 0.5f * master;
             x *= lvl;
-            float a = std::abs (x); lim = a * lim > 0.95f ? 0.95f / std::max (a, 1e-9f) : std::min (1.0f, lim + 0.0005f); // output limiter (protect PA/ears)
-            x *= lim; L[s] = x; R[s] = x;
+            // Safety gain after the cab. An instant ceiling here is a hard clip at the
+            // base rate (48 kHz on the iPad), which the oversampler cannot filter, so a
+            // loud amp sounded like a high buzz even when the interface was not clipping.
+            // A few-millisecond attack is a gain change, not a new waveshaper.
+            const float a = std::abs (x);
+            const float ceilG = a > 0.89f ? 0.89f / a : 1.0f;
+            const float att = 1.0f - std::exp (-1.0f / (0.004f * fs_));
+            const float relC = 1.0f - std::exp (-1.0f / (0.080f * fs_));
+            lim += (ceilG - lim) * (ceilG < lim ? att : relC);
+            x *= lim;
+            x = 0.95f * std::tanh (x / 0.95f); // bound the attack transient without a flat-top clip
+            L[s] = x; R[s] = x;
         }
     }
 };

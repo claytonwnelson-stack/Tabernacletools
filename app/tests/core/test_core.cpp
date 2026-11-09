@@ -96,6 +96,18 @@ static void testMidi() {
     r.handle (0xB1, 82, 127, 2000); n = r.pop (a, 16); CHECK (n == 1 && a[0].type == Action::JumpChorus);
     r.handle (0xB0, 80, 127, 2100); n = r.pop (a, 16); CHECK (n == 1 && a[0].type == Action::Tap);
     r.handle (0xB0, 81, 127, 2200); n = r.pop (a, 16); CHECK (n == 1 && a[0].type == Action::Boost);
+    r.tick (3101); n = r.pop (a, 16); CHECK (n == 1 && a[0].type == Action::TunerToggle); // the tap above was still held
+    r.handle (0xB0, 80, 0, 3200); CHECK_EQ (r.pop (a, 16), 0);
+    // section A: tap starts, hold 0.7 s stops, and the release after a hold does not also start
+    r.handle (0xB1, 80, 127, 6000); r.tick (6200); CHECK_EQ (r.pop (a, 16), 0); r.handle (0xB1, 80, 0, 6400); n = r.pop (a, 16); CHECK (n == 1 && a[0].type == Action::PlayStart);
+    r.handle (0xB1, 80, 127, 7000); r.tick (7690); CHECK_EQ (r.pop (a, 16), 0); r.tick (7700); n = r.pop (a, 16); CHECK (n == 1 && a[0].type == Action::TransportStop);
+    r.handle (0xB1, 80, 0, 8000); CHECK_EQ (r.pop (a, 16), 0);
+    // Chocolate Manufacturer Control (CC 20-23) hits the same switches as CC 80-83
+    r.handle (0xB0, 20, 127, 9000); n = r.pop (a, 16); CHECK (n == 1 && a[0].type == Action::Tap);
+    { ControllerProfile old = defaultSectionUnit(); old.sw[0].action = "prevSection"; old.sw[0].longAction.clear(); old.sw[0].longMs = 0;
+      ControllerProfile::Bank bk; bk.action[0] = "prevSection"; old.banks = { bk };
+      auto up = controllerFromJson (toJson (old)); CHECK_EQ (up.sw[0].action, std::string ("playStart")); CHECK_EQ (up.sw[0].longAction, std::string ("stop")); CHECK_EQ (up.sw[0].longMs, 700);
+      CHECK_EQ (up.banks[0].action[0], std::string ("playStart")); CHECK_EQ (up.banks[0].longAction[0], std::string ("stop")); }
     // same CC on the wrong channel does nothing
     r.handle (0xB5, 81, 127, 2300); CHECK_EQ (r.pop (a, 16), 0);
     // MIDI learn: spare unit sends PC 5 on ch 3 for guitar switch C
@@ -443,7 +455,11 @@ static void testCues() {
       }
       ClickGen c; c.prepare (fs); c.setNumbers (nums); ClickGen::Params m = P; m.on = false; c.countIn (8, false, 4); std::vector<float> o ((size_t) B * 9, 0.0f); c.process (o.data(), o.data(), (int) o.size(), m);
       float pk1 = 0, pk2 = 0, after = 0; for (int i = 0; i < 600; ++i) { pk1 = std::max (pk1, std::abs (o[(size_t) i])); pk2 = std::max (pk2, std::abs (o[(size_t) (B + i)])); after = std::max (after, std::abs (o[(size_t) (8 * B + i)])); }
-      CHECK (pk1 > pk2 * 1.4f); CHECK (after < 1e-4f); // downbeat accent; click off -> silent after the count-in
+      CHECK (pk1 > pk2 * 1.4f); CHECK (after < 1e-4f); // downbeat accent; click switch off -> silent after the count-in
+      ClickGen cOn; cOn.prepare (fs); cOn.setNumbers (nums); ClickGen::Params mon = P; mon.on = true; mon.muted = false; cOn.countIn (8, false, 4);
+      std::vector<float> oOn ((size_t) B * 10, 0.0f); cOn.process (oOn.data(), oOn.data(), (int) oOn.size(), mon);
+      float songClick = 0; for (int i = 0; i < 600; ++i) songClick = std::max (songClick, std::abs (oOn[(size_t) (8 * B + i)]));
+      CHECK (songClick > 0.05f); // click left on: the downbeat after the count-in is still audible
       float pk5 = 0; for (int i = 0; i < 600; ++i) pk5 = std::max (pk5, std::abs (o[(size_t) (4 * B + i)])); CHECK (pk5 > pk2 * 1.4f); // bar 2's 1 accented too
     }
 
@@ -469,8 +485,11 @@ static void testCues() {
     CHECK_EQ (countInBeats (8, 4), 8); CHECK_EQ (countInBeats (101, 3), 3); CHECK_EQ (countInBeats (102, 4), 8); CHECK_EQ (countInBeats (0, 4), 0); CHECK_EQ (countInBeats (-1, 4), 0);
     Library l2 = seedLibrary(); auto& c2 = l2.songs[0].chart; c2.bpm = 120; c2.time = "4/4"; for (auto& s2 : c2.sections) s2.bars = 1;
     CueSink k2; LiveSession m (l2, k2); m.start (l2.setlists[0], 0, 0); m.setPlaying (true, 0); CHECK_EQ (k2.countBeats, 8); CHECK (! k2.countSpoken);
-    for (double u = 0; u < 3.9; u += 0.01) m.tick (u); CHECK_EQ (m.sectionIndex(), 0); for (double u = 3.9; u < 6.05; u += 0.01) m.tick (u); CHECK_EQ (m.sectionIndex(), 1); // 4 s count-in + 2 s (1 bar) section
-    l2.songs[0].countIn = 102; l2.settings.countInSpoken = true; m.setPlaying (false, 7); m.setPlaying (true, 7); CHECK_EQ (k2.countBeats, 8); CHECK (k2.countSpoken);
+    CHECK (m.clickOn()); CHECK (k2.clickOn); // Play turns the metronome on; it is not only the count-in
+    for (double u = 0; u < 3.9; u += 0.01) m.tick (u); CHECK_EQ (m.sectionIndex(), 0); CHECK (m.clickOn());
+    for (double u = 3.9; u < 6.05; u += 0.01) m.tick (u); CHECK_EQ (m.sectionIndex(), 1); CHECK (m.clickOn()); // still clicking after the count-in
+    m.setPlaying (false, 6.5); CHECK (! m.clickOn()); CHECK (! k2.clickOn);
+    l2.songs[0].countIn = 102; l2.settings.countInSpoken = true; m.setPlaying (true, 7); CHECK (m.clickOn()); CHECK_EQ (k2.countBeats, 8); CHECK (k2.countSpoken);
     l2.songs[0].countIn = 0; k2.countBeats = -1; m.setPlaying (true, 8); CHECK_EQ (k2.countBeats, -1); // off: no count-in
     l2.songs[0].chart.time = "3/4"; l2.songs[0].countIn = 101; m.refreshChart(); m.setPlaying (true, 9); CHECK_EQ (k2.countBeats, 3);
     // settings persist; defaults

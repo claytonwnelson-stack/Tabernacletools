@@ -4,7 +4,7 @@
 namespace wr {
 static const char* kNames[] = { "", "prevSection", "nextSection", "jumpChorus", "nextSong", "prevSong", "tap", "boost", "switchC", "switchD", "tunerToggle", "toggleView",
                                 "gotoSection", "clockBpm", "start", "stop", "learned", "clickMute", "clickToggle", "play", "bankNext", "bankPrev", "bankChanged",
-                                "tracksPlay", "tracksNext", "tracksLoop", "tracksStop", "songPosition" };
+                                "tracksPlay", "tracksNext", "tracksLoop", "tracksStop", "songPosition", "playStart" };
 Action::Type actionFromName (const std::string& n) { for (int i = 1; i < (int) (sizeof kNames / sizeof *kNames); ++i) if (n == kNames[i]) return (Action::Type) i; return Action::None; }
 const char* actionName (Action::Type t) { return kNames[(int) t]; }
 
