@@ -236,6 +236,7 @@ if(WR_BUILD_APP)
             FILE_SHARING_ENABLED TRUE
             ${WR_APP_GROUP_ARGS}
             STATUS_BAR_HIDDEN TRUE
+            ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/resources/AppIcon.appiconset/AppIcon-1024.png"
             COPY_PLUGIN_AFTER_BUILD FALSE)
         wr_setup_app(TabernacleGuitar "TabernacleTools")
         target_sources(TabernacleGuitar PRIVATE apps/guitar/PluginProcessor.cpp apps/guitar/PluginEditor.cpp apps/guitar/LiveView.cpp apps/guitar/WorkshopView.cpp)
