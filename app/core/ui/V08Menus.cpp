@@ -105,7 +105,9 @@ void wr::ui::addV08Settings (CoreEditor& ed, juce::PopupMenu& m, juce::Component
                     r.ok ? "Added " + juce::String (r.songs) + " songs, " + juce::String (r.setlists) + " setlists, " + juce::String (r.rigs) + " rigs" + (r.skipped ? " (" + juce::String (r.skipped) + " already here, kept)" : juce::String()) + ".\nThe previous library is in Backups."
                          : juce::String (r.error)); e->repaint(); }); });
     m.addSubMenu ("Backup / restore everything", bk);
-    { juce::PopupMenu pd; auto& st = e->core.store.lib.settings;
+}
+void wr::ui::addFootPedalSettings (CoreEditor& ed, juce::PopupMenu& m) {
+    CoreEditor* e = &ed; auto& st = e->core.store.lib.settings; juce::PopupMenu pd;
       auto shortId = [] (const std::string& id) { return id.size() <= 4 ? id : id.substr (id.size() - 4); };
       auto label = [&] (const std::string& name, const std::string& id, const char* fallback) {
           if (id.empty()) return juce::String (fallback);
@@ -142,5 +144,5 @@ void wr::ui::addV08Settings (CoreEditor& ed, juce::PopupMenu& m, juce::Component
           auto& s2 = e->core.store.lib.settings; std::swap (s2.guitarPedalId, s2.sectionPedalId); std::swap (s2.guitarPedalName, s2.sectionPedalName);
           e->core.refreshFootswitchPorts(); e->core.store.save(); });
       pd.addItem ("Both pedals on U, through a powered hub. First one listed is guitar until you swap.", false, false, [] {});
-      m.addSubMenu ("Foot pedals (two Chocolates)", pd); }
+    m.addSubMenu ("Foot pedals (two Chocolates)", pd);
 }

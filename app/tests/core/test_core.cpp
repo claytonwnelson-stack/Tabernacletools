@@ -514,6 +514,32 @@ static void testCues() {
     { Library d; CHECK_EQ (d.settings.clickOut, 2); CHECK (d.settings.voiceCues); CHECK_EQ (d.settings.countIn, 8); CHECK (! d.settings.cuesWhenClickMuted); }
     { Library x = seedLibrary(); x.settings.cueDb = -12; x.settings.cuesWhenClickMuted = true; x.settings.countIn = 101; x.songs[0].countIn = 4; auto y = libraryFromJson (toJson (x));
       CHECK_EQ (y.settings.cueDb, -12.0f); CHECK (y.settings.cuesWhenClickMuted); CHECK_EQ (y.settings.countIn, 101); CHECK_EQ (y.songs[0].countIn, 4); }
+    { Library x = seedLibrary(); x.settings.favoritePedals = { "overdrive" }; x.settings.recentPedals = { "delay", "chorus" };
+      auto y = libraryFromJson (toJson (x)); CHECK_EQ (y.settings.favoritePedals.size(), (size_t) 1); CHECK_EQ (y.settings.favoritePedals[0], std::string ("overdrive"));
+      CHECK_EQ (y.settings.recentPedals.size(), (size_t) 2); CHECK_EQ (y.settings.recentPedals[1], std::string ("chorus"));
+      CHECK (toJson (seedLibrary()).dump().find ("favPedals") == std::string::npos); }
+    { // footswitch map is global (the library), not per song; factory PC/CC still dispatch the saved action
+      Library lib = seedLibrary();
+      CHECK_EQ (lib.controllers[0].sw[0].action, std::string ("tap")); CHECK_EQ (lib.controllers[0].comboE, std::string ("tunerToggle"));
+      lib.controllers[0].sw[0].action = "boost"; lib.controllers[0].sw[0].longAction.clear(); lib.controllers[0].sw[3].action = "clickMute"; lib.controllers[0].comboE = "stop";
+      lib.controllers[1].sw[1].action = "jumpChorus";
+      auto back = libraryFromJson (toJson (lib));
+      CHECK_EQ (back.controllers[0].sw[0].action, std::string ("boost")); CHECK_EQ (back.controllers[0].sw[3].action, std::string ("clickMute"));
+      CHECK_EQ (back.controllers[0].comboE, std::string ("stop")); CHECK_EQ (back.controllers[1].sw[1].action, std::string ("jumpChorus"));
+      CHECK_EQ (back.controllers[0].sw[0].press.number, 81 - 1); // CC 80 binding is untouched
+      resetFootswitchMap (back.controllers[0]); resetFootswitchMap (back.controllers[1]);
+      CHECK_EQ (back.controllers[0].sw[0].action, std::string ("tap")); CHECK_EQ (back.controllers[0].sw[1].action, std::string ("boost"));
+      CHECK_EQ (back.controllers[0].comboE, std::string ("tunerToggle")); CHECK_EQ (back.controllers[0].sw[0].longAction, std::string ("tunerToggle"));
+      CHECK_EQ (back.controllers[1].sw[0].action, std::string ("playStart")); CHECK_EQ (back.controllers[1].sw[0].longAction, std::string ("stop"));
+      CHECK_EQ (back.controllers[1].sw[1].action, std::string ("nextSection")); CHECK_EQ (back.controllers[1].comboF, std::string ("stop"));
+      CHECK_EQ (back.controllers[0].sw[0].press.number, 80);
+      MidiRouter mapped; auto g = defaultGuitarUnit(); g.sw[0].action = "boost"; g.sw[0].longAction.clear(); g.sw[0].longMs = 0; g.comboE = "stop";
+      auto sec = defaultSectionUnit(); sec.sw[1].action = "jumpChorus";
+      mapped.setProfiles ({ g, sec });
+      mapped.handle (0xB0, 80, 127, 0); Action out[4]; int n = mapped.pop (out, 4); CHECK (n == 1 && out[0].type == Action::Boost);
+      mapped.handle (0xC0, 0, 0, 1000, 0); mapped.flushFactory (1100); n = mapped.pop (out, 4); CHECK (n == 1 && out[0].type == Action::Boost);
+      mapped.handle (0xC0, 1, 0, 2000, 1); mapped.flushFactory (2100); n = mapped.pop (out, 4); CHECK (n == 1 && out[0].type == Action::JumpChorus);
+      mapped.handle (0xC0, 0, 0, 3000, 0); mapped.handle (0xC0, 1, 0, 3020, 0); mapped.flushFactory (3100); n = mapped.pop (out, 4); CHECK (n == 1 && out[0].type == Action::TransportStop); }
 }
 
 int main() { setvbuf (stdout, nullptr, _IONBF, 0);

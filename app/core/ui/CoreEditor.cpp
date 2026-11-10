@@ -77,12 +77,13 @@ void CoreEditor::choosePracticeTrack() {
         if (err.isNotEmpty()) juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Practice track", err);
         else if (! core.practiceMode()) core.setPracticeMode (true); });
 }
-CoreEditor::~CoreEditor() { setLookAndFeel (nullptr); }
+// Destructor is defined after SettingsPanel so the unique_ptr can see the complete type.
 
 void CoreEditor::coreLayout() {
     auto top = getLocalBounds().removeFromTop (64);
-    settingsBtn_.setBounds (top.removeFromRight (140).reduced (8, 16));
+    settingsBtn_.setBounds (top.removeFromRight (164).reduced (10, 16));
     band_->setBounds (getLocalBounds()); arr_->setBounds (getLocalBounds()); imp_->setBounds (getLocalBounds()); if (team_) team_->setBounds (getLocalBounds()); if (paywall_) paywall_->setBounds (getLocalBounds());
+    if (settings_) settings_->setBounds (getLocalBounds());
     pbar_->setBounds (getLocalBounds().removeFromBottom (56));
     tbar_->setBounds (getLocalBounds().withTrimmedBottom (core.practiceMode() ? 56 : 0).removeFromBottom (56));
 }
@@ -134,131 +135,318 @@ void CoreEditor::coreTick() {
    #endif
 }
 
-void CoreEditor::openSettings (juce::Component* anchor) {
-    auto& proc = core; juce::PopupMenu m; auto& s = proc.store.lib.settings;
-   #if JucePlugin_Build_Standalone
-    if (proc.wrapperType == juce::AudioProcessor::wrapperType_Standalone) m.addItem ("Audio interface, sample rate & buffer (64-128)...", [] { if (auto* h = juce::StandalonePluginHolder::getInstance()) h->showAudioSettingsDialog(); });
-   #endif
-    addAudioSettings (m);
-    { // v0.17 MIDI Clock: Off / Send / Receive + port pickers (USB, Bluetooth MIDI, network session, virtual)
-      juce::PopupMenu ck; const int mode = s.midiClockMode;
-      ck.addItem ("Off", true, mode == 0, [this] { core.setMidiClockMode (wr::MidiClockMode::Off); });
-      ck.addItem ("Send (24 ppqn + Start/Stop + Song Position on section jumps)", true, mode == 1, [this] { core.setMidiClockMode (wr::MidiClockMode::Send); });
-      ck.addItem ("Receive (follow external tempo + transport)", true, mode == 2, [this] { core.setMidiClockMode (wr::MidiClockMode::Receive); });
-      ck.addSeparator();
-      ck.addItem ("Leader-only when sending; followers keep Wi-Fi band sync", false, false, [] {});
-      ck.addItem ("Enable the CoreMIDI network session (Cubase / Mac)", false, false, [] {});
-      if (mode == 1) {
-        juce::PopupMenu outs; outs.addItem ("Virtual port: Tabernacle Tools Clock (other iPad apps)", true, s.midiClockOutId.empty(), [this] {
-          core.store.lib.settings.midiClockOutId.clear(); core.applySettings(); core.store.save(); });
-        for (auto& d : juce::MidiOutput::getAvailableDevices()) {
-          auto id = d.identifier.toStdString(); auto name = d.name;
-          outs.addItem (name, true, s.midiClockOutId == id || s.midiClockOutId == name.toStdString(), [this, id] {
-            core.store.lib.settings.midiClockOutId = id; core.applySettings(); core.store.save(); });
+class CoreEditor::SettingsPanel : public juce::Component {
+public:
+    explicit SettingsPanel (CoreEditor& e) : ed (e) { setOpaque (true); }
+    void showHome() { nav.clear(); nav.push_back (make (KHome)); scroll = 0; setVisible (true); toFront (false); }
+    void paint (juce::Graphics& g) override;
+    void mouseDown (const juce::MouseEvent& e) override { drag = false; grab = scroll; juce::ignoreUnused (e); }
+    void mouseDrag (const juce::MouseEvent& e) override {
+        if (e.getDistanceFromDragStart() > 8) { drag = true; scroll = std::clamp (grab - e.getDistanceFromDragStartY(), 0, maxScroll); repaint(); }
+    }
+    void mouseUp (const juce::MouseEvent& e) override;
+    void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails& w) override {
+        scroll = std::clamp (scroll - (int) ((w.deltaY + w.deltaX) * 90), 0, maxScroll); repaint();
+    }
+private:
+    enum Kind { KHome, KAudio, KMidi, KClick, KBand, KDisplay, KAbout, KMap, KMenu };
+    struct Row { juce::String title, sub; bool tick = false; bool on = true; std::function<void()> go; };
+    struct Level { Kind kind = KHome; juce::String title, blurb; std::vector<Row> rows; bool closeOnPick = true; };
+    CoreEditor& ed;
+    std::vector<Level> nav;
+    int scroll = 0, grab = 0, maxScroll = 0; bool drag = false;
+    std::vector<juce::Rectangle<int>> hits;
+    juce::Rectangle<int> closeR, backR, listR;
+    bool mapGuitar = true;
+
+    void dismiss() { setVisible (false); }
+    void pop() { if (nav.size() > 1) nav.pop_back(); else dismiss(); scroll = 0; repaint(); }
+    Level& cur() { return nav.back(); }
+    Level make (Kind k);
+    void addMenu (Level& L, const juce::PopupMenu& menu);
+    static juce::String actName (const std::string& a);
+    int unit (bool guitar) const;
+    std::string liveAct (const wr::ControllerProfile& c, int sw, bool lng, bool combo) const;
+    void writeAct (bool guitar, int sw, bool lng, bool combo, const std::string& name);
+    void chooseAct (const juce::String& title, int sw, bool lng, bool combo);
+};
+
+juce::String CoreEditor::SettingsPanel::actName (const std::string& a) {
+    static const std::pair<const char*, const char*> n[] = {
+        { "", "(nothing)" }, { "tap", "Tap tempo" }, { "tunerToggle", "Tuner" }, { "boost", "Boost" },
+        { "switchC", "This song's switch C" }, { "switchD", "This song's switch D" }, { "clickMute", "Mute the click" },
+        { "clickToggle", "Click on / off" }, { "playStart", "Start" }, { "stop", "Stop" }, { "play", "Play / stop" },
+        { "nextSection", "Next section" }, { "prevSection", "Previous section" }, { "jumpChorus", "Jump to chorus" },
+        { "nextSong", "Next song" }, { "prevSong", "Previous song" }, { "toggleView", "Full song / one section" },
+        { "tracksPlay", "Tracks: play / stop" }, { "tracksNext", "Tracks: next section" }, { "tracksLoop", "Loop / vamp this section" },
+        { "tracksStop", "Tracks: stop" }, { "bankNext", "Next bank" }, { "bankPrev", "Previous bank" } };
+    for (auto& p : n) if (a == p.first) return p.second;
+    return a.empty() ? juce::String ("(nothing)") : juce::String (a);
+}
+int CoreEditor::SettingsPanel::unit (bool guitar) const {
+    auto& cs = ed.core.store.lib.controllers; const char* role = guitar ? "guitar" : "section";
+    for (int i = 0; i < (int) cs.size(); ++i) if (cs[(size_t) i].role == role) return i;
+    return -1;
+}
+std::string CoreEditor::SettingsPanel::liveAct (const wr::ControllerProfile& c, int sw, bool lng, bool combo) const {
+    if (combo) return sw == 0 ? c.comboE : c.comboF;
+    if (! c.banks.empty()) { auto& b = c.banks[(size_t) std::clamp (c.bank, 0, (int) c.banks.size() - 1)]; return lng ? b.longAction[sw] : b.action[sw]; }
+    return lng ? c.sw[sw].longAction : c.sw[sw].action;
+}
+void CoreEditor::SettingsPanel::writeAct (bool guitar, int sw, bool lng, bool combo, const std::string& name) {
+    int u = unit (guitar); if (u < 0) return;
+    auto& c = ed.core.store.lib.controllers[(size_t) u];
+    if (combo) { if (sw == 0) c.comboE = name; else c.comboF = name; }
+    else {
+        if (! c.banks.empty()) { auto& b = c.banks[(size_t) std::clamp (c.bank, 0, (int) c.banks.size() - 1)]; (lng ? b.longAction[sw] : b.action[sw]) = name; }
+        (lng ? c.sw[sw].longAction : c.sw[sw].action) = name;
+    }
+    ed.core.pushControllerProfiles(); ed.core.store.save();
+}
+void CoreEditor::SettingsPanel::chooseAct (const juce::String& title, int sw, bool lng, bool combo) {
+    static const char* kAct[] = { "", "tap", "tunerToggle", "boost", "switchC", "switchD", "clickMute", "clickToggle", "playStart", "stop", "play",
+        "nextSection", "prevSection", "jumpChorus", "nextSong", "prevSong", "toggleView", "tracksPlay", "tracksNext", "tracksLoop", "tracksStop", "bankNext", "bankPrev" };
+    int u = unit (mapGuitar); if (u < 0) return;
+    auto cur = liveAct (ed.core.store.lib.controllers[(size_t) u], sw, lng, combo);
+    Level L; L.kind = KMenu; L.title = title; L.closeOnPick = false;
+    L.blurb = "Choose what this switch does. C and D still use the target saved on the current song.";
+    for (auto* a : kAct) { std::string name = a;
+        L.rows.push_back ({ actName (name), {}, name == cur, true, [this, sw, lng, combo, name] {
+            writeAct (mapGuitar, sw, lng, combo, name);
+            if (nav.size() > 1) nav.pop_back();
+            if (! nav.empty() && nav.back().kind == KMap) nav.back() = make (KMap);
+            scroll = 0; repaint();
+        } }); }
+    nav.push_back (std::move (L)); scroll = 0; repaint();
+}
+void CoreEditor::SettingsPanel::addMenu (Level& L, const juce::PopupMenu& menu) {
+    for (juce::PopupMenu::MenuItemIterator it (menu); it.next();) {
+        auto item = it.getItem();
+        if (item.isSeparator || item.text.isEmpty()) continue;
+        if (item.isSectionHeader) { L.rows.push_back ({ item.text, {}, false, false, {} }); continue; }
+        if (item.subMenu != nullptr && item.subMenu->getNumItems() > 0) {
+            juce::PopupMenu sub = *item.subMenu; auto title = item.text; bool close = L.closeOnPick;
+            L.rows.push_back ({ title, "Opens a list", false, item.isEnabled, [this, title, sub, close] {
+                Level child; child.kind = KMenu; child.title = title; child.closeOnPick = close;
+                child.blurb = close ? "Pick one. This screen closes after you choose." : "Pick one.";
+                addMenu (child, sub); nav.push_back (std::move (child)); scroll = 0; repaint();
+            } });
+        } else if (item.action) {
+            auto fn = item.action; bool tick = item.isTicked, close = L.closeOnPick, enabled = item.isEnabled;
+            L.rows.push_back ({ item.text, tick ? "On" : juce::String(), tick, enabled, [this, fn, close] {
+                if (fn) fn(); if (close) dismiss(); else pop();
+            } });
+        } else L.rows.push_back ({ item.text, {}, false, false, {} });
+    }
+}
+CoreEditor::SettingsPanel::Level CoreEditor::SettingsPanel::make (Kind k) {
+    using namespace wr;
+    Level L; L.kind = k; L.closeOnPick = true; auto& proc = ed.core; auto& s = proc.store.lib.settings;
+    auto homeRow = [&] (Kind dest, const char* title, const char* blurb) {
+        L.rows.push_back ({ title, blurb, false, true, [this, dest] { nav.push_back (make (dest)); scroll = 0; repaint(); } });
+    };
+    if (k == KHome) {
+        L.title = "Settings"; L.blurb = "Each group is one screen. Choosing a setting closes it, so it does not stay open over the show.";
+        homeRow (KAudio, "Audio & Interface", "The sound card, the buffer, and how the guitar is routed.");
+        homeRow (KMidi, "MIDI & Footswitches", "Clock, the cue channel, which Chocolate is which, and what each switch does.");
+        homeRow (KClick, "Click & Count-in", "The click sound, spoken cues, and the count-in before Play.");
+        homeRow (KBand, "Band Sync", "Lead or follow the rest of the band on this Wi-Fi.");
+        homeRow (KDisplay, "Display", "The chart, section colours, the projector, and the stage view.");
+        homeRow (KAbout, "About & Legal", "Subscription, terms of use, privacy, backup, and the recorder.");
+        return L;
+    }
+    if (k == KAudio) {
+        L.title = "Audio & Interface"; L.blurb = "The sound card, the buffer size, and how the guitar is routed.";
+       #if JucePlugin_Build_Standalone
+        if (proc.wrapperType == juce::AudioProcessor::wrapperType_Standalone)
+            L.rows.push_back ({ "Audio interface, sample rate and buffer", "Opens the system audio screen, then closes Settings.", false, true, [this] {
+                if (auto* h = juce::StandalonePluginHolder::getInstance()) h->showAudioSettingsDialog(); dismiss(); } });
+       #endif
+        juce::PopupMenu extra; ed.addAudioSettings (extra); addMenu (L, extra); return L;
+    }
+    if (k == KMidi) {
+        L.title = "MIDI & Footswitches"; L.blurb = "Clock, the cue channel, which physical Chocolate is the guitar unit, and what each switch does.";
+        { juce::PopupMenu ck; const int mode = s.midiClockMode;
+          ck.addItem ("Off", true, mode == 0, [this] { ed.core.setMidiClockMode (wr::MidiClockMode::Off); });
+          ck.addItem ("Send (24 ppqn + Start/Stop + position on section jumps)", true, mode == 1, [this] { ed.core.setMidiClockMode (wr::MidiClockMode::Send); });
+          ck.addItem ("Receive (follow an external tempo and transport)", true, mode == 2, [this] { ed.core.setMidiClockMode (wr::MidiClockMode::Receive); });
+          ck.addItem ("The leader sends clock. Followers stay on Wi-Fi band sync.", false, false, [] {});
+          if (mode == 1) { juce::PopupMenu outs; outs.addItem ("Virtual port: Tabernacle Tools Clock", true, s.midiClockOutId.empty(), [this] {
+              ed.core.store.lib.settings.midiClockOutId.clear(); ed.core.applySettings(); ed.core.store.save(); });
+            for (auto& d : juce::MidiOutput::getAvailableDevices()) { auto id = d.identifier.toStdString(); auto name = d.name;
+              outs.addItem (name, true, s.midiClockOutId == id || s.midiClockOutId == name.toStdString(), [this, id] { ed.core.store.lib.settings.midiClockOutId = id; ed.core.applySettings(); ed.core.store.save(); }); }
+            ck.addSubMenu ("MIDI output", outs); }
+          if (mode == 2) { juce::PopupMenu ins; ins.addItem ("All inputs", true, s.midiClockInId.empty(), [this] {
+              ed.core.store.lib.settings.midiClockInId.clear(); ed.core.applySettings(); ed.core.store.save(); });
+            for (auto& d : juce::MidiInput::getAvailableDevices()) { auto id = d.identifier.toStdString(); auto name = d.name;
+              ins.addItem (name, true, s.midiClockInId == id || s.midiClockInId == name.toStdString(), [this, id] { ed.core.store.lib.settings.midiClockInId = id; ed.core.applySettings(); ed.core.store.save(); }); }
+            ck.addSubMenu ("MIDI input", ins); }
+          L.rows.push_back ({ "MIDI clock: " + juce::String (wr::midiClockModeName (wr::midiClockModeFromInt (mode))), "Off, send, or follow another device.", false, true, [this, ck] {
+              Level child; child.kind = KMenu; child.title = "MIDI clock"; child.blurb = "Pick one. This screen closes after you choose."; child.closeOnPick = true; addMenu (child, ck); nav.push_back (std::move (child)); scroll = 0; repaint(); } }); }
+        { juce::PopupMenu ex; for (int ch = 1; ch <= 16; ++ch) ex.addItem ("Channel " + juce::String (ch), true, s.externalChannel == ch, [this, ch] { ed.core.store.lib.settings.externalChannel = ch; ed.core.applySettings(); ed.core.store.save(); });
+          L.rows.push_back ({ "External cue channel (now " + juce::String (s.externalChannel) + ")", "Program changes and notes on this channel jump sections.", false, true, [this, ex] {
+              Level child; child.kind = KMenu; child.title = "Cue channel"; child.blurb = "Pick one. This screen closes after you choose."; child.closeOnPick = true; addMenu (child, ex); nav.push_back (std::move (child)); scroll = 0; repaint(); } }); }
+        { juce::PopupMenu pd; wr::ui::addFootPedalSettings (ed, pd); addMenu (L, pd); }
+        L.rows.push_back ({ "Footswitch mapping", "What A-D, hold, and the E/F two-button combos do.", false, true, [this] { nav.push_back (make (KMap)); scroll = 0; repaint(); } });
+        return L;
+    }
+    if (k == KMap) {
+        L.title = "Footswitch Mapping"; L.closeOnPick = false;
+        L.blurb = mapGuitar ? "Guitar unit. Factory program changes still arrive as they do now; this only changes the action."
+                            : "Sections unit. Factory program changes still arrive as they do now; this only changes the action.";
+        auto& st = s;
+        auto shown = mapGuitar ? (st.guitarPedalName.empty() ? juce::String ("first Chocolate plugged in") : juce::String (st.guitarPedalName))
+                               : (st.sectionPedalName.empty() ? juce::String ("second Chocolate plugged in") : juce::String (st.sectionPedalName));
+        L.rows.push_back ({ mapGuitar ? "Guitar unit" : "Sections unit", shown + "  -  tap to switch unit", false, true, [this] { mapGuitar = ! mapGuitar; nav.back() = make (KMap); scroll = 0; repaint(); } });
+        int u = unit (mapGuitar);
+        if (u < 0) { L.rows.push_back ({ "No saved pedal for this unit", "Plug both Chocolates in once so they can be told apart.", false, false, {} }); return L; }
+        auto& c = proc.store.lib.controllers[(size_t) u];
+        const char* letters = "ABCD";
+        for (int i = 0; i < 4; ++i) {
+            L.rows.push_back ({ juce::String::charToString ((juce::juce_wchar) letters[i]) + "  press", actName (liveAct (c, i, false, false)), false, true, [this, i] { chooseAct (juce::String::charToString ((juce::juce_wchar) ("ABCD"[i])) + " press", i, false, false); } });
+            L.rows.push_back ({ juce::String::charToString ((juce::juce_wchar) letters[i]) + "  hold", actName (liveAct (c, i, true, false)), false, true, [this, i] { chooseAct (juce::String::charToString ((juce::juce_wchar) ("ABCD"[i])) + " hold", i, true, false); } });
         }
-        ck.addSubMenu ("MIDI output (USB / Bluetooth / network / virtual)", outs);
-      }
-      if (mode == 2) {
-        juce::PopupMenu ins; ins.addItem ("All inputs (Audio MIDI settings)", true, s.midiClockInId.empty(), [this] {
-          core.store.lib.settings.midiClockInId.clear(); core.applySettings(); core.store.save(); });
-        for (auto& d : juce::MidiInput::getAvailableDevices()) {
-          auto id = d.identifier.toStdString(); auto name = d.name;
-          ins.addItem (name, true, s.midiClockInId == id || s.midiClockInId == name.toStdString(), [this, id] {
-            core.store.lib.settings.midiClockInId = id; core.applySettings(); core.store.save(); });
-        }
-        ck.addSubMenu ("MIDI input (USB / Bluetooth / network)", ins);
-      }
-      m.addSubMenu ("MIDI Clock: " + juce::String (wr::midiClockModeName (wr::midiClockModeFromInt (mode))), ck); }
-    juce::PopupMenu ar; for (int sec : { 0, 5, 10, 20, 30 }) ar.addItem (sec == 0 ? "Never" : juce::String (sec) + " s", true, s.autoReturnSec == sec, [this, sec] { core.store.lib.settings.autoReturnSec = sec; core.store.save(); });
-    m.addSubMenu ("Chart: auto-return to full view after", ar);
-    juce::PopupMenu ex; for (int ch = 1; ch <= 16; ++ch) ex.addItem ("ch " + juce::String (ch), true, s.externalChannel == ch, [this, ch] { core.store.lib.settings.externalChannel = ch; core.applySettings(); core.store.save(); });
-    m.addSubMenu ("External MIDI cue channel (PC n / note " + juce::String (s.externalChannel) + ")", ex);
-    { juce::PopupMenu ck; bool anyOut = false;
-      for (int i = 0; i < 3; ++i) { auto lbl = proc.clickOutLabel (i); if (lbl.isEmpty()) continue; anyOut = true; ck.addItem (lbl, true, s.clickOut == i, [this, i] { core.store.lib.settings.clickOut = i; core.applySettings(); core.store.save(); }); }
-      if (anyOut) ck.addSeparator();
-      for (int db : { -30, -24, -18, -12, -6, -3, 0 }) ck.addItem ("Volume " + juce::String (db) + " dB", true, (int) s.clickDb == db, [this, db] { core.store.lib.settings.clickDb = (float) db; core.applySettings(); core.store.save(); });
-      ck.addSeparator(); { juce::PopupMenu ps; for (int i = 0; i < ClickGen::kNumPresets; ++i) ps.addItem (ClickGen::presetName (i), true, s.clickPreset == i, [this, i] { core.store.lib.settings.clickPreset = i; core.applySettings(); core.store.save(); });
-        ck.addSubMenu ("Sound: " + juce::String (ClickGen::presetName (s.clickPreset)), ps);
-        juce::PopupMenu dl; for (int db : { -6, -3, 0, 2, 4, 6, 9, 12 }) dl.addItem ((db > 0 ? "+" : "") + juce::String (db) + " dB vs other beats", true, (int) std::round (s.downbeatDb) == db, [this, db] { core.store.lib.settings.downbeatDb = (float) db; core.applySettings(); core.store.save(); });
-        ck.addSubMenu ("Downbeat level", dl); }
-      ck.addItem ("Distinct downbeat (beat 1 sound)", true, s.clickAccent, [this] { auto& st = core.store.lib.settings; st.clickAccent = ! st.clickAccent; core.applySettings(); core.store.save(); });
-      ck.addItem ("Muted (also: hold guitar D)", true, s.clickMuted, [this] { core.live().toggleClickMute(); core.store.save(); });
-      ck.addSeparator();
-      ck.addItem ("Spoken section cues (\"Verse two... 2, 3, 4\")", true, s.voiceCues, [this] { auto& st = core.store.lib.settings; st.voiceCues = ! st.voiceCues; core.applySettings(); core.store.save(); });
-      juce::PopupMenu cv; for (int db : { -24, -18, -12, -9, -6, -3, 0 }) cv.addItem (juce::String (db) + " dB", true, (int) s.cueDb == db, [this, db] { core.store.lib.settings.cueDb = (float) db; core.applySettings(); core.store.save(); });
-      ck.addSubMenu ("Cue voice volume", cv);
-      ck.addItem ("Cues still speak when the click is muted", true, s.cuesWhenClickMuted, [this] { auto& st = core.store.lib.settings; st.cuesWhenClickMuted = ! st.cuesWhenClickMuted; core.applySettings(); core.store.save(); });
-      ck.addItem ("Section changes wait for the bar line (click / PLAY / MIDI clock)", true, s.quantizeSections, [this] { auto& st = core.store.lib.settings; st.quantizeSections = ! st.quantizeSections; core.store.save(); });
-      ck.addSeparator();
-      juce::PopupMenu cin; const std::pair<int, const char*> opts[] = { { 0, "Off" }, { 4, "4 clicks" }, { 8, "8 clicks (default)" }, { 101, "1 bar" }, { 102, "2 bars" } };
-      for (auto& o : opts) { int code = o.first; cin.addItem (o.second, true, s.countIn == code, [this, code] { core.store.lib.settings.countIn = code; core.store.save(); }); }
-      cin.addSeparator(); cin.addItem ("Speak the count (1, 2, 3, 4)", true, s.countInSpoken, [this] { auto& st = core.store.lib.settings; st.countInSpoken = ! st.countInSpoken; core.store.save(); });
-      ck.addSubMenu ("Count-in on PLAY (plays even when muted)", cin);
-      m.addSubMenu ("Click track, voice cues, count-in", ck); }
-    m.addItem ("Auto-advance sections by bars (when no MIDI clock)", true, s.autoAdvance, [this] { auto& st = core.store.lib.settings; st.autoAdvance = ! st.autoAdvance; core.store.save(); });
-    wr::ui::addSectionColourSettings (*this, m, anchor ? anchor : this);   // v0.8
-    wr::ui::addV08Settings (*this, m, anchor ? anchor : this);
-    { juce::PopupMenu sub; const auto nowS = (int64_t) juce::Time::currentTimeMillis() / 1000;   // v0.10 plan / trial status (StoreKit hookup TODO)
-      sub.addItem (juce::String (core.entitlements.statusText (nowS)), false, false, [] {});
+        L.rows.push_back ({ "E   A+B together", actName (c.comboE), false, true, [this] { chooseAct ("E  (A+B)", 0, false, true); } });
+        L.rows.push_back ({ "F   C+D together", actName (c.comboF), false, true, [this] { chooseAct ("F  (C+D)", 1, false, true); } });
+        L.rows.push_back ({ "Reset to factory defaults", "Guitar: tap, boost, this song's C and D. Sections: start / hold stop, next, chorus, next song.", false, true, [this] {
+            int u2 = unit (mapGuitar); if (u2 < 0) return;
+            wr::resetFootswitchMap (ed.core.store.lib.controllers[(size_t) u2]); ed.core.pushControllerProfiles(); ed.core.store.save();
+            nav.back() = make (KMap); scroll = 0; repaint(); } });
+        return L;
+    }
+    if (k == KClick) {
+        L.title = "Click & Count-in"; L.blurb = "The click sound, spoken section names, and the count-in before Play.";
+        juce::PopupMenu ck;
+        for (int i = 0; i < 3; ++i) { auto lbl = proc.clickOutLabel (i); if (lbl.isEmpty()) continue; ck.addItem (lbl, true, s.clickOut == i, [this, i] { ed.core.store.lib.settings.clickOut = i; ed.core.applySettings(); ed.core.store.save(); }); }
+        for (int db : { -30, -24, -18, -12, -6, -3, 0 }) ck.addItem ("Volume " + juce::String (db) + " dB", true, (int) s.clickDb == db, [this, db] { ed.core.store.lib.settings.clickDb = (float) db; ed.core.applySettings(); ed.core.store.save(); });
+        { juce::PopupMenu ps; for (int i = 0; i < ClickGen::kNumPresets; ++i) ps.addItem (ClickGen::presetName (i), true, s.clickPreset == i, [this, i] { ed.core.store.lib.settings.clickPreset = i; ed.core.applySettings(); ed.core.store.save(); });
+          ck.addSubMenu ("Sound: " + juce::String (ClickGen::presetName (s.clickPreset)), ps);
+          juce::PopupMenu dl; for (int db : { -6, -3, 0, 2, 4, 6, 9, 12 }) dl.addItem ((db > 0 ? "+" : "") + juce::String (db) + " dB versus the other beats", true, (int) std::round (s.downbeatDb) == db, [this, db] { ed.core.store.lib.settings.downbeatDb = (float) db; ed.core.applySettings(); ed.core.store.save(); });
+          ck.addSubMenu ("Downbeat level", dl); }
+        ck.addItem ("Beat 1 has its own sound", true, s.clickAccent, [this] { auto& st = ed.core.store.lib.settings; st.clickAccent = ! st.clickAccent; ed.core.applySettings(); ed.core.store.save(); });
+        ck.addItem ("Muted (hold guitar D does this too)", true, s.clickMuted, [this] { ed.core.live().toggleClickMute(); ed.core.store.save(); });
+        ck.addItem ("Speak the section name", true, s.voiceCues, [this] { auto& st = ed.core.store.lib.settings; st.voiceCues = ! st.voiceCues; ed.core.applySettings(); ed.core.store.save(); });
+        { juce::PopupMenu cv; for (int db : { -24, -18, -12, -9, -6, -3, 0 }) cv.addItem (juce::String (db) + " dB", true, (int) s.cueDb == db, [this, db] { ed.core.store.lib.settings.cueDb = (float) db; ed.core.applySettings(); ed.core.store.save(); }); ck.addSubMenu ("Spoken cue volume", cv); }
+        ck.addItem ("Still speak when the click is muted", true, s.cuesWhenClickMuted, [this] { auto& st = ed.core.store.lib.settings; st.cuesWhenClickMuted = ! st.cuesWhenClickMuted; ed.core.applySettings(); ed.core.store.save(); });
+        ck.addItem ("Section changes wait for the next bar", true, s.quantizeSections, [this] { auto& st = ed.core.store.lib.settings; st.quantizeSections = ! st.quantizeSections; ed.core.store.save(); });
+        { juce::PopupMenu cin; const std::pair<int, const char*> opts[] = { { 0, "Off" }, { 4, "4 clicks" }, { 8, "8 clicks (usual)" }, { 101, "1 bar" }, { 102, "2 bars" } };
+          for (auto& o : opts) { int code = o.first; cin.addItem (o.second, true, s.countIn == code, [this, code] { ed.core.store.lib.settings.countIn = code; ed.core.store.save(); }); }
+          cin.addItem ("Speak the count (1, 2, 3, 4)", true, s.countInSpoken, [this] { auto& st = ed.core.store.lib.settings; st.countInSpoken = ! st.countInSpoken; ed.core.store.save(); });
+          ck.addSubMenu ("Count-in when you press Play", cin); }
+        ck.addItem ("Advance sections from their bar counts when no MIDI clock is coming in", true, s.autoAdvance, [this] { auto& st = ed.core.store.lib.settings; st.autoAdvance = ! st.autoAdvance; ed.core.store.save(); });
+        ed.addInstrumentSettings (ck);
+        addMenu (L, ck); return L;
+    }
+    if (k == KBand) {
+        L.title = "Band Sync"; L.blurb = "One iPad leads. The others follow the song, the section, and Play over this Wi-Fi.";
+        auto& S = proc.sync(); juce::PopupMenu bs; S.browse (true);
+        bs.addItem (juce::String (S.statusLine()), false, false, [] {});
+        if (S.mode() == BandSync::Mode::Leading) for (auto& n : S.followerNames()) bs.addItem ("   " + juce::String (n.empty() ? "follower" : n), false, false, [] {});
+        bs.addItem ("Lead this session", proc.fullAccess(), S.mode() == BandSync::Mode::Leading, [this] { ed.core.sync().lead (ed.core.store.lib.settings.deviceName); });
+        for (auto& p : S.leaders()) { auto peer = p; bs.addItem ("Join " + juce::String (peer.name), proc.fullAccess(), false, [this, peer] { ed.core.sync().join (peer.host, peer.port, ed.core.store.lib.settings.deviceName); ed.core.store.save(); }); }
+        if (S.leaders().empty()) bs.addItem ("No other leader on this Wi-Fi yet", false, false, [] {});
+        if (! s.lastLeaderHost.empty()) bs.addItem ("Rejoin " + juce::String (s.lastLeaderHost), [this] { auto& st = ed.core.store.lib.settings; ed.core.sync().join (st.lastLeaderHost, st.lastLeaderPort > 0 ? st.lastLeaderPort : wr::sync::kDefaultPort, st.deviceName); });
+        bs.addItem ("Join by IP address...", [this] { ed.askText ("Join leader", "The leader's IP address, shown on their Band Sync screen", ed.core.store.lib.settings.lastLeaderHost, [this] (juce::String ip) {
+            if (ip.isNotEmpty()) { ed.core.sync().join (ip.trim().toStdString(), wr::sync::kDefaultPort, ed.core.store.lib.settings.deviceName); ed.core.store.save(); } }); });
+        bs.addItem ("Leave / stop sync", S.mode() != BandSync::Mode::Off, false, [this] { ed.core.sync().stop(); });
+       #if __has_include(<ableton/Link.hpp>)
+        bs.addItem ("Use Ableton Link for the tempo", true, s.useLink, [this] { auto& st = ed.core.store.lib.settings; st.useLink = ! st.useLink; ed.core.sync().useLink = st.useLink; ed.core.store.save(); });
+       #else
+        bs.addItem ("Ableton Link is off. Tempo follows MIDI clock or this iPad.", false, false, [] {});
+       #endif
+        bs.addItem ("This iPad's name: " + juce::String (s.deviceName), [this] { ed.askText ("Device name", "The name the rest of the band sees", ed.core.store.lib.settings.deviceName, [this] (juce::String n) { if (n.isNotEmpty()) { ed.core.store.lib.settings.deviceName = n.toStdString(); ed.core.store.save(); } }); });
+        addMenu (L, bs); return L;
+    }
+    if (k == KDisplay) {
+        L.title = "Display"; L.blurb = "The chart, the section colours, the projector words, and how the stage view scrolls.";
+        { juce::PopupMenu ar; for (int sec : { 0, 5, 10, 20, 30 }) ar.addItem (sec == 0 ? "Never" : juce::String (sec) + " seconds", true, s.autoReturnSec == sec, [this, sec] { ed.core.store.lib.settings.autoReturnSec = sec; ed.core.store.save(); });
+          L.rows.push_back ({ "Return the chart to the whole song", s.autoReturnSec == 0 ? "Never" : juce::String (s.autoReturnSec) + " seconds after a jump", false, true, [this, ar] {
+              Level child; child.kind = KMenu; child.title = "Chart auto-return"; child.blurb = "Pick one. This screen closes after you choose."; child.closeOnPick = true; addMenu (child, ar); nav.push_back (std::move (child)); scroll = 0; repaint(); } }); }
+        { juce::PopupMenu sc; wr::ui::addSectionColourSettings (ed, sc, this); addMenu (L, sc); }
+        { auto& pj = s.projector; juce::PopupMenu pm;
+          pm.addItem (proc.projector().externalAvailable() ? "Show on the external display" : "Show on an external display when one is plugged in", true, proc.projector().externalOn(), [this] { auto& o = ed.core.projector(); if (o.externalOn()) o.showExternal (false); else if (ed.requireAccess (wr::Feature::Projector)) o.showExternal (true); });
+          pm.addItem ("Fill this iPad (double-tap the picture to close it)", [this] { if (ed.requireAccess (wr::Feature::Projector)) ed.core.projector().showOnThisScreen (ed); });
+          juce::PopupMenu lp; for (int n : { 1, 2, 3, 4, 6 }) lp.addItem (juce::String (n) + (n == 1 ? " line" : " lines"), true, pj.linesPerSlide == n, [this, n] { ed.core.store.lib.settings.projector.linesPerSlide = n; ed.core.store.save(); });
+          pm.addSubMenu ("Lines on each slide (" + juce::String (pj.linesPerSlide) + ")", lp);
+          juce::PopupMenu fz; const char* sz[] = { "Small", "Medium", "Large (usual)", "Extra large" }; for (int i = 0; i < 4; ++i) fz.addItem (sz[i], true, pj.fontSize == i, [this, i] { ed.core.store.lib.settings.projector.fontSize = i; ed.core.store.save(); });
+          pm.addSubMenu ("Word size", fz);
+          pm.addItem ("Title slide before each song", true, pj.titleSlide, [this] { auto& p = ed.core.store.lib.settings.projector; p.titleSlide = ! p.titleSlide; ed.core.store.save(); });
+          pm.addItem ("Blank slide between songs", true, pj.blankBetweenSongs, [this] { auto& p = ed.core.store.lib.settings.projector; p.blankBetweenSongs = ! p.blankBetweenSongs; ed.core.store.save(); });
+          pm.addItem ("Service notes along the bottom", true, pj.showNotes, [this] { auto& p = ed.core.store.lib.settings.projector; p.showNotes = ! p.showNotes; ed.core.store.save(); });
+          pm.addItem ("ALL CAPS", true, pj.uppercase, [this] { auto& p = ed.core.store.lib.settings.projector; p.uppercase = ! p.uppercase; ed.core.store.save(); });
+          pm.addItem (pj.background.empty() ? "Background picture (now plain black)" : "Background picture (" + juce::File (pj.background).getFileName() + ")", [this] { ed.chooseImage (false); });
+          if (! pj.background.empty()) pm.addItem ("Background: plain black", [this] { ed.core.store.lib.settings.projector.background.clear(); ed.core.store.save(); });
+          pm.addItem (pj.logo.empty() ? "Logo on the blank slide" : "Logo (" + juce::File (pj.logo).getFileName() + ")", [this] { ed.chooseImage (true); });
+          L.rows.push_back ({ "Projector lyrics", "Slides, size, background, and the external screen.", false, true, [this, pm] {
+              Level child; child.kind = KMenu; child.title = "Projector"; child.blurb = "Pick one. This screen closes after you choose."; child.closeOnPick = true; addMenu (child, pm); nav.push_back (std::move (child)); scroll = 0; repaint(); } }); }
+        { juce::PopupMenu view; ed.addViewSettings (view); addMenu (L, view); }
+        return L;
+    }
+    L.title = "About & Legal"; L.blurb = "The subscription, the terms, the privacy policy, backups, and usage you type into CCLI yourself.";
+    { juce::PopupMenu sub; const auto nowS = (int64_t) juce::Time::currentTimeMillis() / 1000;
+      sub.addItem (juce::String (proc.entitlements.statusText (nowS)), false, false, [] {});
 #ifdef WR_STORE_BUILD
-      sub.addItem ("Subscribe / free trial / restore purchases...", true, false, [this] { openPaywall(); });
-#endif
-      for (auto& pr : wr::subscriptionProducts()) sub.addItem (juce::String (pr.name) + " - $" + juce::String (pr.usdPrice, 2) + "/month" + (pr.seats > 1 ? " (up to " + juce::String (pr.seats) + " people)" : juce::String()) + " - 14-day free trial", false, false, [] {});
-#ifdef WR_STORE_BUILD
-      sub.addSeparator();
-      sub.addItem ("Church team: join with a code / manage your team...", true, false, [this] { openTeam(); });
+      sub.addItem ("Subscribe, start the trial, or restore", [this] { ed.openPaywall(); });
+      sub.addItem ("Church team", [this] { ed.openTeam(); });
 #else
-      sub.addItem ("Church teams: App Store build only (this build is fully unlocked)", false, false, [] {});
+      sub.addItem ("This build is unlocked. Church teams are in the App Store build.", false, false, [] {});
 #endif
-      sub.addSeparator();
       sub.addItem ("Terms of Use", [] { juce::URL (wr::legal::termsUrl()).launchInDefaultBrowser(); });
       sub.addItem ("Privacy Policy", [] { juce::URL (wr::legal::privacyUrl()).launchInDefaultBrowser(); });
-      m.addSubMenu ("Subscription", sub); }
-    { juce::PopupMenu lg; lg.addItem ("Terms of Use", [] { juce::URL (wr::legal::termsUrl()).launchInDefaultBrowser(); });
-      lg.addItem ("Privacy Policy", [] { juce::URL (wr::legal::privacyUrl()).launchInDefaultBrowser(); });
-      m.addSubMenu ("About & legal", lg); }
-    addInstrumentSettings (m);
-    // ---- band sync: leader / follower over local Wi-Fi (Bonjour), Ableton Link tempo + beat phase
-    { auto& S = proc.sync(); juce::PopupMenu bs; S.browse (true);
-      bs.addItem (juce::String (S.statusLine()), false, false, [] {});
-      if (S.mode() == BandSync::Mode::Leading) for (auto& n : S.followerNames()) bs.addItem ("   " + juce::String (n.empty() ? "follower" : n), false, false, [] {});
-      bs.addSeparator();
-      bs.addItem ("Lead this session (followers mirror song, sections, cues, tempo, PLAY)", core.fullAccess(), S.mode() == BandSync::Mode::Leading, [this] { core.sync().lead (core.store.lib.settings.deviceName); });
-      auto leaders = S.leaders();
-      if (leaders.empty()) bs.addItem ("Join: looking for leaders on this Wi-Fi...", false, false, [] {});
-      for (auto& p : leaders) { auto peer = p; bs.addItem ("Join " + juce::String (peer.name) + "  (" + juce::String (peer.host) + ")", core.fullAccess(), false, [this, peer] { core.sync().join (peer.host, peer.port, core.store.lib.settings.deviceName); core.store.save(); }); }
-      if (! s.lastLeaderHost.empty()) bs.addItem ("Rejoin " + juce::String (s.lastLeaderHost), [this] { auto& st = core.store.lib.settings; core.sync().join (st.lastLeaderHost, st.lastLeaderPort > 0 ? st.lastLeaderPort : wr::sync::kDefaultPort, st.deviceName); });
-      bs.addItem ("Join by IP address...", [this] { askText ("Join leader", "Leader IP address (shown on the leader under Band sync)", core.store.lib.settings.lastLeaderHost,
-          [this] (juce::String ip) { if (ip.isNotEmpty()) { core.sync().join (ip.trim().toStdString(), wr::sync::kDefaultPort, core.store.lib.settings.deviceName); core.store.save(); } }); });
-      bs.addItem ("Leave / stop sync", S.mode() != BandSync::Mode::Off, false, [this] { core.sync().stop(); });
-      bs.addSeparator();
-     #if __has_include(<ableton/Link.hpp>)
-      bs.addItem ("Use Ableton Link for tempo + beat phase", true, s.useLink, [this] { auto& st = core.store.lib.settings; st.useLink = ! st.useLink; core.sync().useLink = st.useLink; core.store.save(); });
-     #else
-      bs.addItem ("Ableton Link: off (MIDI Clock + Wi-Fi sync)", false, false, [] {});
-     #endif
-      bs.addItem ("This device's name: " + juce::String (s.deviceName) + "...", [this] { askText ("Device name", "Shown to the band", core.store.lib.settings.deviceName,
-          [this] (juce::String n) { if (n.isNotEmpty()) { core.store.lib.settings.deviceName = n.toStdString(); core.store.save(); } }); });
-      m.addSubMenu ("Band sync (leader / follower)", bs); }
-    // ---- projector lyrics
-    { auto& pj = s.projector; juce::PopupMenu pm; auto& out = proc.projector();
-      pm.addItem (out.externalAvailable() ? "Show on external display (HDMI)" : "Show on external display (none connected - shows when plugged in)", true, out.externalOn(), [this] { auto& o = core.projector(); if (o.externalOn()) o.showExternal (false); else if (requireAccess (wr::Feature::Projector)) o.showExternal (true); });
-      pm.addItem ("Show full screen on this iPad (projector-only follower; double-tap to close)", [this] { if (requireAccess (wr::Feature::Projector)) core.projector().showOnThisScreen (*this); });
-      pm.addSeparator();
-      juce::PopupMenu lp; for (int n : { 1, 2, 3, 4, 6 }) lp.addItem (juce::String (n) + (n == 1 ? " line" : " lines"), true, pj.linesPerSlide == n, [this, n] { core.store.lib.settings.projector.linesPerSlide = n; core.store.save(); });
-      pm.addSubMenu ("Lines per slide (" + juce::String (pj.linesPerSlide) + ")", lp);
-      juce::PopupMenu fz; const char* sz[] = { "Small", "Medium", "Large (default)", "Extra large" }; for (int i = 0; i < 4; ++i) fz.addItem (sz[i], true, pj.fontSize == i, [this, i] { core.store.lib.settings.projector.fontSize = i; core.store.save(); });
-      pm.addSubMenu ("Font size", fz);
-      pm.addItem ("Title slide before each song", true, pj.titleSlide, [this] { auto& p = core.store.lib.settings.projector; p.titleSlide = ! p.titleSlide; core.store.save(); });
-      pm.addItem ("Blank / logo slide between songs", true, pj.blankBetweenSongs, [this] { auto& p = core.store.lib.settings.projector; p.blankBetweenSongs = ! p.blankBetweenSongs; core.store.save(); });
-      pm.addItem ("Show service notes at the bottom of the slides", true, pj.showNotes, [this] { auto& p = core.store.lib.settings.projector; p.showNotes = ! p.showNotes; core.store.save(); });
-      pm.addItem ("ALL CAPS", true, pj.uppercase, [this] { auto& p = core.store.lib.settings.projector; p.uppercase = ! p.uppercase; core.store.save(); });
-      pm.addItem (pj.background.empty() ? "Background image... (now: black)" : "Background image... (" + juce::File (pj.background).getFileName() + ")", [this] { chooseImage (false); });
-      if (! pj.background.empty()) pm.addItem ("Background: plain black", [this] { core.store.lib.settings.projector.background.clear(); core.store.save(); });
-      pm.addItem (pj.logo.empty() ? "Logo for the blank slide..." : "Logo: " + juce::File (pj.logo).getFileName() + "...", [this] { chooseImage (true); });
-      m.addSubMenu ("Projector lyrics", pm); }
-    addViewSettings (m);
-    m.addSeparator();
-    m.addItem ("Data folder: " + proc.store.file().getParentDirectory().getFullPathName(), false, false, [] {});
-    m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (anchor));
+      addMenu (L, sub); }
+    { juce::PopupMenu v; wr::ui::addV08Settings (ed, v, this); addMenu (L, v); }
+    L.rows.push_back ({ "Library folder", proc.store.file().getParentDirectory().getFullPathName(), false, false, {} });
+    return L;
 }
+
+void CoreEditor::SettingsPanel::paint (juce::Graphics& g) {
+    using namespace wr::theme;
+    g.fillAll (bg);
+    if (nav.empty()) return;
+    auto& L = cur();
+    closeR = { getWidth() - 112, 14, 94, 36 };
+    backR = nav.size() > 1 ? juce::Rectangle<int> (16, 14, 44, 36) : juce::Rectangle<int>();
+    pill (g, closeR.toFloat(), card, cardBorder, 10);
+    g.setColour (text); g.setFont (font (14, true));
+    { auto x = closeR.toFloat().reduced (10, 10).removeFromLeft (16);
+      g.drawLine (x.getX(), x.getY(), x.getRight(), x.getBottom(), 2.0f); g.drawLine (x.getRight(), x.getY(), x.getX(), x.getBottom(), 2.0f); }
+    g.drawText ("Done", closeR.withTrimmedLeft (28), juce::Justification::centredLeft);
+    auto titleR = juce::Rectangle<int> (nav.size() > 1 ? 68 : 20, 10, getWidth() - (nav.size() > 1 ? 68 : 20) - 120, 28);
+    g.setFont (font (20, true)); g.drawText (L.title, titleR, juce::Justification::centredLeft, true);
+    g.setColour (dim); g.setFont (font (13));
+    g.drawFittedText (L.blurb, juce::Rectangle<int> (20, 42, getWidth() - 40, 36), juce::Justification::centredLeft, 2);
+    if (! backR.isEmpty()) { pill (g, backR.toFloat(), card, cardBorder, 10); g.setColour (text); g.setFont (font (18, true)); g.drawText ("<", backR, juce::Justification::centred); }
+    listR = getLocalBounds().withTrimmedTop (86).reduced (16, 8);
+    g.saveState(); g.reduceClipRegion (listR);
+    int y = listR.getY() - scroll; hits.assign (L.rows.size(), {});
+    for (int i = 0; i < (int) L.rows.size(); ++i) {
+        auto b = juce::Rectangle<int> (listR.getX(), y, listR.getWidth(), 56); hits[(size_t) i] = b;
+        if (b.getBottom() > listR.getY() && b.getY() < listR.getBottom()) {
+            auto& row = L.rows[(size_t) i];
+            pill (g, b.toFloat(), row.tick ? accentFill.withAlpha (0.45f) : card, row.tick ? accentText : cardBorder, 10);
+            g.setColour (row.on ? text : dimmer); g.setFont (font (15, true));
+            g.drawText (row.title, b.reduced (14, 6).removeFromTop (24), juce::Justification::centredLeft, true);
+            g.setColour (row.tick ? onAccent : dim); g.setFont (font (12));
+            g.drawText (row.sub, b.reduced (14, 4).removeFromBottom (20), juce::Justification::centredLeft, true);
+        }
+        y += 62;
+    }
+    g.restoreState();
+    int content = y + scroll - listR.getY();
+    maxScroll = std::max (0, content - listR.getHeight());
+}
+void CoreEditor::SettingsPanel::mouseUp (const juce::MouseEvent& e) {
+    if (drag) { drag = false; return; }
+    if (closeR.contains (e.getPosition())) { dismiss(); return; }
+    if (backR.contains (e.getPosition())) { pop(); return; }
+    if (nav.empty()) return;
+    auto& rows = cur().rows;
+    for (int i = 0; i < (int) hits.size() && i < (int) rows.size(); ++i)
+        if (rows[(size_t) i].on && rows[(size_t) i].go && hits[(size_t) i].contains (e.getPosition()) && listR.contains (e.getPosition())) { rows[(size_t) i].go(); return; }
+}
+
+void CoreEditor::openSettings (juce::Component*) {
+    if (! settings_) { settings_ = std::make_unique<SettingsPanel> (*this); addChildComponent (*settings_); }
+    settings_->setBounds (getLocalBounds()); settings_->showHome();
+}
+CoreEditor::~CoreEditor() { setLookAndFeel (nullptr); }

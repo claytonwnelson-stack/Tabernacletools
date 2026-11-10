@@ -45,6 +45,7 @@ void addSectionColourSettings (CoreEditor&, juce::PopupMenu& settings, juce::Com
 // v0.8 (V08Menus.cpp)
 void addFootswitchMenu (CoreEditor&, juce::PopupMenu&, int unit, int sw);       // assign press / long actions per bank, manage banks
 void addV08Settings (CoreEditor&, juce::PopupMenu&, juce::Component* anchor);   // stage mode, auto-scroll, recorder, stats, backup
+void addFootPedalSettings (CoreEditor&, juce::PopupMenu&);                        // which Chocolate is the guitar unit, which is sections
 void paintNextSongCard (juce::Graphics&, juce::Rectangle<float> area, const wr::NextSongInfo&, bool songEnded);
 void paintNotesBanner (juce::Graphics&, juce::Rectangle<float> area, const std::vector<wr::ServiceNote>&);
 juce::String noteWhenText (const std::string& at);

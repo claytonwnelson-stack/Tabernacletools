@@ -186,6 +186,8 @@ Json toJson (const Library& l) {
         .set ("oversampling", l.settings.ampOversampling).set ("osAuto", l.settings.autoOversampling)
         .set ("guitarPedal", l.settings.guitarPedalId).set ("sectionPedal", l.settings.sectionPedalId)
         .set ("guitarPedalName", l.settings.guitarPedalName).set ("sectionPedalName", l.settings.sectionPedalName);
+    if (! l.settings.favoritePedals.empty()) { Json a = Json::array(); for (auto& s : l.settings.favoritePedals) a.push (s); st.set ("favPedals", a); }
+    if (! l.settings.recentPedals.empty()) { Json a = Json::array(); for (auto& s : l.settings.recentPedals) a.push (s); st.set ("recentPedals", a); }
     { Json pl = Json::array(); for (auto& e : l.playLog) pl.push (Json::object().set ("song", e.songId).set ("date", e.date)); j.set ("playLog", pl); }
     { Json ul = Json::array(); for (auto& e : l.usageLog) ul.push (Json::object().set ("date", e.date).set ("song", e.songId).set ("title", e.title).set ("ccli", e.ccliNumber)
           .set ("authors", e.authors).set ("setlist", e.setlist).set ("pd", e.publicDomain).set ("projected", e.projected).set ("chart", e.chart)); j.set ("usageLog", ul); }
@@ -210,6 +212,8 @@ Library libraryFromJson (const Json& j) {
     { int o = st["oversampling"].integer (4); l.settings.ampOversampling = o >= 8 ? 8 : o >= 4 ? 4 : o >= 2 ? 2 : 1; l.settings.autoOversampling = st["osAuto"].boolean (true); }
     l.settings.guitarPedalId = st["guitarPedal"].str(); l.settings.sectionPedalId = st["sectionPedal"].str();
     l.settings.guitarPedalName = st["guitarPedalName"].str(); l.settings.sectionPedalName = st["sectionPedalName"].str();
+    for (auto& e : st["favPedals"].items()) if (! e.str().empty()) l.settings.favoritePedals.push_back (e.str());
+    for (auto& e : st["recentPedals"].items()) if (! e.str().empty()) l.settings.recentPedals.push_back (e.str());
     l.settings.stageMode = false; // saved "dark stage mode" is ignored; the app has one dark look
     l.settings.autoScroll = st["autoScroll"].boolean (true); l.settings.recordClick = st["recordClick"].boolean (false); l.settings.repeatWarnDays = st["repeatWarnDays"].integer (21); l.settings.trackJumpAt = std::clamp (st["trackJumpAt"].integer (0), 0, 1);
     for (auto& e : j["playLog"].items()) l.playLog.push_back ({ e["song"].str(), e["date"].str() });
@@ -246,6 +250,15 @@ ControllerProfile defaultSectionUnit() {
 ControllerProfile defaultGuitarUnit() { const char* a[4] = { "tap", "boost", "switchC", "switchD" }; const char* la[4] = { "tunerToggle", "", "", "clickMute" };
     // A: tap fires on press (tempo-accurate), hold 1 s opens the tuner. D: short = per-song D (on release), hold 0.6 s = click mute.
     auto c = chocolate ("Chocolate Plus - Guitar", "guitar", 1, a, la); c.sw[0].longMs = 1000; c.sw[3].longMs = 600; return c; }
+void resetFootswitchMap (ControllerProfile& c) {
+    auto d = c.role == "section" ? defaultSectionUnit() : defaultGuitarUnit();
+    for (int i = 0; i < 4; ++i) {
+        c.sw[i].action = d.sw[i].action; c.sw[i].longAction = d.sw[i].longAction; c.sw[i].longMs = d.sw[i].longMs;
+        if (! c.banks.empty()) { auto bi = (size_t) std::clamp (c.bank, 0, (int) c.banks.size() - 1);
+            c.banks[bi].action[i] = d.sw[i].action; c.banks[bi].longAction[i] = d.sw[i].longAction; }
+    }
+    c.comboE = d.comboE; c.comboF = d.comboF;
+}
 
 RigPreset defaultRig() {
     RigPreset r; r.name = "Worship Ambient";

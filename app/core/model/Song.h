@@ -95,6 +95,7 @@ struct ControllerProfile {
     std::string comboE, comboF;
 };
 void enableDefaultBanks (ControllerProfile&);   // bank 1 = the current mapping, bank 2 = a template (guitar: click/transport, section: songs)
+void resetFootswitchMap (ControllerProfile&);   // factory press / hold / E / F for this role; MIDI bindings, name, and channel stay
 
 struct ProjectorSettings {
     int linesPerSlide = 2;            // 1..8; a section's lyric lines are split into balanced slides of at most N lines
@@ -148,6 +149,7 @@ struct AppSettings {
     int trackJumpAt = 0;                      // v0.14 backing tracks: section jumps land 0 = on the next bar line, 1 = at the end of the section             // v0.12 step it down automatically when the DSP gets close to the audio deadline
     // Two factory Chocolates send the same messages. These CoreMIDI identifiers say which USB port is which.
     std::string guitarPedalId, sectionPedalId, guitarPedalName, sectionPedalName;
+    std::vector<std::string> favoritePedals, recentPedals; // Workshop library: long-press to favorite; recent is the last pedals added
 };
 // v0.15 CCLI song-usage log: one row per song per day per setlist (live sets only, never practice); flags are OR-ed
 struct UsageEntry { std::string date, songId, title, ccliNumber, authors, setlist; bool publicDomain = false, projected = false, chart = false; };

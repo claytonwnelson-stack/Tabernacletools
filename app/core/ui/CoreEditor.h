@@ -38,12 +38,30 @@ protected:
     virtual void addAudioSettings (juce::PopupMenu&) {}              // after "Audio interface..." (e.g. guitar routing)
     virtual void addInstrumentSettings (juce::PopupMenu&) {}         // after auto-advance (e.g. rig tails)
     virtual void addViewSettings (juce::PopupMenu&) {}               // after projector (e.g. tuner)
-    juce::TextButton settingsBtn_ { "AUDIO / MIDI" };
+    struct SettingsButton : juce::TextButton {
+        SettingsButton() { setButtonText ("Settings"); }
+        void paintButton (juce::Graphics& g, bool over, bool down) override {
+            using namespace wr::theme;
+            auto r = getLocalBounds().toFloat().reduced (0.5f);
+            pill (g, r, down ? accentFill : (over ? btn.brighter (0.08f) : btn), down ? accentText : btnBorder, 10.0f);
+            auto f = font (13.0f, true);
+            const float icon = 20.0f, gap = 6.0f;
+            juce::GlyphArrangement ga; ga.addLineOfText (f, "Settings", 0, 0);
+            const float tw = ga.getBoundingBox (0, -1, true).getWidth();
+            const float x = r.getCentreX() - (icon + gap + tw) * 0.5f;
+            paintBearingMark (g, { x, r.getCentreY() - icon * 0.5f, icon, icon });
+            g.setColour (text); g.setFont (f);
+            g.drawText ("Settings", juce::Rectangle<float> (x + icon + gap, r.getY(), tw + 2.0f, r.getHeight()), juce::Justification::centredLeft);
+        }
+    };
+    SettingsButton settingsBtn_;
     wr::theme::LookAndFeel lnf_;
     std::unique_ptr<BandPanel> band_;
     std::unique_ptr<ArrangementEditor> arr_; std::unique_ptr<PracticeBar> pbar_; std::unique_ptr<ImportPreviewView> imp_; std::unique_ptr<class HymnBrowserView> hymns_; std::unique_ptr<class TeamPanel> team_; std::unique_ptr<class PaywallView> paywall_;
     std::vector<wr::platform::SharedChart> sharedQueue_; int shareTick_ = 0;
 private:
+    class SettingsPanel;
+    std::unique_ptr<SettingsPanel> settings_;
     std::unique_ptr<juce::FileChooser> chooser_;
     bool lastPractice_ = false, lastTracks_ = false; std::unique_ptr<class TracksBar> tbar_;
 public:
