@@ -50,7 +50,7 @@ protected:
             const float tw = ga.getBoundingBox (0, -1, true).getWidth();
             const float x = r.getCentreX() - (icon + gap + tw) * 0.5f;
             paintBearingMark (g, { x, r.getCentreY() - icon * 0.5f, icon, icon });
-            g.setColour (text); g.setFont (f);
+            g.setColour (wr::theme::text); g.setFont (f);
             g.drawText ("Settings", juce::Rectangle<float> (x + icon + gap, r.getY(), tw + 2.0f, r.getHeight()), juce::Justification::centredLeft);
         }
     };
@@ -62,6 +62,7 @@ protected:
 private:
     class SettingsPanel;
     std::unique_ptr<SettingsPanel> settings_;
+    void layoutSettingsOverlay();
     std::unique_ptr<juce::FileChooser> chooser_;
     bool lastPractice_ = false, lastTracks_ = false; std::unique_ptr<class TracksBar> tbar_;
 public:

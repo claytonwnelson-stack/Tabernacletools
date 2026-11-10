@@ -83,7 +83,7 @@ void CoreEditor::coreLayout() {
     auto top = getLocalBounds().removeFromTop (64);
     settingsBtn_.setBounds (top.removeFromRight (164).reduced (10, 16));
     band_->setBounds (getLocalBounds()); arr_->setBounds (getLocalBounds()); imp_->setBounds (getLocalBounds()); if (team_) team_->setBounds (getLocalBounds()); if (paywall_) paywall_->setBounds (getLocalBounds());
-    if (settings_) settings_->setBounds (getLocalBounds());
+    layoutSettingsOverlay();
     pbar_->setBounds (getLocalBounds().removeFromBottom (56));
     tbar_->setBounds (getLocalBounds().withTrimmedBottom (core.practiceMode() ? 56 : 0).removeFromBottom (56));
 }
@@ -445,6 +445,7 @@ void CoreEditor::SettingsPanel::mouseUp (const juce::MouseEvent& e) {
         if (rows[(size_t) i].on && rows[(size_t) i].go && hits[(size_t) i].contains (e.getPosition()) && listR.contains (e.getPosition())) { rows[(size_t) i].go(); return; }
 }
 
+void CoreEditor::layoutSettingsOverlay() { if (settings_) settings_->setBounds (getLocalBounds()); }
 void CoreEditor::openSettings (juce::Component*) {
     if (! settings_) { settings_ = std::make_unique<SettingsPanel> (*this); addChildComponent (*settings_); }
     settings_->setBounds (getLocalBounds()); settings_->showHome();
