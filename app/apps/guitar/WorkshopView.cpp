@@ -76,15 +76,21 @@ void paintChainStomp (juce::Graphics& g, juce::Rectangle<int> full, const std::s
       float ky = (float) full.getY() + 5.f, kx = (float) full.getX() + 7.f;
       for (int i = 0; i < nk; ++i) miniKnob (g, { kx + i * (kd + 3.f), ky, kd, kd }, 0.25f + 0.18f * i);
       led (g, { (float) full.getRight() - 11.f, ky + kd * 0.45f }, on);
-      auto nameR = full.reduced (6, 2); nameR.removeFromTop ((int) (kd + 6)); nameR.removeFromBottom (16);
-      g.setColour (on ? text : dim); g.setFont (font (std::min (16.f, std::max (12.f, full.getHeight() * 0.20f)), true));
-      g.drawFittedText (name, nameR, juce::Justification::centred, 2);
       float fs = std::min (15.f, full.getWidth() * 0.14f);
       juce::Rectangle<float> sw (full.getCentreX() - fs * 0.5f, (float) full.getBottom() - 4.f - fs, fs, fs);
       g.setColour (juce::Colours::white.withAlpha (0.92f)); g.fillEllipse (sw);
       g.setColour (bg); g.fillEllipse (sw.reduced (fs * 0.28f));
       g.setColour (hue.brighter (0.45f)); g.drawEllipse (sw.reduced (0.6f), 1.f);
     }
+    auto nameR = full.reduced (6, 2); nameR.removeFromTop ((int) (std::min (12.f, full.getHeight() * 0.16f) + 6)); nameR.removeFromBottom (16);
+    auto faceCol = bg.interpolatedWith (hue.brighter (0.18f), on ? 1.0f : 0.55f);
+    const bool light = faceCol.getPerceivedBrightness() > 0.45f;
+    if (light) { g.setColour (juce::Colours::black.withAlpha (on ? 0.42f : 0.55f)); g.fillRoundedRectangle (nameR.reduced (1, 0).toFloat(), 4.0f); }
+    g.setFont (font (std::min (16.f, std::max (12.f, full.getHeight() * 0.20f)), true));
+    g.setColour (juce::Colours::black.withAlpha (0.7f));
+    g.drawFittedText (name, nameR.translated (0, 1), juce::Justification::centred, 2);
+    g.setColour (juce::Colours::white);
+    g.drawFittedText (name, nameR, juce::Justification::centred, 2);
     if (sel) { g.setColour (accentText); g.drawRoundedRectangle (full.toFloat().reduced (1.2f), 10, 2.2f); }
 }
 }
@@ -114,6 +120,9 @@ WorkshopView::WorkshopView (TabernacleGuitarEditor& e) : ed (e) {
     tempoHost_.setFocusContainerType (juce::Component::FocusContainerType::keyboardFocusContainer);
     tempoHost_.addAndMakeVisible (tempoL_); tempoL_.setFont (font (12, true)); tempoL_.setColour (juce::Label::textColourId, text); tempoL_.setText ("BPM", juce::dontSendNotification); tempoL_.setJustificationType (juce::Justification::centredLeft);
     tempoHost_.addAndMakeVisible (tempo_); tempo_.setFont (font (16, true)); tempo_.setJustification (juce::Justification::centred); tempo_.setInputRestrictions (5, "0123456789.");
+    tempo_.setColour (juce::TextEditor::textColourId, juce::Colours::white);
+    tempo_.setColour (juce::TextEditor::highlightedTextColourId, juce::Colours::white);
+    tempo_.setColour (juce::CaretComponent::caretColourId, juce::Colours::white);
     tempo_.onReturnKey = [this] { setSongTempo (tempo_.getText().getDoubleValue()); }; tempo_.onFocusLost = [this] { setSongTempo (tempo_.getText().getDoubleValue()); };
     for (auto* b : { &tempoMinus_, &tempoPlus_ }) tempoHost_.addAndMakeVisible (*b);
     ed.addChildComponent (tempoHost_);
@@ -365,8 +374,8 @@ void WorkshopView::resized() {
             const int textH = 15;
             int d = (int) std::min (cell.getWidth() - 6.f, cell.getHeight() - textH - 2.f);
             d = std::min (108, std::max (36, d));
-            auto box = juce::Rectangle<int> (d, d + textH).withCentre (cell.toNearestInt().getCentre());
-            if (box.getY() < (int) cell.getY()) box.setY ((int) cell.getY());
+            auto box = juce::Rectangle<int> (d, d + textH).withCentre ({ cell.toNearestInt().getCentreX(), (int) cell.getY() + (d + textH) / 2 });
+            if (box.getBottom() > (int) cell.getBottom()) box.setBottom ((int) cell.getBottom());
             if (box.getRight() > pedalRect_.getRight() - 10) box.setRight (pedalRect_.getRight() - 10);
             if (box.getX() < pedalRect_.getX() + 10) box.setX (pedalRect_.getX() + 10);
             knobs_[i]->setTextBoxStyle (juce::Slider::TextBoxBelow, false, d, textH);
