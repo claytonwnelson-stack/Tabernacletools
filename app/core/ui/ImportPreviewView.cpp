@@ -6,7 +6,8 @@ ImportPreviewView::ImportPreviewView() {
     for (auto* t : { &title_, &artist_, &key_, &capo_ }) { addAndMakeVisible (*t); t->setFont (font (15)); t->setColour (juce::TextEditor::backgroundColourId, well); }
     title_.setTextToShowWhenEmpty ("Title", dimmer); artist_.setTextToShowWhenEmpty ("Artist", dimmer); key_.setTextToShowWhenEmpty ("Key", dimmer); capo_.setTextToShowWhenEmpty ("0", dimmer);
     capo_.setInputRestrictions (2, "0123456789");
-    addAndMakeVisible (import_); addAndMakeVisible (cancel_);
+    addAndMakeVisible (import_); addAndMakeVisible (cancel_); addAndMakeVisible (edit_);
+    edit_.onClick = [this] { if (onEdit && p_.ok()) onEdit (p_.chart); };
     import_.setColour (juce::TextButton::buttonColourId, accentFill); import_.setColour (juce::TextButton::textColourOffId, onAccent);
     cancel_.onClick = [this] { setVisible (false); done_ = nullptr; };
     import_.onClick = [this] {
@@ -33,7 +34,7 @@ void ImportPreviewView::resized() {
     auto r = box_.reduced (22).withTrimmedTop (40);
     auto row = r.removeFromTop (36); title_.setBounds (row.removeFromLeft (row.getWidth() / 2 - 6)); row.removeFromLeft (12); artist_.setBounds (row);
     r.removeFromTop (10); row = r.removeFromTop (36); key_.setBounds (row.removeFromLeft (110)); row.removeFromLeft (110); capo_.setBounds (row.removeFromLeft (70));
-    auto b = box_.reduced (22).removeFromBottom (44); import_.setBounds (b.removeFromRight (160)); b.removeFromRight (10); cancel_.setBounds (b.removeFromRight (130));
+    auto b = box_.reduced (22).removeFromBottom (44); import_.setBounds (b.removeFromRight (160)); b.removeFromRight (10); cancel_.setBounds (b.removeFromRight (130)); b.removeFromRight (10); edit_.setBounds (b.removeFromRight (170));
 }
 
 void ImportPreviewView::paint (juce::Graphics& g) {

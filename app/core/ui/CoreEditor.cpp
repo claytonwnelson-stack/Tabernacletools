@@ -20,11 +20,13 @@ CoreEditor::CoreEditor (CoreProcessor& p) : juce::AudioProcessorEditor (p), core
     pbar_ = std::make_unique<PracticeBar> (*this); addChildComponent (*pbar_);
     tbar_ = std::make_unique<TracksBar> (*this); addChildComponent (*tbar_);
     arr_ = std::make_unique<ArrangementEditor>(); addChildComponent (*arr_);
+    songEd_ = std::make_unique<SongEditor>(); addChildComponent (*songEd_);
     arr_->defaults = &core.store.lib.settings.sectionColors;   // v0.8 section colours edited in the arrangement editor
     arr_->onColours = [this] (const std::string& id, std::vector<std::string> cc) {
         if (auto* so = core.store.lib.song (id)) { for (size_t i = 0; i < so->chart.sections.size() && i < cc.size(); ++i) so->chart.sections[i].customColor = cc[i];
             wr::applySectionColors (so->chart, {}); core.live().refreshChart(); core.store.save(); repaint(); } };
     imp_ = std::make_unique<ImportPreviewView>(); addChildComponent (*imp_);
+    imp_->onEdit = [this] (wr::Chart c) { songEd_->open (this, {}, std::move (c), [this] (wr::Chart edited) { imp_->setChart (std::move (edited)); imp_->setVisible (true); imp_->toFront (true); }); };
     hymns_ = std::make_unique<HymnBrowserView>(); addChildComponent (*hymns_);
 }
 bool CoreEditor::requireAccess (wr::Feature f) {
@@ -56,6 +58,11 @@ void CoreEditor::openImportPreview (const juce::String& text, const juce::String
         if (onAdded) onAdded (id); });
 }
 int CoreEditor::practiceBarHeight() const { return (core.practiceMode() ? 56 : 0) + (lastTracks_ ? 56 : 0); }
+void CoreEditor::openSongEditor (const std::string& songId, std::function<void()> afterSave) {
+    if (! requireAccess (wr::Feature::Edit)) return;
+    auto* s = core.store.lib.song (songId); if (! s || ! songEd_) return;
+    songEd_->open (this, songId, s->chart, [this, afterSave] (wr::Chart) { if (afterSave) afterSave(); repaint(); });
+}
 void CoreEditor::openLiveArrangement() {
     if (! requireAccess (wr::Feature::Edit)) return;
     auto& L = core.live(); auto* s = L.song(); if (! s) return;
@@ -82,7 +89,7 @@ void CoreEditor::choosePracticeTrack() {
 void CoreEditor::coreLayout() {
     auto top = getLocalBounds().removeFromTop (64);
     settingsBtn_.setBounds (top.removeFromRight (164).reduced (10, 16));
-    band_->setBounds (getLocalBounds()); arr_->setBounds (getLocalBounds()); imp_->setBounds (getLocalBounds()); if (team_) team_->setBounds (getLocalBounds()); if (paywall_) paywall_->setBounds (getLocalBounds());
+    band_->setBounds (getLocalBounds()); arr_->setBounds (getLocalBounds()); if (songEd_) songEd_->setBounds (getLocalBounds()); imp_->setBounds (getLocalBounds()); if (team_) team_->setBounds (getLocalBounds()); if (paywall_) paywall_->setBounds (getLocalBounds());
     layoutSettingsOverlay();
     pbar_->setBounds (getLocalBounds().removeFromBottom (56));
     tbar_->setBounds (getLocalBounds().withTrimmedBottom (core.practiceMode() ? 56 : 0).removeFromBottom (56));

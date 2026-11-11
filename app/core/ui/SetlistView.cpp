@@ -84,7 +84,7 @@ void SetlistView::paintTopBar (juce::Graphics& g, juce::Rectangle<int> r) {
 }
 
 void SetlistView::paint (juce::Graphics& g) {
-    g.fillAll (bg); auto& lib = ed.core.store.lib; libRows_.clear(); setRows_.clear(); learnBtns_.clear();
+    g.fillAll (bg); auto& lib = ed.core.store.lib; libRows_.clear(); setRows_.clear(); learnBtns_.clear(); editHits_.clear();
     // ---- library
     label (g, "SONG LIBRARY", libArea_.withHeight (18)); label (g, juce::String ((int) lib.songs.size()) + " songs", libArea_.withHeight (18), dimmer, 12, juce::Justification::centredRight);
     auto lr = libArea_.withTrimmedTop (72).withTrimmedBottom (52); int y = lr.getY();
@@ -95,6 +95,7 @@ void SetlistView::paint (juce::Graphics& g) {
         g.setColour (dim); g.setFont (font (11, true)); g.drawText ("KEY " + juce::String (s.chart.key) + "  BPM " + juce::String ((int) s.chart.bpm), row.reduced (12, 0).withTrimmedRight (30), juce::Justification::centredRight);
         bool inSet = std::any_of (working_.entries.begin(), working_.entries.end(), [&] (const SetlistEntry& e) { return e.songId == s.id; });
         g.setColour (inSet ? accentText : accentFill); g.setFont (font (18, true)); g.drawText (inSet ? "v" : "+", row.withTrimmedLeft (row.getWidth() - 30), juce::Justification::centred);
+        { juce::Rectangle<int> edb (row.getRight() - 108, row.getY() + 8, 70, row.getHeight() - 16); pill (g, edb.toFloat(), btn, btnBorder, 8); g.setColour (text); g.setFont (font (13, true)); g.drawText ("Edit", edb, juce::Justification::centred); editHits_.push_back ({ edb, i }); }
         libRows_.push_back ({ row, i }); y += 52;
     }
     // ---- set
@@ -176,6 +177,9 @@ void SetlistView::mouseUp (const juce::MouseEvent& e) {
     }
     dragFrom_ = dragTo_ = -1;
     if (e.getDistanceFromDragStart() > 6) { repaint(); return; }
+    for (auto& h : editHits_) if (h.first.contains (e.getPosition())) {
+        if (! ed.requireAccess (wr::Feature::Edit)) return; auto id = ed.core.store.lib.songs[(size_t) h.second].id;
+        ed.openSongEditor (id, [this] { if (auto* s = ed.core.store.lib.setlist (working_.date)) working_ = *s; repaint(); }); return; }
     for (auto& r : libRows_) if (r.first.contains (e.getPosition())) { if (! ed.requireAccess (wr::Feature::Edit)) return; working_.entries.push_back ({ ed.core.store.lib.songs[(size_t) r.second].id, "", 0, "lead" }); repaint(); return; }
     for (auto& r : setRows_) if (r.first.contains (e.getPosition())) { entryMenu (r.second); return; }
     for (auto& b : learnBtns_) if (b.first.contains (e.getPosition())) {

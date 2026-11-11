@@ -96,7 +96,7 @@ public:
     int capo() const { return chart_.capo; }
     std::string capoText() const { return capoLabel (chart_.key, chart_.capo); }
     void setCapoOverride (int capo);                          // -1 = song's capo
-    void refreshChart() { rebuildChart(); ++version_; }        // after editing the song (capo, bars) in the library
+    void refreshChart() { rebuildChart(); if (chart_.sections.empty()) secIdx_ = 0; else secIdx_ = std::clamp (secIdx_, 0, (int) chart_.sections.size() - 1); ++version_; }
     // quantised section changes: while the bar grid runs (click on, PLAY, or MIDI clock) next/prev/jump/goto wait for the bar line
     bool sectionPending() const { return pendingIdx_ >= 0; }
     int pendingSection() const { return pendingIdx_; }

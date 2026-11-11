@@ -1,6 +1,201 @@
 #include "LiveExtras.h"
 #include "model/Chart.h"
+#include "Platform.h"
 using namespace wr; using namespace wr::theme;
+
+// ================================================================== song editor
+SongEditor::SongEditor() {
+    addAndMakeVisible (name_); addAndMakeVisible (body_);
+    body_.setMultiLine (true, true); body_.setReturnKeyStartsNewLine (true);
+    name_.setFont (font (18)); body_.setFont (font (16));
+    for (auto* t : { &name_, &body_ }) {
+        t->setColour (juce::TextEditor::backgroundColourId, well);
+        t->setColour (juce::TextEditor::textColourId, juce::Colours::white);
+        t->setColour (juce::TextEditor::outlineColourId, cardBorder);
+        t->setColour (juce::TextEditor::focusedOutlineColourId, accentText);
+    }
+    name_.onFocusLost = [this] { if (isVisible() && sel_ >= 0 && sel_ < (int) chart_.sections.size()) { auto n = name_.getText().trim().toStdString(); if (! n.empty() && n != chart_.sections[(size_t) sel_].name) { pushUndo(); run (renameSection (chart_, sel_, n)); } } };
+    body_.onFocusLost = [this] { if (isVisible()) storeBody(); };
+}
+int SongEditor::nonTabs (const Section& s) const { int n = 0; for (auto& it : s.items) if (it.kind != ChartItem::Tab) ++n; return n; }
+void SongEditor::pushUndo() { undo_.push_back (chart_); undoOrigin_.push_back (origin_); if (undo_.size() > 40) { undo_.erase (undo_.begin()); undoOrigin_.erase (undoOrigin_.begin()); } }
+void SongEditor::undo() { if (undo_.empty()) return; chart_ = undo_.back(); origin_ = undoOrigin_.back(); undo_.pop_back(); undoOrigin_.pop_back(); if (sel_ >= (int) chart_.sections.size()) sel_ = std::max (0, (int) chart_.sections.size() - 1); loadSel(); repaint(); }
+void SongEditor::run (const ChartEdit& e) {
+    if (! e.ok) { if (! undo_.empty()) { undo_.pop_back(); undoOrigin_.pop_back(); } return; }
+    std::vector<int> next (chart_.sections.size(), -1);
+    for (int i = 0; i < (int) origin_.size() && i < (int) e.oldToNew.size(); ++i) { int j = e.oldToNew[(size_t) i]; if (j >= 0 && j < (int) next.size() && next[(size_t) j] < 0) next[(size_t) j] = origin_[(size_t) i]; }
+    origin_ = std::move (next); loadSel(); repaint();
+}
+void SongEditor::storeBody() {
+    if (sel_ < 0 || sel_ >= (int) chart_.sections.size()) return;
+    auto& s = chart_.sections[(size_t) sel_]; auto text = body_.getText().toStdString();
+    if (text != sectionBodyText (s)) setSectionBody (s, text);
+}
+void SongEditor::loadSel() {
+    if (chart_.sections.empty()) { name_.setText ({}, false); body_.setText ({}, false); return; }
+    sel_ = std::clamp (sel_, 0, (int) chart_.sections.size() - 1);
+    auto& s = chart_.sections[(size_t) sel_]; name_.setText (juce::String (s.name), false); body_.setText (juce::String (sectionBodyText (s)), false);
+    splitAt_ = std::clamp (splitAt_, 1, std::max (1, nonTabs (s) - 1));
+}
+void SongEditor::open (CoreEditor* ed, const std::string& songId, Chart chart, std::function<void (Chart)> onSave) {
+    ed_ = ed; songId_ = songId; opened_ = chart; chart_ = std::move (chart); onSave_ = std::move (onSave);
+    origin_.assign (chart_.sections.size(), 0); for (int i = 0; i < (int) origin_.size(); ++i) origin_[(size_t) i] = i;
+    undo_.clear(); undoOrigin_.clear(); pending_.clear(); sel_ = 0; splitAt_ = 1; dragFrom_ = -1; loadSel();
+    setVisible (true); toFront (true); resized();
+}
+void SongEditor::addBlank() {
+    storeBody(); pushUndo(); Section s; s.name = "New section"; s.label = sectionLabelFor (s.name, &s.kind, &s.color); s.customColor.clear();
+    ChartLine line; line.lyric = ""; ChartItem it; it.kind = ChartItem::Line; it.line.lyric = " "; s.items.push_back (it);
+    chart_.sections.push_back (std::move (s)); origin_.push_back (-1); sel_ = (int) chart_.sections.size() - 1; loadSel(); repaint();
+}
+void SongEditor::chooseKind (const std::string& kind) {
+    if (sel_ < 0 || sel_ >= (int) chart_.sections.size()) return;
+    storeBody();
+    int n = 1; for (int i = 0; i < (int) chart_.sections.size(); ++i) if (i != sel_ && chart_.sections[(size_t) i].kind == kind) ++n;
+    std::string name = kind == "verse" ? "Verse " + std::to_string (n) : kind == "prechorus" ? "Pre-Chorus" : kind == "other" ? "Part" : kindDisplayName (kind);
+    if (kind != "verse" && n > 1) name += " " + std::to_string (n);
+    pushUndo(); run (renameSection (chart_, sel_, name));
+}
+void SongEditor::takeTabText (const juce::String& text) {
+    auto parts = parseTabText (text.toStdString()); if (parts.empty()) return;
+    if (parts.size() == 1 && sel_ >= 0 && sel_ < (int) chart_.sections.size()) { storeBody(); pushUndo(); addSectionTab (chart_.sections[(size_t) sel_], parts[0].tab); loadSel(); repaint(); return; }
+    pending_ = std::move (parts); repaint();
+}
+void SongEditor::importTabFile() {
+    auto safe = juce::Component::SafePointer<SongEditor> (this);
+    platform::pickChartFile (this, [safe] (const juce::File& f, const juce::String&) { if (safe == nullptr || ! f.existsAsFile()) return; safe->takeTabText (f.loadFileAsString()); });
+}
+void SongEditor::save() {
+    storeBody();
+    if (sel_ >= 0 && sel_ < (int) chart_.sections.size()) { auto n = name_.getText().trim().toStdString(); if (! n.empty() && n != chart_.sections[(size_t) sel_].name) { pushUndo(); run (renameSection (chart_, sel_, n)); } }
+    const SectionColorMap* defs = ed_ ? &ed_->core.store.lib.settings.sectionColors : nullptr;
+    auto remapTokens = [&] (std::vector<std::string>& tokens) {
+        if (tokens.empty()) return; std::vector<std::string> next;
+        for (auto& t : tokens) { int old = resolveArrangementToken (opened_, t); if (old < 0) { next.push_back (t); continue; }
+            int found = -1; for (int i = 0; i < (int) origin_.size(); ++i) if (origin_[(size_t) i] == old) { found = i; break; }
+            if (found < 0 || found >= (int) chart_.sections.size()) continue;
+            auto& s = chart_.sections[(size_t) found]; next.push_back (resolveArrangementToken (chart_, s.label) == found ? s.label : s.name); }
+        tokens.swap (next);
+    };
+    if (opened_.arrangement.empty()) chart_.arrangement.clear(); else remapTokens (chart_.arrangement = opened_.arrangement);
+    applySectionColors (chart_, defs ? *defs : SectionColorMap());
+    if (ed_ && ! songId_.empty()) {
+        if (auto* s = ed_->core.store.lib.song (songId_)) {
+            s->chart = chart_;
+            for (auto& set : ed_->core.store.lib.setlists) for (auto& e : set.entries) if (e.songId == songId_ && ! e.arrangement.empty()) remapTokens (e.arrangement);
+            ed_->core.store.save();
+            if (ed_->core.live().song() && ed_->core.live().song()->id == songId_) ed_->core.live().refreshChart();
+        }
+    }
+    setVisible (false); if (onSave_) onSave_ (chart_);
+}
+void SongEditor::resized() {
+    auto area = getLocalBounds().reduced (16);
+    auto top = area.removeFromTop (48);
+    close_ = top.removeFromRight (112); top.removeFromRight (8); save_ = top.removeFromRight (120); top.removeFromRight (8); undoR_ = top.removeFromRight (100);
+    area.removeFromTop (12);
+    list_ = area.removeFromLeft (juce::jmin (340, area.getWidth() / 3)); area.removeFromLeft (14);
+    auto side = list_.removeFromBottom (196);
+    actions_.clear();
+    auto row = side.removeFromTop (46); actions_.push_back ({ row.removeFromLeft (row.getWidth() / 2 - 4), 1 }); row.removeFromLeft (8); actions_.push_back ({ row, 2 });
+    side.removeFromTop (8); row = side.removeFromTop (46); actions_.push_back ({ row.removeFromLeft (row.getWidth() / 3 - 4), 3 }); row.removeFromLeft (6); actions_.push_back ({ row.removeFromLeft (row.getWidth() / 2 - 3), 4 }); row.removeFromLeft (6); actions_.push_back ({ row, 5 });
+    side.removeFromTop (8); actions_.push_back ({ side.removeFromTop (46), 6 });
+    name_.setBounds (area.removeFromTop (44)); area.removeFromTop (8);
+    kindArea_ = area.removeFromTop (92); area.removeFromTop (8);
+    auto split = area.removeFromTop (46); splitDec_ = split.removeFromLeft (52); split.removeFromLeft (8); splitInc_ = split.removeFromLeft (52); split.removeFromLeft (8); splitGo_ = split.removeFromLeft (150);
+    area.removeFromTop (8);
+    auto tabs = area.removeFromBottom (std::min (210, area.getHeight() / 3)); area.removeFromBottom (8);
+    paste_ = tabs.removeFromTop (44).removeFromLeft (150); tabs.removeFromLeft (8); importB_ = tabs.removeFromTop (44).removeFromLeft (170);
+    tabArea_ = tabs; body_.setBounds (area);
+}
+void SongEditor::paint (juce::Graphics& g) {
+    g.fillAll (bg);
+    g.setColour (text); g.setFont (font (22, true)); g.drawText (songId_.empty() ? "Edit sections" : "Edit chart", 20, 16, 420, 40, juce::Justification::centredLeft);
+    auto drawBtn = [&] (juce::Rectangle<int> r, const juce::String& t, juce::Colour fill) { pill (g, r.toFloat(), fill, cardBorder, 10); g.setColour (text); g.setFont (font (15, true)); g.drawText (t, r, juce::Justification::centred); };
+    drawBtn (undoR_, "Undo", undo_.empty() ? juce::Colour (0xff1a2744) : card); drawBtn (save_, "Save", accentFill); drawBtn (close_, "Close", card);
+    const SectionColorMap* defs = ed_ ? &ed_->core.store.lib.settings.sectionColors : nullptr;
+    rows_.clear(); auto list = list_;
+    for (int i = 0; i < (int) chart_.sections.size(); ++i) {
+        auto row = list.removeFromTop (58); if (row.getHeight() < 40) break; rows_.push_back (row.reduced (0, 4));
+        auto& s = chart_.sections[(size_t) i]; auto col = accent (juce::String (effectiveSectionColor (s, defs ? *defs : SectionColorMap())));
+        pill (g, rows_.back().toFloat(), i == sel_ ? accentFill.withAlpha (0.35f) : card, i == sel_ ? accentText : cardBorder, 10);
+        g.setColour (col); g.fillRoundedRectangle ((float) rows_.back().getX() + 8, (float) rows_.back().getY() + 10, 6, (float) rows_.back().getHeight() - 20, 2);
+        g.setColour (text); g.setFont (font (16, true)); g.drawText (juce::String (s.name), rows_.back().reduced (22, 6), juce::Justification::centredLeft, true);
+        if (dragged_ && dragTo_ == i) { g.setColour (accentText); g.fillRect (rows_.back().getX(), rows_.back().getY() - 3, rows_.back().getWidth(), 3); }
+    }
+    const char* names[] = { "Add section", "Duplicate", "Up", "Down", "Merge next", "Delete" };
+    for (size_t i = 0; i < actions_.size() && i < 6; ++i) drawBtn (actions_[i].first, names[i], i == 5 ? juce::Colour (0xff5a2740) : card);
+    g.setColour (dim); g.setFont (font (13)); g.drawText ("Chords and lyrics", name_.getBounds().getX(), kindArea_.getBottom() + 52, 200, 16, juce::Justification::left);
+    kinds_.clear(); const char* ks[] = { "verse", "chorus", "prechorus", "bridge", "tag", "intro", "outro", "other" };
+    const char* kl[] = { "Verse", "Chorus", "Pre-Chorus", "Bridge", "Tag", "Intro", "Outro", "Other" };
+    auto ka = kindArea_; int x = ka.getX(), y = ka.getY();
+    for (int i = 0; i < 8; ++i) {
+        juce::Rectangle<int> r (x, y, 118, 40); if (r.getRight() > ka.getRight()) { x = ka.getX(); y += 46; r.setPosition (x, y); }
+        kinds_.push_back (r); auto col = accent (juce::String (builtinKindColor (ks[i])));
+        bool on = sel_ >= 0 && sel_ < (int) chart_.sections.size() && chart_.sections[(size_t) sel_].kind == ks[i];
+        pill (g, r.toFloat(), on ? col.withAlpha (0.85f) : card, col, 8); g.setColour (on ? inkOn (col) : text); g.setFont (font (14, true)); g.drawText (kl[i], r, juce::Justification::centred);
+        x += 124;
+    }
+    drawBtn (splitDec_, "-", card); drawBtn (splitInc_, "+", card);
+    int lines = sel_ >= 0 && sel_ < (int) chart_.sections.size() ? nonTabs (chart_.sections[(size_t) sel_]) : 0;
+    drawBtn (splitGo_, "Split at line " + juce::String (std::min (splitAt_, std::max (1, lines - 1))), card);
+    drawBtn (paste_, "Paste tab", card); drawBtn (importB_, "Import tab file", card);
+    tabRows_.clear(); partRows_.clear(); auto ta = tabArea_;
+    if (sel_ >= 0 && sel_ < (int) chart_.sections.size()) {
+        int ti = 0; for (auto& it : chart_.sections[(size_t) sel_].items) if (it.kind == ChartItem::Tab) {
+            auto row = ta.removeFromTop (36); if (row.getHeight() < 28) break; tabRows_.push_back (row);
+            g.setColour (text); g.setFont (font (14)); g.drawText (juce::String (it.tab.title) + "  (" + juce::String ((int) it.tab.strings.size()) + " lines)", row.withTrimmedRight (80), juce::Justification::centredLeft, true);
+            auto rm = row.removeFromRight (72); pill (g, rm.toFloat(), card, cardBorder, 8); g.setColour (juce::Colour (0xffff8080)); g.drawText ("Remove", rm, juce::Justification::centred); ++ti;
+        }
+    }
+    for (int i = 0; i < (int) pending_.size(); ++i) {
+        auto row = ta.removeFromTop (36); if (row.getHeight() < 28) break; partRows_.push_back (row);
+        g.setColour (accentText); g.setFont (font (14, true)); g.drawText ("Add \"" + juce::String (pending_[(size_t) i].title) + "\" to this section", row, juce::Justification::centredLeft, true);
+    }
+}
+void SongEditor::mouseDown (const juce::MouseEvent& e) { dragged_ = false; dragFrom_ = -1; for (int i = 0; i < (int) rows_.size(); ++i) if (rows_[(size_t) i].contains (e.getPosition())) dragFrom_ = i; }
+void SongEditor::mouseDrag (const juce::MouseEvent& e) {
+    if (dragFrom_ < 0 || e.getDistanceFromDragStart() < 10) return; dragged_ = true; dragTo_ = (int) rows_.size() - 1;
+    for (int i = 0; i < (int) rows_.size(); ++i) if (e.y < rows_[(size_t) i].getCentreY()) { dragTo_ = i; break; }
+    repaint();
+}
+void SongEditor::mouseUp (const juce::MouseEvent& e) {
+    if (dragged_ && dragFrom_ >= 0 && dragTo_ >= 0 && dragFrom_ != dragTo_) { storeBody(); pushUndo(); int from = dragFrom_; int to = dragTo_; run (moveSection (chart_, from, to)); sel_ = to; loadSel(); dragFrom_ = -1; dragged_ = false; repaint(); return; }
+    dragFrom_ = -1; dragged_ = false;
+    auto p = e.getPosition();
+    if (close_.contains (p)) { setVisible (false); return; }
+    if (undoR_.contains (p)) { undo(); return; }
+    if (save_.contains (p)) { save(); return; }
+    for (int i = 0; i < (int) rows_.size(); ++i) if (rows_[(size_t) i].contains (p)) { storeBody(); sel_ = i; loadSel(); repaint(); return; }
+    for (auto& a : actions_) if (a.first.contains (p)) {
+        storeBody(); if (chart_.sections.empty() && a.second != 1) return;
+        if (a.second == 1) { addBlank(); return; }
+        if (a.second == 6) {
+            int idx = sel_; juce::String nm = idx >= 0 && idx < (int) chart_.sections.size() ? juce::String (chart_.sections[(size_t) idx].name) : juce::String();
+            juce::AlertWindow::showOkCancelBox (juce::MessageBoxIconType::WarningIcon, "Delete " + nm + "?", "This removes the section from the chart. Undo can bring it back before you save.", "Delete", "Cancel", this,
+                juce::ModalCallbackFunction::create ([this, idx] (int r) { if (r != 1 || idx < 0 || idx >= (int) chart_.sections.size()) return; pushUndo(); run (deleteSection (chart_, idx)); if (sel_ >= (int) chart_.sections.size()) sel_ = std::max (0, (int) chart_.sections.size() - 1); loadSel(); }));
+            return;
+        }
+        pushUndo();
+        if (a.second == 2) { run (duplicateSection (chart_, sel_)); sel_ = std::min (sel_ + 1, (int) chart_.sections.size() - 1); loadSel(); }
+        else if (a.second == 3 && sel_ > 0) { run (moveSection (chart_, sel_, sel_ - 1)); --sel_; loadSel(); }
+        else if (a.second == 4 && sel_ + 1 < (int) chart_.sections.size()) { run (moveSection (chart_, sel_, sel_ + 1)); ++sel_; loadSel(); }
+        else if (a.second == 5) run (mergeSections (chart_, sel_));
+        else { undo_.pop_back(); undoOrigin_.pop_back(); }
+        return;
+    }
+    const char* ks[] = { "verse", "chorus", "prechorus", "bridge", "tag", "intro", "outro", "other" };
+    for (int i = 0; i < (int) kinds_.size(); ++i) if (kinds_[(size_t) i].contains (p)) { chooseKind (ks[i]); return; }
+    if (splitDec_.contains (p)) { splitAt_ = std::max (1, splitAt_ - 1); repaint(); return; }
+    if (splitInc_.contains (p)) { int n = sel_ >= 0 && sel_ < (int) chart_.sections.size() ? nonTabs (chart_.sections[(size_t) sel_]) : 1; splitAt_ = std::min (std::max (1, n - 1), splitAt_ + 1); repaint(); return; }
+    if (splitGo_.contains (p)) { storeBody(); int n = sel_ >= 0 && sel_ < (int) chart_.sections.size() ? nonTabs (chart_.sections[(size_t) sel_]) : 0; if (n < 2) return; pushUndo(); int at = std::clamp (splitAt_, 1, n - 1); run (splitSection (chart_, sel_, at, "New section")); sel_ = std::min (sel_ + 1, (int) chart_.sections.size() - 1); loadSel(); return; }
+    if (paste_.contains (p)) { takeTabText (platform::clipboardText()); return; }
+    if (importB_.contains (p)) { importTabFile(); return; }
+    if (sel_ >= 0 && sel_ < (int) chart_.sections.size()) for (int i = 0; i < (int) tabRows_.size(); ++i) if (tabRows_[(size_t) i].contains (p) && p.x > tabRows_[(size_t) i].getRight() - 80) {
+        storeBody(); pushUndo(); removeSectionTab (chart_.sections[(size_t) sel_], i); loadSel(); repaint(); return; }
+    for (int i = 0; i < (int) partRows_.size() && i < (int) pending_.size(); ++i) if (partRows_[(size_t) i].contains (p) && sel_ >= 0 && sel_ < (int) chart_.sections.size()) {
+        storeBody(); pushUndo(); addSectionTab (chart_.sections[(size_t) sel_], pending_[(size_t) i].tab); pending_.erase (pending_.begin() + i); loadSel(); repaint(); return; }
+}
 
 // ================================================================== arrangement editor
 void ArrangementEditor::open (const Chart& written, std::vector<std::string> tokens, bool setlistScope, Done done, std::string songId) {
@@ -198,6 +393,7 @@ void editServiceNotes (std::vector<ServiceNote> notes, const Chart& written, juc
 void showSongMenu (CoreEditor& ed, juce::Rectangle<int> anchor) {
     auto& P = ed.core; auto& L = P.live(); const Song* s = L.song(); if (! s) return;
     const bool following = L.following(); juce::PopupMenu m;
+    m.addItem ("Edit chart...", ! following, false, [&ed, id = s->id] { ed.openSongEditor (id); });
     m.addItem ("Arrangement...  (" + juce::String (L.arrangement().empty() ? std::string ("as written") : formatArrangement (L.arrangement())) + ")", ! following, false, [&ed] { ed.openLiveArrangement(); });
     const auto& notes = L.setlist().entries.empty() ? std::vector<ServiceNote>() : L.setlist().entries[(size_t) L.songIndex()].notes;
     m.addItem ("Service notes for this song... (" + juce::String ((int) notes.size()) + ")", ! following, false, [&ed, notes] {

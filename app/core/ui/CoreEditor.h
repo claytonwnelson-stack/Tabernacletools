@@ -5,7 +5,7 @@
 #include "CoreProcessor.h"
 #include "Theme.h"
 #include "Platform.h"
-class BandPanel; class ArrangementEditor; class PracticeBar; class ImportPreviewView;
+class BandPanel; class ArrangementEditor; class SongEditor; class PracticeBar; class ImportPreviewView;
 
 class CoreEditor : public juce::AudioProcessorEditor, protected juce::Timer {
 public:
@@ -20,6 +20,8 @@ public:
     void openSettings (juce::Component* anchor);
     // v0.7
     ArrangementEditor& arrangementEditor() { return *arr_; }
+    void openSongEditor (const std::string& songId, std::function<void()> afterSave = {});
+    SongEditor& songEditor() { return *songEd_; }
     void openLiveArrangement();                                      // current song: save to song or to this setlist item
     void choosePracticeTrack();
     int practiceBarHeight() const;
@@ -57,7 +59,7 @@ protected:
     SettingsButton settingsBtn_;
     wr::theme::LookAndFeel lnf_;
     std::unique_ptr<BandPanel> band_;
-    std::unique_ptr<ArrangementEditor> arr_; std::unique_ptr<PracticeBar> pbar_; std::unique_ptr<ImportPreviewView> imp_; std::unique_ptr<class HymnBrowserView> hymns_; std::unique_ptr<class TeamPanel> team_; std::unique_ptr<class PaywallView> paywall_;
+    std::unique_ptr<ArrangementEditor> arr_; std::unique_ptr<SongEditor> songEd_; std::unique_ptr<PracticeBar> pbar_; std::unique_ptr<ImportPreviewView> imp_; std::unique_ptr<class HymnBrowserView> hymns_; std::unique_ptr<class TeamPanel> team_; std::unique_ptr<class PaywallView> paywall_;
     std::vector<wr::platform::SharedChart> sharedQueue_; int shareTick_ = 0;
 private:
     class SettingsPanel;

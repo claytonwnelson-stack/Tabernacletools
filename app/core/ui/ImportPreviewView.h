@@ -9,12 +9,14 @@ public:
     using Done = std::function<void (wr::Chart)>;
     ImportPreviewView();
     void open (const juce::String& text, const juce::String& fallbackTitle, Done onImport);
+    void setChart (wr::Chart c) { p_.chart = std::move (c); repaint(); }
+    std::function<void (wr::Chart)> onEdit;
     void paint (juce::Graphics&) override;
     void resized() override;
     const wr::ImportPreview& preview() const { return p_; }
 private:
     wr::ImportPreview p_; Done done_;
     juce::TextEditor title_, artist_, key_, capo_;
-    juce::TextButton import_ { "IMPORT" }, cancel_ { "CANCEL" };
+    juce::TextButton import_ { "IMPORT" }, cancel_ { "CANCEL" }, edit_ { "EDIT SECTIONS" };
     juce::Rectangle<int> box_;
 };

@@ -27,6 +27,6 @@ private:
     juce::TextButton export_ { "Share..." }, players_ { "Players..." }, backups_ { "Backups..." };
     juce::TextButton save_ { "Save Set" }, goLive_ { "Go Live  >" }, import_ { "+  Import file" }, paste_ { "Paste chart" }, hymnal_ { "Hymnal" }, sets_ { "Saved sets..." };
     juce::Rectangle<int> libArea_, setArea_, ctlArea_;
-    std::vector<std::pair<juce::Rectangle<int>, int>> libRows_, setRows_, learnBtns_;
+    std::vector<std::pair<juce::Rectangle<int>, int>> libRows_, setRows_, learnBtns_, editHits_;
     int dragFrom_ = -1, dragTo_ = -1; juce::String savedMsg_;
 };

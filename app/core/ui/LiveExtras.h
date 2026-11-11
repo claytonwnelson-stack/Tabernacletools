@@ -3,6 +3,30 @@
 #pragma once
 #include "CoreEditor.h"
 
+// Full-screen chart editor: sections, chords/lyrics, and tabs pasted or imported per section.
+class SongEditor : public juce::Component {
+public:
+    SongEditor();
+    void open (CoreEditor* ed, const std::string& songId, wr::Chart chart, std::function<void (wr::Chart)> onSave);
+    void paint (juce::Graphics&) override;
+    void resized() override;
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override;
+private:
+    void loadSel(); void storeBody(); void pushUndo(); void undo(); void save();
+    void run (const wr::ChartEdit&); void addBlank(); void chooseKind (const std::string& kind);
+    void takeTabText (const juce::String&); void importTabFile();
+    int nonTabs (const wr::Section&) const;
+    CoreEditor* ed_ = nullptr; std::string songId_; wr::Chart opened_, chart_; std::vector<int> origin_;
+    std::vector<wr::Chart> undo_; std::vector<std::vector<int>> undoOrigin_;
+    std::function<void (wr::Chart)> onSave_; int sel_ = 0, splitAt_ = 1, dragFrom_ = -1, dragTo_ = -1; bool dragged_ = false;
+    juce::TextEditor name_, body_; std::vector<wr::TabPart> pending_; std::unique_ptr<juce::FileChooser> files_;
+    juce::Rectangle<int> close_, save_, undoR_, list_, kindArea_, splitDec_, splitInc_, splitGo_, paste_, importB_, tabArea_;
+    std::vector<juce::Rectangle<int>> rows_, kinds_, tabRows_, partRows_;
+    std::vector<std::pair<juce::Rectangle<int>, int>> actions_;
+};
+
 // Full-screen overlay: the play order as chips (drag to reorder, tap for duplicate / remove), written sections to add.
 class ArrangementEditor : public juce::Component {
 public:
