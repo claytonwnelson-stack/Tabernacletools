@@ -2,6 +2,7 @@
 #include "PaywallView.h"
 #include "CoreProcessor.h"
 #include "SeatSession.h"
+#include "Theme.h"
 
 static const char* kInd = "com.tabernacletools.guitar.individual.monthly";
 static const char* kChurch = "com.tabernacletools.guitar.church.monthly";
