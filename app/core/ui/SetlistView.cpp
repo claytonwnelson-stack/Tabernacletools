@@ -42,22 +42,16 @@ std::vector<int> SetlistView::filteredSongs() const {
 }
 
 void SetlistView::importChart() {
-    // Parent is this view so iPad presents a page sheet. A top-level chooser becomes an unanchored popover and UIKit throws before the picker appears.
-    chooser_ = std::make_unique<juce::FileChooser> ("Import chart", juce::File(), "*.cho;*.chopro;*.chordpro;*.txt;*.pdf;*.crd", true, false, this);
     juce::Component::SafePointer<SetlistView> safe (this);
-    chooser_->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [safe] (const juce::FileChooser& fc) {
+    platform::pickChartFile (&import_, [safe] (const juce::File& file, const juce::String& error) {
         if (safe == nullptr) return;
         auto fail = [] (const juce::String& m) { juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Import", m); };
+        if (! file.existsAsFile()) { if (error.isNotEmpty()) fail (error); return; }
         try {
-            auto url = fc.getURLResult();
-            if (url.isEmpty()) { if (! fc.getResult().existsAsFile()) return; url = juce::URL (fc.getResult()); }
-            juce::String text; juce::String title = url.getFileName().upToLastOccurrenceOf (".", false, false);
-            const bool pdf = url.getFileName().endsWithIgnoreCase (".pdf");
-            if (pdf && url.isLocalFile()) text = platform::extractPdfText (url.getLocalFile());
-            else if (auto in = url.createInputStream (juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress))) {
-                if (in->getTotalLength() > 4 * 1024 * 1024) { fail ("That file is larger than 4 MB."); return; }
-                text = in->readEntireStreamAsString();
-            } else if (url.isLocalFile()) text = url.getLocalFile().loadFileAsString();
+            if (file.getSize() > 4 * 1024 * 1024) { fail ("That file is larger than 4 MB."); return; }
+            const bool pdf = file.hasFileExtension ("pdf");
+            juce::String text = pdf ? platform::extractPdfText (file) : file.loadFileAsString();
+            juce::String title = file.getFileNameWithoutExtension();
             if (text.trim().isEmpty()) { fail (pdf ? "This PDF has no text layer (it's a scan or photo). Use a text PDF, a .txt or a ChordPro file." : "Couldn't read that file. Use ChordPro, plain text, or a text PDF."); return; }
             safe->ed.openImportPreview (text, title.isEmpty() ? juce::String ("Imported chart") : title, [safe] (juce::String id) {
                 if (safe != nullptr) { safe->working_.entries.push_back ({ id.toStdString(), "", 0, "lead" }); safe->repaint(); } });

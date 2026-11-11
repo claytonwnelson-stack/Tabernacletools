@@ -16,6 +16,7 @@
 #if TARGET_OS_IPHONE
  #import <AVFoundation/AVFoundation.h>
  #import <UIKit/UIKit.h>
+ #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #endif
 #undef Point
 #undef Component
@@ -51,6 +52,95 @@ API_AVAILABLE(ios(13.0), macos(10.15))
 #endif
 }
 @end
+
+#if JUCE_IOS
+// Kept alive for the whole picker session. UIDocumentPicker's delegate is weak, so a local object would
+// be freed before UIKit calls back, and the app would crash on the way out of the picker.
+static juce::File copyPickedChart (NSURL* url, juce::String& error) {
+    error.clear();
+    if (url == nil) { error = "Couldn't read that file."; return {}; }
+    @autoreleasepool {
+        const BOOL scoped = [url startAccessingSecurityScopedResource];
+        NSError* err = nil;
+        NSData* data = [NSData dataWithContentsOfURL: url options: 0 error: &err];
+        if (scoped) [url stopAccessingSecurityScopedResource];
+        if (data == nil || data.bytes == nil) {
+            error = (err != nil && err.localizedDescription.UTF8String != nullptr) ? juce::String::fromUTF8 (err.localizedDescription.UTF8String) : juce::String ("Couldn't read that file.");
+            return {};
+        }
+        if (data.length > 4 * 1024 * 1024) { error = "That file is larger than 4 MB."; return {}; }
+        if (data.length == 0) { error = "Couldn't read that file. Use ChordPro, plain text, or a text PDF."; return {}; }
+        const char* utf = url.lastPathComponent.UTF8String;
+        juce::String leaf = juce::File::createLegalFileName (utf != nullptr ? juce::String::fromUTF8 (utf) : juce::String());
+        if (leaf.isEmpty()) leaf = "chart.txt";
+        auto prefix = leaf.containsChar ('.') ? leaf.upToLastOccurrenceOf (".", false, false) : leaf;
+        auto suffix = leaf.containsChar ('.') ? leaf.fromLastOccurrenceOf (".", true, false) : juce::String (".txt");
+        if (prefix.isEmpty()) prefix = "chart";
+        if (suffix.isEmpty()) suffix = ".txt";
+        auto dir = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tt-import");
+        dir.createDirectory();
+        auto dest = dir.getNonexistentChildFile (prefix, suffix);
+        if (! dest.replaceWithData (data.bytes, (size_t) data.length)) { error = "Couldn't read that file."; return {}; }
+        return dest;
+    }
+}
+
+@interface WRChartImportPicker : NSObject <UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate>
+@property (nonatomic, copy) void (^done) (NSURL* url, NSString* error);
+@property (nonatomic, strong) UIDocumentPickerViewController* picker;
+@end
+
+static WRChartImportPicker* gChartPicker = nil;
+
+@implementation WRChartImportPicker
+- (UIModalPresentationStyle) adaptivePresentationStyleForPresentationController: (UIPresentationController*) controller {
+    juce::ignoreUnused (controller);
+    return UIModalPresentationFormSheet; // stay a sheet; an adapted popover with no anchor is the iPad crash
+}
+- (UIModalPresentationStyle) adaptivePresentationStyleForPresentationController: (UIPresentationController*) controller traitCollection: (UITraitCollection*) trait {
+    juce::ignoreUnused (controller, trait);
+    return UIModalPresentationFormSheet;
+}
+- (void) finish: (NSURL*) url error: (NSString*) error {
+    void (^cb) (NSURL*, NSString*) = self.done;
+    self.done = nil; self.picker = nil; gChartPicker = nil;
+    if (cb != nil) cb (url, error);
+}
+- (void) documentPicker: (UIDocumentPickerViewController*) controller didPickDocumentsAtURLs: (NSArray<NSURL*>*) urls {
+    juce::ignoreUnused (controller);
+    [self finish: urls.firstObject error: nil];
+}
+- (void) documentPickerWasCancelled: (UIDocumentPickerViewController*) controller {
+    juce::ignoreUnused (controller);
+    [self finish: nil error: nil];
+}
+@end
+
+static UIViewController* topViewController() {
+    UIViewController* root = nil;
+    if (@available (iOS 13.0, *)) {
+        for (UIScene* sc in [UIApplication sharedApplication].connectedScenes)
+            if ([sc isKindOfClass: [UIWindowScene class]])
+                for (UIWindow* w in ((UIWindowScene*) sc).windows)
+                    if (w.isKeyWindow) { root = w.rootViewController; break; }
+    }
+    if (root == nil) root = [UIApplication sharedApplication].windows.firstObject.rootViewController;
+    while (root.presentedViewController != nil) root = root.presentedViewController;
+    return root;
+}
+
+static UIDocumentPickerViewController* makeChartPicker (bool anyFile) API_AVAILABLE (ios (14.0)) {
+    NSMutableArray<UTType*>* types = [NSMutableArray array];
+    if (anyFile) {
+        if (UTType* data = [UTType typeWithIdentifier: @"public.data"]) [types addObject: data];
+    } else {
+        for (NSString* ident in @[ @"public.plain-text", @"public.text", @"com.adobe.pdf", @"public.data", @"org.chordpro.chart" ])
+            if (UTType* t = [UTType typeWithIdentifier: ident]) [types addObject: t];
+    }
+    if (types.count == 0) return nil;
+    return [[UIDocumentPickerViewController alloc] initForOpeningContentTypes: types asCopy: YES];
+}
+#endif
 
 namespace wr::platform {
 juce::String clipboardText() { return juce::SystemClipboard::getTextFromClipboard(); }
@@ -226,6 +316,64 @@ void setExternalDisplayContent (juce::Component* c) {
 int externalDisplayCount() { return 0; }
 void setExternalDisplayContent (juce::Component*) {}
 #endif
+void pickChartFile (juce::Component* anchor, std::function<void (const juce::File&, const juce::String&)> done) {
+   #if JUCE_IOS
+    if (done == nullptr) return;
+    if (! juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        juce::Component::SafePointer<juce::Component> safe (anchor);
+        juce::MessageManager::callAsync ([safe, done] { pickChartFile (safe.getComponent(), done); });
+        return;
+    }
+    if (gChartPicker != nil) return;
+    if (@available (iOS 14.0, *)) {
+        UIDocumentPickerViewController* picker = nil;
+        @try { picker = makeChartPicker (false); } @catch (NSException*) { picker = nil; }
+        if (picker == nil) { @try { picker = makeChartPicker (true); } @catch (NSException*) { picker = nil; } }
+        UIViewController* root = topViewController();
+        if (picker == nil || root == nil) {
+            juce::MessageManager::callAsync ([done] { done ({}, "The iPad could not open the file picker."); });
+            return;
+        }
+        picker.allowsMultipleSelection = NO;
+        picker.modalPresentationStyle = UIModalPresentationFormSheet;
+        gChartPicker = [[WRChartImportPicker alloc] init];
+        gChartPicker.picker = picker;
+        picker.delegate = gChartPicker;
+        if (picker.presentationController != nil) picker.presentationController.delegate = gChartPicker;
+        juce::Rectangle<int> b = anchor != nullptr ? anchor->getScreenBounds() : juce::Rectangle<int> (80, 80, 2, 2);
+        if (b.getWidth() < 2) b.setWidth (2);
+        if (b.getHeight() < 2) b.setHeight (2);
+        CGRect screen = CGRectMake ((CGFloat) b.getX(), (CGFloat) b.getY(), (CGFloat) b.getWidth(), (CGFloat) b.getHeight());
+        CGRect rect = [root.view convertRect: screen fromView: nil];
+        if (rect.size.width < 2) rect.size.width = 2;
+        if (rect.size.height < 2) rect.size.height = 2;
+        if (picker.popoverPresentationController != nil) {
+            picker.popoverPresentationController.sourceView = root.view;
+            picker.popoverPresentationController.sourceRect = rect;
+            picker.popoverPresentationController.permittedArrowDirections = UIPopoverArrowDirectionAny;
+        }
+        gChartPicker.done = ^(NSURL* url, NSString* err) {
+            juce::String error = (err != nil && err.UTF8String != nullptr) ? juce::String::fromUTF8 (err.UTF8String) : juce::String();
+            juce::File file;
+            if (url != nil && error.isEmpty()) file = copyPickedChart (url, error);
+            juce::MessageManager::callAsync ([done, file, error] { done (file, error); });
+        };
+        @try {
+            [root presentViewController: picker animated: YES completion: nil];
+        } @catch (NSException* ex) {
+            if (gChartPicker != nil) { gChartPicker.done = nil; gChartPicker.picker = nil; gChartPicker = nil; }
+            juce::String why = (ex.reason != nil && ex.reason.UTF8String != nullptr) ? juce::String::fromUTF8 (ex.reason.UTF8String) : juce::String ("The iPad could not open the file picker.");
+            juce::MessageManager::callAsync ([done, why] { done ({}, why); });
+        }
+        return;
+    }
+    juce::MessageManager::callAsync ([done] { done ({}, "Needs iPadOS 14 or later"); });
+   #else
+    auto chooser = std::make_shared<juce::FileChooser> ("Import chart", juce::File(), "*.cho;*.chopro;*.chordpro;*.txt;*.pdf;*.crd", true, false, anchor);
+    chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [chooser, done] (const juce::FileChooser& fc) {
+        auto f = fc.getResult(); if (done) done (f.existsAsFile() ? f : juce::File(), {}); });
+   #endif
+}
 void signInWithApple (std::function<void (juce::String, juce::String)> done) {
     if (@available (iOS 13.0, macOS 10.15, *)) {
         static WRSiwaDelegate* del = nil; del = [[WRSiwaDelegate alloc] init];

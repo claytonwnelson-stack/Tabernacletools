@@ -24,6 +24,11 @@ void setExternalDisplayContent (juce::Component* c) {
     holder->addToDesktop (ds.size() > 1 ? 0 : juce::ComponentPeer::windowHasTitleBar | juce::ComponentPeer::windowIsResizable); holder->setVisible (true);
 }
 void shareFiles (const juce::Array<juce::File>& files, juce::Component*) { if (! files.isEmpty()) files.getFirst().revealToUser(); }
+void pickChartFile (juce::Component* anchor, std::function<void (const juce::File&, const juce::String&)> done) {
+    auto chooser = std::make_shared<juce::FileChooser> ("Import chart", juce::File(), "*.cho;*.chopro;*.chordpro;*.txt;*.pdf;*.crd", true, false, anchor);
+    chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [chooser, done] (const juce::FileChooser& fc) {
+        auto f = fc.getResult(); if (done) done (f.existsAsFile() ? f : juce::File(), {}); });
+}
 void signInWithApple (std::function<void (juce::String, juce::String)> done) { juce::MessageManager::callAsync ([done] { done ({}, "Sign in with Apple needs the iPad build"); }); }
 void churchSubscriptionJws (std::function<void (juce::String)> done) { juce::MessageManager::callAsync ([done] { done ({}); }); }
 }

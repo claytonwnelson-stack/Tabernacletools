@@ -29,6 +29,12 @@ static constexpr const char* kSharedChartType = "com.tabernacletools.shared-char
 struct SharedChart { juce::String text, name; };
 std::vector<SharedChart> takeSharedCharts();
 juce::String clipboardText();
+// Chart import. iOS does not use juce::FileChooser: on iPad that picker is a popover, and JUCE presents it
+// before the popover has a source view, so UIKit throws and the app dies before the picker appears.
+// This presents UIDocumentPickerViewController on the message thread, keeps it alive until it finishes,
+// anchors the popover on `anchor`, and copies the file in (asCopy) using system UTIs. Empty file and empty
+// error means the user cancelled.
+void pickChartFile (juce::Component* anchor, std::function<void (const juce::File& file, const juce::String& error)> done);
 inline bool isStemAudio (const juce::File& f) { return f.hasFileExtension ("wav;aif;aiff;m4a;mp3;caf;aac"); }
 inline juce::File shareInbox() {
    #if JUCE_IOS
