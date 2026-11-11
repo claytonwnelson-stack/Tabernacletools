@@ -22,6 +22,7 @@
 // ignores the event and asks for a snapshot. Duplicates (seq <= last) are dropped.
 #pragma once
 #include "../model/LiveSession.h"
+#include "ClockLock.h"
 #include <deque>
 #include <functional>
 
@@ -134,6 +135,8 @@ public:
     std::string role = "player";                           // "player" | "projector" (shown in the leader's roster)
     DeviceHealth health;                                   // v0.7 battery / thermal, sent in every heartbeat (app sets it)
     bool wasKicked() const { return kicked_; }             // leader removed this device: don't auto-reconnect
+    ClockLock& clockLock() { return lock_; }
+    const ClockLock& clockLock() const { return lock_; }
     void setName (const std::string& n) { name_ = n; }
     // v0.14: leader's backing-track transport (display only - followers have no stems)
     mt::Transport transport;
@@ -144,7 +147,7 @@ private:
     void applySnapshot (const State& st, LiveSession& live, Library& lib, const BeatClock& clock, double now);
     void applyCue (int idx, int pass, double cueBeat, double dueBeat, LiveSession& live, const BeatClock& clock, double now);
     std::function<void (const std::string&)> send_; std::string name_, session_;
-    double lastHb_ = -1; bool kicked_ = false;
+    double lastHb_ = -1, lastClk_ = -1; int clkId_ = 0; bool kicked_ = false; ClockLock lock_;
     bool connected_ = false, haveSnap_ = false, wantSnap_ = false; long long last_ = -1; int resyncs_ = 0; double discAt_ = -1;
     struct Pending { bool active = false; int idx = 0, pass = 1; double dueBeat = 0; } cue_;
     struct PlayAt { bool active = false, on = false; double atBeat = 0; int countIn = 0; } play_;

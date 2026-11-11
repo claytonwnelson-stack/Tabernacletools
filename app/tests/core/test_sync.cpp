@@ -365,6 +365,30 @@ static void testRosterTcp() {
     CHECK_EQ (R.connectedCount(), 0); CHECK (std::count (toasts.begin(), toasts.end(), std::string ("Keys iPad dropped")) == 1);
 }
 
+static void testClockLock() {
+    auto even = ntpReading (10.0, 10.02, 10.02, 10.04);
+    CHECK (even.ok); CHECK (std::abs (even.offsetSec) < 1e-9); CHECK (std::abs (even.rttSec - 0.04) < 1e-9);
+    auto ahead = ntpReading (12.0, 10.02, 10.03, 12.05);   // follower clock is 2 s ahead, ~20 ms each way
+    CHECK (ahead.ok); CHECK (std::abs (ahead.offsetSec + 2.0) < 0.02); CHECK (ahead.rttSec > 0.03 && ahead.rttSec < 0.06);
+    CHECK (! ntpReading (1, 2, 1, 1.5).ok);               // negative round trip is dropped
+    ClockLock lock;
+    CHECK (lock.observe (12.0, 10.02, 10.03, 12.05, 4.0, 120, 12.05));
+    CHECK (lock.ready()); CHECK (std::abs (lock.leaderBeatAt (12.05) - 4.0) < 0.05);
+    const double before = lock.beatAt (12.05);
+    lock.steer (12.10);
+    CHECK (std::abs (lock.beatAt (12.10) - before) < 0.2);   // no multi-beat jump while settling
+    double err = 1;
+    for (int i = 0; i < 40; ++i) { lock.observe (20.0 + i, 18.02 + i, 18.03 + i, 20.06 + i, 8.0 + i * 120.0 / 60.0, 120, 20.06 + i); lock.steer (20.06 + i); err = std::abs (lock.errorBeats()); }
+    CHECK (err < 0.05); CHECK (lock.samples() >= 3);
+    ClockLock tempo; tempo.observe (5, 5.01, 5.01, 5.02, 0, 100, 5.02);
+    for (int i = 0; i < 5; ++i) tempo.steer (5.02 + i * 0.05);
+    CHECK (tempo.observe (6, 6.01, 6.01, 6.02, tempo.leaderBeatAt (6.02), 140, 6.02));
+    double e0 = std::abs (tempo.errorBeats());
+    for (int i = 0; i < 30; ++i) tempo.steer (6.05 + i * 0.05);
+    CHECK (std::abs (tempo.errorBeats()) < e0 + 0.05);
+    CHECK (tempo.label().find ("Clock") == 0);
+}
+
 int main() { setvbuf (stdout, nullptr, _IONBF, 0);
-    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp();
+    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp(); testClockLock();
     std::printf ("%d checks, %d failures\n", checks, fails); return fails ? 1 : 0; }

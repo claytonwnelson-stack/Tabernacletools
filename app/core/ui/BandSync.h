@@ -39,6 +39,7 @@ public:
     void setHealth (const wr::sync::DeviceHealth& h) { follower_.health = h; }   // v0.7: sent in heartbeats while following
     std::string banner (double nowSec) const;                        // follower: "LEADER LOST..." / "Joining..."
     std::string statusLine() const;
+    std::string clockStatus() const;
     bool useLink = true;
     // v0.14 backing tracks: leader publishes its transport; followers read the leader's
     void setTracksTransport (const wr::mt::Transport& t) { if (leader_) leader_->setTransport (t); }

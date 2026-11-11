@@ -120,13 +120,14 @@ std::string Leader::snapshotLine (const LiveSession& live, const BeatClock& cloc
 std::string Leader::onFollowerLine (const std::string& line, const LiveSession& live, const BeatClock& clock, double now) {
     Msg m; if (! decode (line, m)) return {};
     if (m.type == "hello" || m.type == "resync") return snapshotLine (live, clock, now);
+    if (m.type == "clk") return encode ("clk", -1, Json::object().set ("id", m.body["id"].num()).set ("t1", m.body["t1"].num()).set ("t2", now).set ("t3", now).set ("beat", clock.beatAt (now)).set ("bpm", clock.tempo()));
     return {};
 }
 
 // ---------------------------------------------------------------- follower
 void Follower::onConnected() {
     connected_ = true; discAt_ = -1; haveSnap_ = false; wantSnap_ = true;
-    kicked_ = false; lastHb_ = -1;
+    kicked_ = false; lastHb_ = -1; lastClk_ = -1; lock_.reset();
     send_ (encode ("hello", -1, Json::object().set ("name", name_).set ("role", role).set ("last", (double) last_).set ("session", session_)));
 }
 void Follower::onDisconnected (double now) { if (connected_ || discAt_ < 0) discAt_ = now; connected_ = false; haveSnap_ = false; }
@@ -173,6 +174,7 @@ void Follower::onLine (const std::string& line, LiveSession& live, Library& lib,
     Msg m; if (! decode (line, m)) return; const Json& j = m.body;
     if (m.type == "kick") { kicked_ = true; return; }
     if (m.type == "ping") { send_ (encode ("pong", -1, Json::object().set ("id", j["id"].num()))); return; }
+    if (m.type == "clk" && j.has ("t2")) { lock_.observe (j["t1"].num(), j["t2"].num(), j["t3"].num(), now, j["beat"].num(), j["bpm"].num(), now); return; }
     if (m.type == "snap") {
         session_ = j["session"].str(); last_ = m.seq; haveSnap_ = true; wantSnap_ = false;
         transport = mt::transportFromJson (j["mt"]);
@@ -197,7 +199,9 @@ void Follower::onLine (const std::string& line, LiveSession& live, Library& lib,
     }
 }
 void Follower::tick (LiveSession& live, const BeatClock& clock, double now) {
-    const double b = clock.beatAt (now);
+    if (connected_ && (lastClk_ < 0 || now - lastClk_ >= 0.25)) { lastClk_ = now; send_ (encode ("clk", -1, Json::object().set ("id", (double) ++clkId_).set ("t1", now))); }
+    lock_.steer (now);
+    const double b = lock_.engaged() ? lock_.beatAt (now) : clock.beatAt (now);
     if (connected_ && (lastHb_ < 0 || now - lastHb_ >= 1.0)) {   // heartbeat for the leader's roster
         lastHb_ = now; const auto& c = live.chart(); const int si = live.sectionIndex();
         std::string sec = si >= 0 && si < (int) c.sections.size() ? c.sections[(size_t) si].name : std::string();

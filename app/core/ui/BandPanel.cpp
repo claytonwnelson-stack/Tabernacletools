@@ -14,7 +14,8 @@ void BandPanel::paint (juce::Graphics& g) {
     pill (g, box_.toFloat(), bar, cardBorder, 14);
     auto r = box_.reduced (20, 16); auto head = r.removeFromTop (34);
     g.setColour (juce::Colours::white); g.setFont (font (18, true));
-    g.drawText ("BAND - " + juce::String (proc.sync().roster().connectedCount()) + " connected", head, juce::Justification::centredLeft);
+    g.drawText ("BAND - " + juce::String (proc.sync().roster().connectedCount()) + " connected", head.withTrimmedRight (90), juce::Justification::centredLeft);
+    g.setColour (accentText); g.setFont (font (13, true)); g.drawText (juce::String (proc.sync().clockStatus()), head.withTrimmedRight (90), juce::Justification::centredRight);
     close_ = head.removeFromRight (80); pill (g, close_.toFloat().reduced (0, 3), btn, btnBorder, 8); g.setColour (text); g.setFont (font (13, true)); g.drawText ("CLOSE", close_, juce::Justification::centred);
     g.setColour (dim); g.setFont (font (11)); auto cols = r.removeFromTop (20);
     g.drawText ("DEVICE", cols.withX (r.getX() + 26).withWidth (200), juce::Justification::centredLeft);
@@ -22,7 +23,7 @@ void BandPanel::paint (juce::Graphics& g) {
     g.drawText ("PING", cols.withX (r.getX() + 310).withWidth (60), juce::Justification::centredLeft);
     g.drawText ("POWER", cols.withX (r.getX() + 370).withWidth (100), juce::Justification::centredLeft);
     g.drawText ("SHOWING", cols.withX (r.getX() + 470).withWidth (200), juce::Justification::centredLeft);
-    if (ms.empty()) { g.setColour (dim); g.setFont (font (14)); g.drawText ("No followers yet - on each iPad: AUDIO / MIDI > Band sync > Join", r.removeFromTop (rowH), juce::Justification::centredLeft); return; }
+    if (ms.empty()) { g.setColour (dim); g.setFont (font (14)); g.drawText ("No followers yet - on each iPad: Settings > Band Sync > Join", r.removeFromTop (rowH), juce::Justification::centredLeft); return; }
     for (auto& m : ms) {
         auto row = r.removeFromTop (rowH); g.setColour (line); g.drawHorizontalLine (row.getY(), (float) row.getX(), (float) row.getRight());
         g.setColour (statusColour (m.status)); g.fillEllipse ((float) row.getX() + 4, (float) row.getCentreY() - 7, 14, 14);

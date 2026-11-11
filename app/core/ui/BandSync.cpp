@@ -1,4 +1,5 @@
 #include "BandSync.h"
+#include <JuceHeader.h>
 #include <random>
 #if __has_include(<ableton/Link.hpp>)
  #include "sync/LinkClock.h"   // last: asio pulls in <termios.h> (B0/B1 macros)
@@ -66,7 +67,9 @@ void BandSync::poll (double now) {
     } else if (mode_ == Mode::Following) {
         Client::Events ev; ev.connected = [this] { follower_.onConnected(); }; ev.disconnected = [this, now] { follower_.onDisconnected (now); };
         ev.line = [&] (const std::string& l) { follower_.onLine (l, live_, lib_, clock(), now); };
-        client_.poll (now, ev); follower_.tick (live_, clock(), now);
+        client_.poll (now, ev);
+        if (! linkActive_.load() && follower_.clockLock().engaged()) { localClock_.b0 = follower_.clockLock().beatAt (now); localClock_.t0 = now; localClock_.bpm = follower_.clockLock().bpm(); }
+        follower_.tick (live_, clock(), now);
         if (follower_.wasKicked() && client_.attempts() >= 0) client_.disconnect();   // removed by the leader: stay off until the user rejoins
         if (! linkActive_.load() && std::abs (localClock_.tempo() - live_.bpm()) > 0.05) localClock_.setTempo (live_.bpm(), now);
     }
@@ -81,18 +84,25 @@ void BandSync::requestPlay (bool on, double now) {
     live_.setPlaying (on, now);
 }
 std::string BandSync::banner (double now) const { return mode_ == Mode::Following ? follower_.banner (now) : std::string(); }
+std::string BandSync::clockStatus() const {
+    if (mode_ == Mode::Leading) return "Clock: you are the leader";
+    if (mode_ == Mode::Following) return follower_.clockLock().label();
+    return "Clock off";
+}
 std::string BandSync::statusLine() const {
-    std::string link = linkActive_.load() ? " - Link " + std::to_string (linkPeers()) + " peer(s)" : std::string (" - no Link");
+    std::string link = linkActive_.load() ? " - Link " + std::to_string (linkPeers()) + " peer(s)" : " - " + clockStatus();
     if (mode_ == Mode::Leading) return "LEADING - " + std::to_string (server_.clients()) + " follower(s)" + link;
     if (mode_ == Mode::Following) return std::string (follower_.synced() ? "FOLLOWING " : "JOINING ") + host_ + link;
     return "Band sync off";
 }
 void BandSync::audioBlock (ClickEngine& rig, double latency, int) {
 #if WR_HAS_LINK
-    if (! linkActive_.load()) return; auto* L = linkRt_.load(); if (! L) return;
-    const auto host = L->now() + std::chrono::microseconds ((long long) (latency * 1e6));
-    rig.setLinkBeat (L->audioBeat (host)); rig.bpm.store (L->audioTempo());
-#else
-    (void) rig; (void) latency;
+    if (linkActive_.load()) { auto* L = linkRt_.load(); if (! L) return;
+        const auto host = L->now() + std::chrono::microseconds ((long long) (latency * 1e6));
+        rig.setLinkBeat (L->audioBeat (host)); rig.bpm.store (L->audioTempo()); return; }
 #endif
+    if (mode_ != Mode::Following || ! follower_.clockLock().engaged()) return;
+    const double now = juce::Time::getMillisecondCounterHiRes() * 0.001 + latency;
+    rig.setLinkBeat (follower_.clockLock().beatAt (now));
+    rig.bpm.store (follower_.clockLock().audioBpm (now));
 }
