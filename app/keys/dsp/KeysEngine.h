@@ -1,4 +1,4 @@
-// Tabernacle Tools - Keys v0.9 STUB - design target in docs/SOUND_LIBRARY.md. Wraps the existing wk synth engine
+// Bearing Live Keys v0.9 STUB - design target in docs/SOUND_LIBRARY.md. Wraps the existing wk synth engine
 // (tonewheel/pipe organ, pads, grand/EP piano, delay, FDN reverb) with patch presets + a key-matched worship pad drone.
 #pragma once
 #include "../../guitar/third_party/wk/Engine.h"

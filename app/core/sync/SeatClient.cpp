@@ -96,7 +96,7 @@ void SeatClient::adoptToken (const std::string& tok) {
 bool SeatClient::refresh (Entitlements& ent, int64_t now, int64_t refreshAfter) {
     bool stale = ! claims_ || now - claims_->iat >= refreshAfter || claims_->exp - now < 86400;
     if (stale && signedIn()) {
-        // v0.18 cross-app entitlement (own purchase in ANY Tabernacle Tools app, or a church seat); older servers: POST team-only
+        // v0.18 cross-app entitlement (own purchase in ANY Bearing Live app, or a church seat); older servers: POST team-only
         auto r = call ("GET", "/v1/entitlement");
         if (r.ok) { coverage_ = coverageFromJson (r.body); if (coverage_.covered) adoptToken (r.body["token"].str()); else { token_.clear(); claims_.reset(); } }
         else {

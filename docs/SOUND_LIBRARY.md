@@ -1,4 +1,4 @@
-# Tabernacle Tools — Sound Library (Guitar + Keys)
+# Bearing Live — Sound Library (Guitar + Keys)
 
 *v0.9 · Status key: ✅ built (in repo, tested) · 🟡 built in v0.9 (new, offline-tested only) · ⬜ planned*
 

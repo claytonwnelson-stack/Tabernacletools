@@ -1,4 +1,4 @@
-// v0.7 import of shared / pasted chord charts (iOS Share sheet, "Copy to Tabernacle Tools", Paste chart).
+// v0.7 import of shared / pasted chord charts (iOS Share sheet, "Copy to Bearing Live", Paste chart).
 // Only content the user shares or pastes is used - nothing is ever fetched from a URL.
 // Handles ChordPro, chords-over-lyrics text, and Ultimate-Guitar-style text: [Verse] / [Chorus] tags, [ch]G[/ch] chord
 // markup, [tab]...[/tab] blocks, HTML entities, and page clutter around the chart (menus, ratings, comments) when a whole

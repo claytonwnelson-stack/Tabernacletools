@@ -31,7 +31,7 @@ void PaywallView::open (const juce::String& reason) {
         resized(); repaint(); });
     proc_.refreshIntroEligibility ([this, alive] { if (! *alive) return; intro_ = proc_.introEligibility(); resized(); repaint(); });
 #if WR_STORE_BUILD
-    // v0.18 already covered by a subscription bought in another Tabernacle Tools app (or a church seat)? Then don't sell again.
+    // v0.18 already covered by a subscription bought in another Bearing Live app (or a church seat)? Then don't sell again.
     if (auto* ss = proc_.seats()) if (ss->client().signedIn())
         ss->async ([] (wr::SeatClient& c) { return c.coverage(); }, [this, alive, ss] (wr::SeatResult) { if (! *alive) return; cov_ = ss->client().lastCoverage(); updateMode(); resized(); repaint(); });
 #endif
@@ -71,7 +71,7 @@ void PaywallView::paint (juce::Graphics& g) {
     g.fillAll (wr::theme::bg.withAlpha (0.72f));
     g.setColour (wr::theme::panel); g.fillRoundedRectangle (box_.toFloat(), 16);
     auto r = box_.reduced (28);
-    g.setColour (juce::Colours::white); g.setFont (juce::FontOptions (28.0f, juce::Font::bold)); g.drawText ("Tabernacle Tools", r.removeFromTop (36), juce::Justification::left);
+    g.setColour (juce::Colours::white); g.setFont (juce::FontOptions (28.0f, juce::Font::bold)); g.drawText ("Bearing Live", r.removeFromTop (36), juce::Justification::left);
     g.setColour (juce::Colour (0xffffd166)); g.setFont (juce::FontOptions (17.0f));
     g.drawText (reason_.isNotEmpty() ? reason_ : juce::String ("Subscribe to play, lead and project"), r.removeFromTop (26), juce::Justification::left);
     g.setColour (juce::Colours::lightgrey); g.setFont (juce::FontOptions (14.0f));
@@ -84,7 +84,7 @@ void PaywallView::paint (juce::Graphics& g) {
         g.setColour (juce::Colours::lightgrey); g.setFont (juce::FontOptions (14.0f)); g.drawFittedText (lines, t, juce::Justification::topLeft, 6); };
     card (L, "Individual", "One person, all your iPads\nGuitar, Keys, Bass + Charts apps, pedal, amp and cab\nClick, cues, live view, projector, band sync\n" + juce::String (trialShown() ? "2-week free trial (once per person, all apps)" : "Cancel anytime"));
     card (R, "Church", "One leader + up to 14 team members\n(15 people, each on their own Apple ID)\nEverything in Individual for the whole team\nLeader invites with single-use codes");
-    if (mode_ != wr::PaywallMode::Sell) { // v0.18 "You're covered" (one subscription unlocks every Tabernacle Tools app)
+    if (mode_ != wr::PaywallMode::Sell) { // v0.18 "You're covered" (one subscription unlocks every Bearing Live app)
         auto msg = wr::coveredMessage (proc_.entitlements, cov_, (int64_t) juce::Time::currentTimeMillis() / 1000);
         if (mode_ == wr::PaywallMode::UpgradeOnly) msg += " Upgrade to Church only if your whole team needs it.";
         auto b = L.withHeight (200); g.setColour (juce::Colour (0xf0262b35)); g.fillRoundedRectangle (b.toFloat(), 12);
@@ -93,6 +93,6 @@ void PaywallView::paint (juce::Graphics& g) {
     g.setColour (juce::Colours::grey); g.setFont (juce::FontOptions (11.0f));
     g.drawFittedText ("Payment is charged to your Apple ID. Subscriptions renew monthly unless cancelled at least 24 hours before the end of the period, in "
                       "Settings > Apple ID > Subscriptions. "
-                      + juce::String (trialShown() ? "The free trial is once per person across all Tabernacle Tools apps. " : "") + "One subscription unlocks every Tabernacle Tools app when you sign in with Apple. " + "Terms of Use and Privacy Policy: see the App Store page.",
+                      + juce::String (trialShown() ? "The free trial is once per person across all Bearing Live apps. " : "") + "One subscription unlocks every Bearing Live app when you sign in with Apple. " + "Terms of Use and Privacy Policy: see the App Store page.",
                       box_.reduced (28).removeFromBottom (28), juce::Justification::left, 2);
 }

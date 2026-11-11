@@ -1,4 +1,4 @@
-# Tabernacle Tools — Launch Plan (sideload → App Store)
+# Bearing Live — Launch Plan (sideload → App Store)
 
 *Draft v0.10 (subscription pricing, church seats, hymnal); first drafted v0.9 · Nov 3, 2026 · prices checked Nov 3, 2026 (US App Store / vendor sites)*
 
@@ -12,7 +12,7 @@
 - **v0.16 (Nov 4, 2026): planned items finished**: Terms/Privacy drafts, Link off until licensed, voice recording script + overrides, tempo-map editor, stem sharing, CCLI per-song totals.
 - **v0.17 (Nov 4, 2026): MIDI Clock send/receive** (Off/Send/Receive). Ableton Link left off - Clayton chose MIDI clock + Wi-Fi sync.
 - **v0.18 (Nov 4, 2026): one subscription unlocks every app** (Guitar, Keys, Bass, Charts stay separate apps). Cross-app entitlement through the seat service; one free trial per person across all apps.
-- **v0.19 (Nov 4, 2026): renamed to Tabernacle Tools** (Tabernacle Tools LLC, Texas, planned). Apps: Tabernacle Tools - Electric Guitar / Keys / Bass / Charts / Hub; home-screen "TT Guitar" etc.; bundle ids `com.tabernacletools.<app>`.
+- **v0.19 (Nov 4, 2026): renamed to Bearing Live** (Bearing, Texas, planned). Apps: Bearing Live Guitar / Keys / Bass / Charts / Hub; home-screen "TT Guitar" etc.; bundle ids `com.tabernacletools.<app>`.
 
 ## 1. Two licence blockers (must fix before anyone else gets a build)
 | Blocker | Why | Fix | Cost / effort |
@@ -30,7 +30,7 @@ Also:
 - We need a privacy policy. The app collects nothing and only uses the local network, so the App Store "Data Not Collected" label applies.
 
 ## 2. Accounts and setup
-1. Join the **Apple Developer Program** for $99/yr ([developer.apple.com/programs](https://developer.apple.com/programs/)). Enrol as **Tabernacle Tools LLC** (form the Texas LLC first, then get a free D-U-N-S number, 1–2 weeks) so the seller name isn't a personal name.
+1. Join the **Apple Developer Program** for $99/yr ([developer.apple.com/programs](https://developer.apple.com/programs/)). Enrol as **Bearing** (form the Texas LLC first, then get a free D-U-N-S number, 1–2 weeks) so the seller name isn't a personal name.
 2. Join the **App Store Small Business Program** ([link](https://developer.apple.com/app-store/small-business-program/)). It drops Apple's commission from 30% to **15%** while proceeds stay under $1M/yr.
 3. In Xcode: turn on App Groups (`-DWR_USE_APP_GROUP=ON`) so the AUv3 shares the library, and the Share extension (`-DWR_SHARE_EXTENSION=ON`).
 4. Set up GitHub Actions on a macOS runner for CI builds, plus fastlane for TestFlight uploads.
@@ -47,7 +47,7 @@ Also:
 ## 4. Pricing (decided by Clayton, Nov 3, 2026): subscription only
 | Plan | Price | Who | Product id |
 |---|---|---|---|
-| **Individual** | **$4.99 / month** | One person, all their devices (one Apple ID), every Tabernacle Tools app (Guitar, Chart-only, Keys, Bass) | `com.tabernacletools.guitar.individual.monthly` |
+| **Individual** | **$4.99 / month** | One person, all their devices (one Apple ID), every Bearing Live app (Guitar, Chart-only, Keys, Bass) | `com.tabernacletools.guitar.individual.monthly` |
 | **Church** | **$19.99 / month** | A whole church team. The leader subscribes and invites up to **15 people** (the leader included), each on their own Apple ID and devices | `com.tabernacletools.guitar.church.monthly` |
 
 Both are in one App Store subscription group (`worship-rig`), so upgrading or downgrading between them is handled by Apple. Yearly plans: **none at launch.** Optionally add ~$49.99/yr (Individual) and ~$199/yr (Church) after a few months of data; a yearly church plan suits church budgets.
@@ -104,7 +104,7 @@ Assumptions to watch: trial-to-paid conversion is typically 20–40% for music t
 **Why this works against competitors:** OnSong Premium is $5.99/mo for charts alone, Playback Premium is $9.99/mo for tracks, and BIAS FX/ToneStack charge $20–60 for tones. $4.99 covers charts, click, cues, tones and sync. $19.99 for the whole band costs less than one MultiTracks seat.
 
 ## 4b. App Store Connect: separate apps, one subscription (decided by Clayton, Nov 4, 2026)
-Separate apps keep downloads small and performance focused: **Tabernacle Tools - Electric Guitar** (`com.tabernacletools.guitar`), **Keys** (`.keys`), **Bass** (`.bass`), **Charts** (`.charts`).
+Separate apps keep downloads small and performance focused: **Bearing Live Guitar** (`com.tabernacletools.guitar`), **Keys** (`.keys`), **Bass** (`.bass`), **Charts** (`.charts`).
 
 StoreKit subscriptions belong to one app, so **each app has its own subscription group and products**:
 
@@ -180,4 +180,4 @@ Each group: 2-week free intro offer, Billing Grace Period 16 days, Server Notifi
 ## 9. Open decisions for Clayton
 1. Whose voice records the cues. *(Ableton Link: decided Nov 4 - leave off; use MIDI Clock + Wi-Fi sync.)*
 2. Whether to add yearly plans after launch, and the church seat cap (15 for now).
-3. Seller name / LLC: decided Nov 4 - **Tabernacle Tools LLC** (Texas, to be formed).
+3. Seller name / LLC: decided Nov 4 - **Bearing** (Texas, to be formed).

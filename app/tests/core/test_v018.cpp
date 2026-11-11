@@ -1,4 +1,4 @@
-// v0.18 one subscription for every Tabernacle Tools app: client side (coverage, paywall mode, trial honesty, lapse guard)
+// v0.18 one subscription for every Bearing Live app: client side (coverage, paywall mode, trial honesty, lapse guard)
 #include "sync/SeatClient.h"
 #include "model/CrossApp.h"
 #include "seat_fixture.h"
@@ -23,13 +23,13 @@ int main() {
     // coverage from the server: bought Individual in Keys
     FakeServer srv; SeatClient sc (srv.transport(), pk, AUD);
     srv.routes["POST /v1/auth/apple"] = { 200, "{\"session\":\"s1.x.y\"}" }; CHECK (sc.signInWithApple ("idt").ok);
-    srv.routes["GET /v1/entitlement"] = { 200, std::string ("{\"covered\":true,\"plan\":\"individual\",\"source\":\"purchase\",\"coveredBy\":{\"app\":\"Tabernacle Tools - Keys\",\"bundleId\":\"com.tabernacletools.keys\"},\"paidThrough\":")
+    srv.routes["GET /v1/entitlement"] = { 200, std::string ("{\"covered\":true,\"plan\":\"individual\",\"source\":\"purchase\",\"coveredBy\":{\"app\":\"Bearing Live Keys\",\"bundleId\":\"com.tabernacletools.keys\"},\"paidThrough\":")
         + std::to_string (iat + 20 * 86400) + ",\"trialEligible\":false,\"token\":\"" + seat_fixture::kMemberToken + "\"}" };
     Entitlements ent; CHECK (sc.refresh (ent, iat + 60)); CHECK (ent.fullAccess (iat + 60));
     CHECK (srv.log.back() == "GET /v1/entitlement");
-    auto& c = sc.lastCoverage(); CHECK (c.known && c.covered && c.coveredByApp == "Tabernacle Tools - Keys");
+    auto& c = sc.lastCoverage(); CHECK (c.known && c.covered && c.coveredByApp == "Bearing Live Keys");
     CHECK (paywallModeFor (ent, c, iat + 60) == PaywallMode::UpgradeOnly);
-    CHECK (coveredMessage (ent, c, iat + 60).find ("You're covered") == 0 && coveredMessage (ent, c, iat + 60).find ("Tabernacle Tools - Keys") != std::string::npos);
+    CHECK (coveredMessage (ent, c, iat + 60).find ("You're covered") == 0 && coveredMessage (ent, c, iat + 60).find ("Bearing Live Keys") != std::string::npos);
     // church team seat -> fully covered, nothing to sell
     CrossAppCoverage team = c; team.source = "team"; team.plan = "church"; CHECK (paywallModeFor (ent, team, iat + 60) == PaywallMode::Covered);
     // not covered -> sell; covered=false drops a cached token
@@ -41,8 +41,8 @@ int main() {
       old.routes["POST /v1/entitlement"] = { 200, std::string ("{\"token\":\"") + seat_fixture::kMemberToken + "\"}" };
       Entitlements e; CHECK (o.refresh (e, iat + 60)); CHECK (old.log.size() == 3 && old.log[1] == "GET /v1/entitlement" && old.log[2] == "POST /v1/entitlement"); }
     // posting a purchase
-    srv.routes["POST /v1/purchases"] = { 201, "{\"ok\":true,\"plan\":\"individual\",\"trialOk\":false,\"duplicate\":{\"app\":\"Tabernacle Tools - Electric Guitar\"}}" };
-    SeatClient::PurchasePost pp; CHECK (sc.postPurchase ("eyJ.jws.sig", &pp).ok); CHECK (! pp.trialOk && pp.duplicateApp == "Tabernacle Tools - Electric Guitar" && srv.lastBody.find ("eyJ.jws.sig") != std::string::npos);
+    srv.routes["POST /v1/purchases"] = { 201, "{\"ok\":true,\"plan\":\"individual\",\"trialOk\":false,\"duplicate\":{\"app\":\"Bearing Live Guitar\"}}" };
+    SeatClient::PurchasePost pp; CHECK (sc.postPurchase ("eyJ.jws.sig", &pp).ok); CHECK (! pp.trialOk && pp.duplicateApp == "Bearing Live Guitar" && srv.lastBody.find ("eyJ.jws.sig") != std::string::npos);
     // trial honesty
     CrossAppCoverage unknown; CHECK (showTrialAcrossApps (true, unknown)); CHECK (! showTrialAcrossApps (false, unknown));
     CrossAppCoverage used; used.known = true; used.trialEligible = false; CHECK (! showTrialAcrossApps (true, used));
@@ -51,7 +51,7 @@ int main() {
     LapseGuard g; CHECK (! g.audioAllowed (false)); CHECK (g.audioAllowed (true)); CHECK (g.audioAllowed (false)); CHECK (g.latched());
     // seat role reaches the status line
     { Entitlements e; auto cl = verifySeatToken (seat_fixture::kMemberToken, pk, AUD); auto t = toSeatToken (*cl); t.role = "individual"; e.setSeat (t);
-      CHECK (e.statusText (iat + 60).find ("all Tabernacle Tools apps") != std::string::npos); }
+      CHECK (e.statusText (iat + 60).find ("all Bearing Live apps") != std::string::npos); }
     std::printf ("v0.18: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -1,4 +1,4 @@
-// Tabernacle Tools v0.10 - the Workshop's AMP SECTION (head + cab + mic + output mode, or bypass for a real amp).
+// Bearing Live v0.10 - the Workshop's AMP SECTION (head + cab + mic + output mode, or bypass for a real amp).
 // Stored in the rig as a normal PedalDef (type "amp", uid kAmpUid) kept LAST in the before-amp lane, so in two-cable /
 // direct use it sits between the lanes exactly where a real amp would. "Using a real amp" = the section is bypassed.
 #pragma once

@@ -1,4 +1,4 @@
-// Tabernacle Tools v0.10 - Workshop "pedal face" descriptors: colour, the 2-4 main knobs shown big, a one-line description and a
+// Bearing Live v0.10 - Workshop "pedal face" descriptors: colour, the 2-4 main knobs shown big, a one-line description and a
 // suggested footswitch action. Pure data (no JUCE) so it is unit-tested. Colours are our own (no copied trade dress).
 #pragma once
 #include <string>

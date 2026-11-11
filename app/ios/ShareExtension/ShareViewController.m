@@ -1,8 +1,8 @@
-// Tabernacle Tools "Share" extension (optional target WR_SHARE_EXTENSION). Takes ONLY what the user shares: the selected text
+// Bearing Live "Share" extension (optional target WR_SHARE_EXTENSION). Takes ONLY what the user shares: the selected text
 // (or the page text Safari hands over via WRPreprocess.js), plain text, or a text / ChordPro / PDF file. It never fetches
 // a URL - a bare link is refused with a hint to select the chords instead.
 // Hand-off: free Apple IDs can't use App Groups, so the text goes on the general pasteboard under a private type
-// (com.tabernacletools.shared-chart). Tabernacle Tools picks it up the next time it is opened and shows the import preview.
+// (com.tabernacletools.shared-chart). Bearing Live picks it up the next time it is opened and shows the import preview.
 #import <UIKit/UIKit.h>
 #import <PDFKit/PDFKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -31,11 +31,11 @@
         NSString* t = [text stringByTrimmingCharactersInSet: NSCharacterSet.whitespaceAndNewlineCharacterSet];
         BOOL urlOnly = [t rangeOfString: @"\n"].location == NSNotFound && ([t hasPrefix: @"http://"] || [t hasPrefix: @"https://"]);
         if (t.length == 0 || urlOnly) {
-            self->_label.text = @"Nothing to import.\n\nTabernacle Tools doesn't download web pages. Select the chords on the page, then Share (or Copy and use Paste chart).";
+            self->_label.text = @"Nothing to import.\n\nBearing Live doesn't download web pages. Select the chords on the page, then Share (or Copy and use Paste chart).";
         } else {
             NSData* d = [t dataUsingEncoding: NSUTF8StringEncoding];
             [UIPasteboard.generalPasteboard setItems: @[ @{ @"com.tabernacletools.shared-chart": d, (NSString*) UTTypePlainText.identifier: t } ] options: @{}];
-            self->_label.text = @"Chart ready.\n\nOpen Tabernacle Tools - you'll see the import preview to check the title, key and sections.";
+            self->_label.text = @"Chart ready.\n\nOpen Bearing Live - you'll see the import preview to check the title, key and sections.";
         }
         dispatch_after (dispatch_time (DISPATCH_TIME_NOW, (int64_t) (2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             [self.extensionContext completeRequestReturningItems: @[] completionHandler: nil]; });

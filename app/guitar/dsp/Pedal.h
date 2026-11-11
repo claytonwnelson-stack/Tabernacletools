@@ -1,4 +1,4 @@
-// Tabernacle Tools - pedal base class (pure C++17, no JUCE). Every pedal is a Pedal subclass with named params.
+// Bearing Live - pedal base class (pure C++17, no JUCE). Every pedal is a Pedal subclass with named params.
 #pragma once
 #include "../third_party/wk/Engine.h"
 #include "audio/DspUtil.h"

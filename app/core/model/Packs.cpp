@@ -32,8 +32,8 @@ const SoundPack* packForContent (const std::string& c) {
 }
 const std::vector<SubscriptionProduct>& subscriptionProducts() {
     static const std::vector<SubscriptionProduct> v = {
-        { "com.tabernacletools.guitar.individual.monthly", "Tabernacle Tools Individual", Plan::Individual, 4.99, kTrialDays, 1 },
-        { "com.tabernacletools.guitar.church.monthly", "Tabernacle Tools Church (whole band)", Plan::Church, 19.99, kTrialDays, kChurchSeats } };
+        { "com.tabernacletools.guitar.individual.monthly", "Bearing Live Individual", Plan::Individual, 4.99, kTrialDays, 1 },
+        { "com.tabernacletools.guitar.church.monthly", "Bearing Live Church (whole band)", Plan::Church, 19.99, kTrialDays, kChurchSeats } };
     return v;
 }
 const SubscriptionProduct* findProduct (const std::string& id) { for (auto& p : subscriptionProducts()) if (p.productId == id) return &p; return nullptr; }
@@ -84,7 +84,7 @@ std::string Entitlements::statusText (int64_t now) const {
         if (sub_.status == SubStatus::GracePeriod) return "Payment issue - full access for " + days (std::max (sub_.expiresAt, sub_.graceUntil)) + " more days";
         return std::string (plan (now) == Plan::Church ? "Church plan" : "Individual plan") + " - renews in " + days (sub_.expiresAt) + " days";
     }
-    if (seatActive (now)) return seat_.role == "individual" || seat_.role == "church" ? "Covered by your Tabernacle Tools subscription (all Tabernacle Tools apps)" : "Church seat - via your team leader";
+    if (seatActive (now)) return seat_.role == "individual" || seat_.role == "church" ? "Covered by your Bearing Live subscription (all Bearing Live apps)" : "Church seat - via your team leader";
     return sub_.status == SubStatus::None && ! hasSeat_ ? "Start your free 14-day trial" : "Read-only - charts, library and backup export still work. Subscribe or join your church team to play.";
 }
 std::string Entitlements::serialise() const {

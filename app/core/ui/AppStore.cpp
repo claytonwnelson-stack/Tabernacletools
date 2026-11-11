@@ -13,7 +13,7 @@ void AppStore::load() {
         if (ok) {
             lib = libraryFromJson (j); if (lib.controllers.empty()) lib.controllers = { defaultGuitarUnit(), defaultSectionUnit() }; if (lib.rigs.empty()) lib.rigs.push_back (defaultRig());
             if (r.source == BackupStore::Source::Backup) recoveryNote = "The library file was damaged - restored the newest backup (" + juce::File (juce::String (r.restoredFrom)).getFileName() + ").";
-            else if (r.crashed) recoveryNote = "Tabernacle Tools didn't close cleanly last time. Your last autosave was loaded (backups: Setlist > Backups).";
+            else if (r.crashed) recoveryNote = "Bearing Live didn't close cleanly last time. Your last autosave was loaded (backups: Setlist > Backups).";
             return;
         }
     }

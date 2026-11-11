@@ -278,7 +278,7 @@ CoreEditor::SettingsPanel::Level CoreEditor::SettingsPanel::make (Kind k) {
           ck.addItem ("Send (24 ppqn + Start/Stop + position on section jumps)", true, mode == 1, [this] { ed.core.setMidiClockMode (wr::MidiClockMode::Send); });
           ck.addItem ("Receive (follow an external tempo and transport)", true, mode == 2, [this] { ed.core.setMidiClockMode (wr::MidiClockMode::Receive); });
           ck.addItem ("The leader sends clock. Followers stay on Wi-Fi band sync.", false, false, [] {});
-          if (mode == 1) { juce::PopupMenu outs; outs.addItem ("Virtual port: Tabernacle Tools Clock", true, s.midiClockOutId.empty(), [this] {
+          if (mode == 1) { juce::PopupMenu outs; outs.addItem ("Virtual port: Bearing Live Clock", true, s.midiClockOutId.empty(), [this] {
               ed.core.store.lib.settings.midiClockOutId.clear(); ed.core.applySettings(); ed.core.store.save(); });
             for (auto& d : juce::MidiOutput::getAvailableDevices()) { auto id = d.identifier.toStdString(); auto name = d.name;
               outs.addItem (name, true, s.midiClockOutId == id || s.midiClockOutId == name.toStdString(), [this, id] { ed.core.store.lib.settings.midiClockOutId = id; ed.core.applySettings(); ed.core.store.save(); }); }

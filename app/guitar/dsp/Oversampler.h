@@ -1,4 +1,4 @@
-// Tabernacle Tools v0.12 - anti-aliasing oversampler for the nonlinear amp / drive stages (pure C++17, no JUCE).
+// Bearing Live v0.12 - anti-aliasing oversampler for the nonlinear amp / drive stages (pure C++17, no JUCE).
 // Same structure as juce::dsp::Oversampling's "polyphase IIR" mode: cascaded 2x stages, each a half-band filter built from
 // two parallel chains of first-order allpasses (Valenzuela/de Soras design, minimum-phase-ish, low latency, cheap).
 // Why not juce::dsp::Oversampling itself: the guitar DSP is JUCE-free so it builds + is tested on Linux/CI and inside the

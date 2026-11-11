@@ -22,7 +22,7 @@ void setExternalDisplayContent (juce::Component* content);
 struct HealthReading { int batteryPct = -1; bool charging = false; int thermal = 0; };
 HealthReading deviceHealth();
 // v0.7 share import. Charts handed to the app from outside: files iOS put in Documents/Inbox ("Open in" / "Copy to
-// Tabernacle Tools" from Files, Mail, Safari downloads), and text the optional Share Extension left on the pasteboard under
+// Bearing Live" from Files, Mail, Safari downloads), and text the optional Share Extension left on the pasteboard under
 // kSharedChartType (free Apple IDs have no App Group, so the pasteboard is the hand-off). Each call takes them (files are
 // moved to <data>/imported/). Desktop: files dropped in <data>/Inbox. Nothing is downloaded from the web.
 static constexpr const char* kSharedChartType = "com.tabernacletools.shared-chart";
@@ -38,12 +38,12 @@ void pickChartFile (juce::Component* anchor, std::function<void (const juce::Fil
 inline bool isStemAudio (const juce::File& f) { return f.hasFileExtension ("wav;aif;aiff;m4a;mp3;caf;aac"); }
 inline juce::File shareInbox() {
    #if JUCE_IOS
-    return juce::File::getSpecialLocation (juce::File::userDocumentsDirectory).getChildFile ("Inbox");   // "Open in / Copy to Tabernacle Tools"
+    return juce::File::getSpecialLocation (juce::File::userDocumentsDirectory).getChildFile ("Inbox");   // "Open in / Copy to Bearing Live"
    #else
     return dataDirectory().getChildFile ("Inbox");
    #endif
 }
-// v0.16 Share Sheet / "Copy to Tabernacle Tools" audio files: moved out of the inbox into <data>/SharedStems and returned
+// v0.16 Share Sheet / "Copy to Bearing Live" audio files: moved out of the inbox into <data>/SharedStems and returned
 inline juce::Array<juce::File> takeSharedStems() {
     juce::Array<juce::File> out; auto in = shareInbox(); if (! in.isDirectory()) return out;
     auto dir = dataDirectory().getChildFile ("SharedStems"); dir.createDirectory();

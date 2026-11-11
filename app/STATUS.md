@@ -1,4 +1,8 @@
-# Tabernacle Tools: STATUS (v0.19 renamed from Worship Rig; v0.18 one subscription for every app; v0.17 MIDI Clock send/receive; v0.16 legal docs, Link off by default, voice overrides, tempo-map editor, stem sharing, CCLI per-song totals; v0.15 CCLI usage log + export; v0.14 multitrack backing tracks; v0.13 one free trial per person; v0.12 anti-aliasing, cab IR picker, StoreKit 2, read-only locks; v0.11 church seat service; v0.8 - editable section colours, footswitch banks, capo helper, song stats, backup bundle, stage mode, auto-scroll, rehearsal recorder)
+# Bearing Live: STATUS
+
+The public name is **Bearing Live**. The company is **Bearing**. The apps are Bearing Live Guitar, Keys, Bass, Charts, and Hub. Bundle ids stay `com.tabernacletools.*`, and the Xcode project and scheme names are unchanged. The iPad home-screen name is set by hand in Xcode to **Bearing Live**. The notes under v0.19 record the earlier working name.
+
+# Earlier notes (v0.19 renamed from Worship Rig; v0.18 one subscription for every app; v0.17 MIDI Clock send/receive; v0.16 legal docs, Link off by default, voice overrides, tempo-map editor, stem sharing, CCLI per-song totals; v0.15 CCLI usage log + export; v0.14 multitrack backing tracks; v0.13 one free trial per person; v0.12 anti-aliasing, cab IR picker, StoreKit 2, read-only locks; v0.11 church seat service; v0.8 - editable section colours, footswitch banks, capo helper, song stats, backup bundle, stage mode, auto-scroll, rehearsal recorder)
 
 _Last updated: 2026-11-04 (America/Chicago)_
 
@@ -9,11 +13,11 @@ _Last updated: 2026-11-04 (America/Chicago)_
 
 | App | App Store name | Home screen | Bundle id |
 |---|---|---|---|
-| Guitar | Tabernacle Tools - Electric Guitar | TT Guitar | `com.tabernacletools.guitar` |
-| Keys | Tabernacle Tools - Keys | TT Keys | `com.tabernacletools.keys` |
-| Bass | Tabernacle Tools - Bass | TT Bass | `com.tabernacletools.bass` |
-| Charts | Tabernacle Tools - Charts | TT Charts | `com.tabernacletools.charts` |
-| Hub | Tabernacle Tools - Hub | TT Hub | `com.tabernacletools.hub` |
+| Guitar | Bearing Live Guitar | Bearing Live | `com.tabernacletools.guitar` |
+| Keys | Bearing Live Keys | Bearing Live | `com.tabernacletools.keys` |
+| Bass | Bearing Live Bass | Bearing Live | `com.tabernacletools.bass` |
+| Charts | Bearing Live Charts | Bearing Live | `com.tabernacletools.charts` |
+| Hub | Bearing Live Hub | Bearing Live | `com.tabernacletools.hub` |
 | Core test harness | - | TT Core Test | `com.tabernacletools.coretest` |
 
 - Old -> new IDs: bundle prefix `com.bearthe.worshiprig` -> `com.tabernacletools` (Guitar was `com.bearthe.worshiprig.guitar`; the seat service had it as `com.bearthe.worshiprig`, now consistent). Products `<bundle>.individual.monthly` / `<bundle>.church.monthly` (Guitar: `com.tabernacletools.guitar.individual.monthly`). Subscription group "Tabernacle Tools" (id `tabernacle-tools`). App group `group.com.tabernacletools.guitar`. Share extension `com.tabernacletools.guitar.share`. Sign in with Apple: the four App IDs grouped under primary `com.tabernacletools.guitar`. Entitlement token audience `com.tabernacletools`. No keychain group is used (seat session lives in `<data>/seat.json`).

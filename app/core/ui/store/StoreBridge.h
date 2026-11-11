@@ -13,7 +13,7 @@ void start (std::function<void (std::vector<StoreEntitlement>)> onChange);   // 
 void products (std::function<void (std::vector<ProductInfo>)> done);
 void purchase (const std::string& productId, std::function<void (std::string status, std::string error)> done); // success|pending|cancelled|failed
 void restore (std::function<void (bool ok, std::string error, std::vector<StoreEntitlement>)> done);
-// v0.13: Product.SubscriptionInfo.isEligibleForIntroOffer(for: groupID) for the single Tabernacle Tools subscription group.
+// v0.13: Product.SubscriptionInfo.isEligibleForIntroOffer(for: groupID) for the single Bearing Live subscription group.
 // known == false when StoreKit couldn't answer (offline, products missing, non-store build).
 void introEligibility (std::function<void (bool known, bool eligible)> done);
 void entitlements (std::function<void (std::vector<StoreEntitlement>)> done);

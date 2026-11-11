@@ -1,4 +1,4 @@
-// Tabernacle Tools - data model: charts, songs, scenes, rig presets, setlists, controller profiles.
+// Bearing Live - data model: charts, songs, scenes, rig presets, setlists, controller profiles.
 #pragma once
 #include "Json.h"
 #include "SectionColors.h"
@@ -120,7 +120,7 @@ struct AppSettings {
     // followMidiClock is kept as a convenience mirror of (midiClockMode == 2) for older call sites.
     int midiClockMode = 0;        // Off by default (Clayton Nov 4: MIDI clock send/receive, leave Link off)
     bool followMidiClock = false; // == (midiClockMode == Receive); updated when the mode changes
-    std::string midiClockOutId;   // empty = virtual "Tabernacle Tools Clock" (+ every enabled host MIDI out when sending)
+    std::string midiClockOutId;   // empty = virtual "Bearing Live Clock" (+ every enabled host MIDI out when sending)
     std::string midiClockInId;    // empty = all MIDI inputs (host / Audio MIDI settings); else match by device identifier
     // click track
     int clickOut = 2;             // 0 = outs 1/2, 1 = outs 3/4, 2 = out 2 only (mono; default - free in four-cable, where outs 3/4 are the amp return)
@@ -135,7 +135,7 @@ struct AppSettings {
     bool autoAdvance = true;      // beat-based section advance (sections with bars, no MIDI clock, after Play)
     float rigTailSec = 3;         // old rig's delay/reverb ring-out on a rig change
     // v0.5 band sync + projector
-    std::string deviceName = "Tabernacle Tools";   // shown to the band (Bonjour name / follower list)
+    std::string deviceName = "Bearing Live";   // shown to the band (Bonjour name / follower list)
     std::string lastLeaderHost; int lastLeaderPort = 0;   // one-tap rejoin
     bool useLink = false;                     // Ableton Link (off: Clayton chose MIDI clock + Wi-Fi sync; WR_WITH_LINK defaults OFF)
     ProjectorSettings projector;

@@ -27,9 +27,9 @@
 #define JucePlugin_Build_AAX 0
 #define JucePlugin_Build_LV2 0
 #define JucePlugin_Build_Unity 0
-#define JucePlugin_Name "Tabernacle Tools"
-#define JucePlugin_Desc "Tabernacle Tools"
-#define JucePlugin_Manufacturer "Tabernacle Tools LLC"
+#define JucePlugin_Name "Bearing Live"
+#define JucePlugin_Desc "Bearing Live"
+#define JucePlugin_Manufacturer "Bearing"
 #define JucePlugin_ManufacturerCode 0x42747959
 #define JucePlugin_PluginCode 0x57526967
 #define JucePlugin_IsSynth 0
@@ -84,5 +84,5 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #if ! JUCE_DONT_DECLARE_PROJECTINFO
-namespace ProjectInfo { const char* const projectName = "Tabernacle Tools"; const char* const companyName = "Tabernacle Tools LLC"; const char* const versionString = "0.1.0"; const int versionNumber = 0x100; }
+namespace ProjectInfo { const char* const projectName = "Bearing Live"; const char* const companyName = "Bearing"; const char* const versionString = "0.1.0"; const int versionNumber = 0x100; }
 #endif

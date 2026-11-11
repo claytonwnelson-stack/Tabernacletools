@@ -45,7 +45,7 @@ std::string PdfWriter::finish (const std::string& title) const {
     objs.push_back ("<< /Type /Catalog /Pages 2 0 R >>");
     objs.push_back ("<< /Type /Pages /Kids [" + kids + "] /Count " + std::to_string (nPages) + " >>");
     for (auto* f : fonts) objs.push_back (std::string ("<< /Type /Font /Subtype /Type1 /BaseFont /") + f + " /Encoding /WinAnsiEncoding >>");
-    objs.push_back ("<< /Title (" + esc (toWinAnsi (title)) + ") /Producer (Tabernacle Tools) >>");
+    objs.push_back ("<< /Title (" + esc (toWinAnsi (title)) + ") /Producer (Bearing Live) >>");
     for (int i = 0; i < nPages; ++i) {
         const std::string content = i < (int) pages_.size() ? pages_[(size_t) i] : std::string();
         objs.push_back ("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + num (w_) + " " + num (h_) + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> /Contents " + std::to_string (first + i * 2 + 1) + " 0 R >>");

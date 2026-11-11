@@ -1,6 +1,6 @@
-// Tabernacle Tools Core Test - minimal iOS app on the shared core only (no guitar rig): setlist + chart + click + voice cues +
+// Bearing Live Core Test - minimal iOS app on the shared core only (no guitar rig): setlist + chart + click + voice cues +
 // count-in + band sync (leader / follower, Link, roster) + projector lyrics. Click and cues play on outs 1/2
-// (iPad speaker / headphones / interface). Joins the same band session as Tabernacle Tools - Electric Guitar.
+// (iPad speaker / headphones / interface). Joins the same band session as Bearing Live Guitar.
 #pragma once
 #include "CoreProcessor.h"
 

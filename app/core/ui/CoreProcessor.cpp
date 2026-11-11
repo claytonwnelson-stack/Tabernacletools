@@ -55,7 +55,7 @@ void CoreProcessor::applyStoreEntitlements (const std::vector<wr::StoreEntitleme
                            [this, otid] (wr::SeatResult r) {
                                if (r.ok && ! r.body["trialOk"].boolean (true) && trialRefusedOtids_.insert (otid).second) applyStoreEntitlements (storeEnt_);
                                if (r.ok && ! r.body["duplicate"]["app"].str().empty())
-                                   status = "You already subscribe in " + juce::String (r.body["duplicate"]["app"].str()) + " - one subscription covers every Tabernacle Tools app. Cancel the extra one in Settings > Apple ID > Subscriptions.";
+                                   status = "You already subscribe in " + juce::String (r.body["duplicate"]["app"].str()) + " - one subscription covers every Bearing Live app. Cancel the extra one in Settings > Apple ID > Subscriptions.";
                                seats_->refreshEntitlement (true); });
         }
     std::vector<wr::StoreEntitlement> e;   // a StoreKit trial the server refused (second trial for this person) doesn't unlock
@@ -394,10 +394,10 @@ void CoreProcessor::refreshMidiClockDevices() {
     clockMidiIn_.reset(); clockMidiOutSel_.reset();
     auto& s = store.lib.settings;
     const auto mode = midiClockModeFromInt (s.midiClockMode);
-    // Virtual "Tabernacle Tools Clock" out so other iPad apps (AUM, Loopy, GarageBand, ...) can see us; kept while Send is on.
+    // Virtual "Bearing Live Clock" out so other iPad apps (AUM, Loopy, GarageBand, ...) can see us; kept while Send is on.
     if (mode == MidiClockMode::Send) {
        #if JUCE_MAC || JUCE_IOS || JUCE_LINUX || JUCE_BSD
-        if (! clockMidiOut_) clockMidiOut_ = juce::MidiOutput::createNewDevice ("Tabernacle Tools Clock"); // virtual port for other apps
+        if (! clockMidiOut_) clockMidiOut_ = juce::MidiOutput::createNewDevice ("Bearing Live Clock"); // virtual port for other apps
        #endif
         if (! s.midiClockOutId.empty()) {
             for (auto& d : juce::MidiOutput::getAvailableDevices())

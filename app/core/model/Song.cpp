@@ -207,7 +207,7 @@ Library libraryFromJson (const Json& j) {
     l.settings.tunerRefHz = (float) st["tunerRef"].num (440); l.settings.autoAdvance = st["autoAdvance"].boolean (true); l.settings.rigTailSec = (float) st["rigTail"].num (3);
     l.settings.voiceCues = st["voiceCues"].boolean (true); l.settings.cueDb = (float) st["cueDb"].num (-6); l.settings.cuesWhenClickMuted = st["cuesWhenMuted"].boolean (false);
     l.settings.quantizeSections = st["quantize"].boolean (true); l.settings.countIn = st["countIn"].integer (8); l.settings.countInSpoken = st["countInSpoken"].boolean (false);
-    l.settings.deviceName = st["deviceName"].str ("Tabernacle Tools"); l.settings.lastLeaderHost = st["leaderHost"].str(); l.settings.lastLeaderPort = st["leaderPort"].integer(); l.settings.useLink = st["link"].boolean (false);
+    l.settings.deviceName = st["deviceName"].str ("Bearing Live"); l.settings.lastLeaderHost = st["leaderHost"].str(); l.settings.lastLeaderPort = st["leaderPort"].integer(); l.settings.useLink = st["link"].boolean (false);
     l.settings.projector = projectorSettingsFromJson (st["projector"]);
     { int o = st["oversampling"].integer (4); l.settings.ampOversampling = o >= 8 ? 8 : o >= 4 ? 4 : o >= 2 ? 2 : 1; l.settings.autoOversampling = st["osAuto"].boolean (true); }
     l.settings.guitarPedalId = st["guitarPedal"].str(); l.settings.sectionPedalId = st["sectionPedal"].str();

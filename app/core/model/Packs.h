@@ -1,5 +1,5 @@
-// Tabernacle Tools v0.10 - sound packs (content groupings) + SUBSCRIPTION entitlements (IAP-ready, NO StoreKit calls yet).
-// Business model: one auto-renewable subscription ("Tabernacle Tools Plus", $1.99/mo or $19.99/yr) unlocks EVERY paid pack in
+// Bearing Live v0.10 - sound packs (content groupings) + SUBSCRIPTION entitlements (IAP-ready, NO StoreKit calls yet).
+// Business model: one auto-renewable subscription ("Bearing Live Plus", $1.99/mo or $19.99/yr) unlocks EVERY paid pack in
 // every rig app. Free packs (Starters) are always available. Packs stay as browsing/marketing groupings only.
 // Content ids: pedal types ("tapeecho"), amp heads ("amp:British Crunch"), cabs ("cab:..."), presets ("preset:..."), keys patches ("keys:...").
 #pragma once
@@ -64,7 +64,7 @@ public:
 private:
     std::vector<TeamMember> members_; std::vector<std::string> invites_;
 };
-struct SeatToken { std::string teamId, memberId; int64_t teamExpiresAt = 0, refreshedAt = 0; std::string role; }; // v0.18 role: leader | member (church seat) | individual | church (own purchase, possibly in another Tabernacle Tools app)
+struct SeatToken { std::string teamId, memberId; int64_t teamExpiresAt = 0, refreshedAt = 0; std::string role; }; // v0.18 role: leader | member (church seat) | individual | church (own purchase, possibly in another Bearing Live app)
 
 enum class Feature { Library, ReadCharts, ExportBackup, AudioEngine, Click, Sync, Projector, LiveView, Edit, Import, Hymnal, ShareSetlist };
 // v0.12 read-only (lapsed) = Library, ReadCharts, Hymnal (browse + copy into the library), ExportBackup. Everything else locks.

@@ -62,7 +62,7 @@ TeamPanel::TeamPanel (SeatSession& s) : seats_ (s) {
     };
     delete_.onClick = [this] {
         juce::AlertWindow::showOkCancelBox (juce::MessageBoxIconType::WarningIcon, "Delete your seat account?",
-            "Deletes your account on the Tabernacle Tools seat server. If you lead a team, the team is dissolved and everyone loses their seat. "
+            "Deletes your account on the Bearing Live seat server. If you lead a team, the team is dissolved and everyone loses their seat. "
             "Your Apple subscription is NOT cancelled here - do that in iOS Settings > Apple ID > Subscriptions. Your charts on this iPad are kept.", "Delete", "Cancel", this,
             juce::ModalCallbackFunction::create ([this] (int ok) { if (! ok) return; busy ("Deleting...");
                 seats_.async ([] (wr::SeatClient& c) { return c.deleteAccount(); }, [this] (wr::SeatResult r) { report (r, "Account deleted"); hasTeam_ = false; info_ = {}; seats_.refreshEntitlement (true); layout(); }); }));

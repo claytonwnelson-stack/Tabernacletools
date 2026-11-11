@@ -3,14 +3,14 @@
 namespace wr {
 const std::vector<Hymn>& hymnLibrary() {
     static const std::vector<Hymn> v = {
-        { u8"amazing-grace", u8"Amazing Grace", u8"John Newton", 1779, u8"NEW BRITAIN", u8"American folk melody, harm. Edwin O. Excell (melody)", 1829, u8"Text 1779, tune 1829: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"amazing-grace", u8"Amazing Grace", u8"John Newton", 1779, u8"NEW BRITAIN", u8"American folk melody, harm. Edwin O. Excell (melody)", 1829, u8"Text 1779, tune 1829: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Amazing Grace}
 {artist: John Newton}
 {key: G}
 {tempo: 80}
 {time: 3/4}
 {meta: tune NEW BRITAIN - American folk melody, harm. Edwin O. Excell (melody) (1829)}
-{meta: public_domain Text 1779, tune 1829: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1779, tune 1829: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 A[G]mazing grace! how [C]sweet the [G]sound
@@ -37,14 +37,14 @@ He [G]will my shield and [C]portion [G]be
 As [Em]long as [D]life en[G]dures.
 {end_of_verse}
 )WRHYMN" },
-        { u8"holy-holy-holy", u8"Holy, Holy, Holy! Lord God Almighty", u8"Reginald Heber", 1826, u8"NICAEA", u8"John B. Dykes", 1861, u8"Text 1826, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"holy-holy-holy", u8"Holy, Holy, Holy! Lord God Almighty", u8"Reginald Heber", 1826, u8"NICAEA", u8"John B. Dykes", 1861, u8"Text 1826, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Holy, Holy, Holy! Lord God Almighty}
 {artist: Reginald Heber}
 {key: D}
 {tempo: 92}
 {time: 4/4}
 {meta: tune NICAEA - John B. Dykes (1861)}
-{meta: public_domain Text 1826, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1826, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Holy, holy, [Bm]holy! [G]Lord God Al[D]mighty!
@@ -71,14 +71,14 @@ All Thy works shall [Bm]praise Thy name, in [E]earth, and sky, and [A]sea;
 [G]God in three [D]Persons, [Em]bless[A]ed Trini[D]ty!
 {end_of_verse}
 )WRHYMN" },
-        { u8"it-is-well", u8"It Is Well with My Soul", u8"Horatio G. Spafford", 1873, u8"VILLE DU HAVRE", u8"Philip P. Bliss", 1876, u8"Text 1873, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"it-is-well", u8"It Is Well with My Soul", u8"Horatio G. Spafford", 1873, u8"VILLE DU HAVRE", u8"Philip P. Bliss", 1876, u8"Text 1873, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: It Is Well with My Soul}
 {artist: Horatio G. Spafford}
 {key: C}
 {tempo: 72}
 {time: 4/4}
 {meta: tune VILLE DU HAVRE - Philip P. Bliss (1876)}
-{meta: public_domain Text 1873, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1873, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 When [C]peace, like a [F]river, at[C]tendeth my way,
@@ -109,14 +109,14 @@ The [C]trump shall re[F]sound, and the [C]Lord shall de[Am]scend,
 Even [C]so, it is [G7]well with my [C]soul.
 {end_of_verse}
 )WRHYMN" },
-        { u8"come-thou-fount", u8"Come, Thou Fount of Every Blessing", u8"Robert Robinson", 1758, u8"NETTLETON", u8"Wyeth's Repository of Sacred Music, Part Second", 1813, u8"Text 1758, tune 1813: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"come-thou-fount", u8"Come, Thou Fount of Every Blessing", u8"Robert Robinson", 1758, u8"NETTLETON", u8"Wyeth's Repository of Sacred Music, Part Second", 1813, u8"Text 1758, tune 1813: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Come, Thou Fount of Every Blessing}
 {artist: Robert Robinson}
 {key: D}
 {tempo: 84}
 {time: 3/4}
 {meta: tune NETTLETON - Wyeth's Repository of Sacred Music, Part Second (1813)}
-{meta: public_domain Text 1758, tune 1813: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1758, tune 1813: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Come, Thou Fount of [G]every [D]blessing,
@@ -149,14 +149,14 @@ Here's my heart, O [G]take and [D]seal it,
 Seal it for Thy [A]courts a[D]bove.
 {end_of_verse}
 )WRHYMN" },
-        { u8"be-thou-my-vision", u8"Be Thou My Vision", u8"Irish, c. 8th cent.; tr. Mary E. Byrne (1905), versified Eleanor H. Hull (1912)", 1912, u8"SLANE", u8"Traditional Irish melody", 1909, u8"Text 1912, tune 1909: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"be-thou-my-vision", u8"Be Thou My Vision", u8"Irish, c. 8th cent.; tr. Mary E. Byrne (1905), versified Eleanor H. Hull (1912)", 1912, u8"SLANE", u8"Traditional Irish melody", 1909, u8"Text 1912, tune 1909: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Be Thou My Vision}
 {artist: Irish, c. 8th cent.; tr. Mary E. Byrne (1905), versified Eleanor H. Hull (1912)}
 {key: D}
 {tempo: 76}
 {time: 3/4}
 {meta: tune SLANE - Traditional Irish melody (1909)}
-{meta: public_domain Text 1912, tune 1909: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1912, tune 1909: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Be Thou my [G]Vision, O [D]Lord of my heart;
@@ -183,14 +183,14 @@ Seal it for Thy [A]courts a[D]bove.
 [G]Still be my [D]Vision, O [A]Ruler of [D]all.
 {end_of_verse}
 )WRHYMN" },
-        { u8"a-mighty-fortress", u8"A Mighty Fortress Is Our God", u8"Martin Luther (1529); tr. Frederick H. Hedge (1853)", 1853, u8"EIN FESTE BURG", u8"Martin Luther", 1529, u8"Text 1853, tune 1529: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"a-mighty-fortress", u8"A Mighty Fortress Is Our God", u8"Martin Luther (1529); tr. Frederick H. Hedge (1853)", 1853, u8"EIN FESTE BURG", u8"Martin Luther", 1529, u8"Text 1853, tune 1529: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: A Mighty Fortress Is Our God}
 {artist: Martin Luther (1529); tr. Frederick H. Hedge (1853)}
 {key: C}
 {tempo: 88}
 {time: 4/4}
 {meta: tune EIN FESTE BURG - Martin Luther (1529)}
-{meta: public_domain Text 1853, tune 1529: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1853, tune 1529: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 A [C]mighty fortress [G]is our [C]God, a [F]bulwark [G]never [C]failing;
@@ -221,14 +221,14 @@ The [C]body they may [F]kill: God's [Dm]truth a[G]bideth [C]still,
 His [F]kingdom [C]is for[G]ev[C]er.
 {end_of_verse}
 )WRHYMN" },
-        { u8"how-firm-a-foundation", u8"How Firm a Foundation", u8"\"K\" in John Rippon's Selection of Hymns", 1787, u8"FOUNDATION", u8"Funk's Compilation of Genuine Church Music", 1832, u8"Text 1787, tune 1832: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"how-firm-a-foundation", u8"How Firm a Foundation", u8"\"K\" in John Rippon's Selection of Hymns", 1787, u8"FOUNDATION", u8"Funk's Compilation of Genuine Church Music", 1832, u8"Text 1787, tune 1832: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: How Firm a Foundation}
 {artist: "K" in John Rippon's Selection of Hymns}
 {key: G}
 {tempo: 96}
 {time: 3/4}
 {meta: tune FOUNDATION - Funk's Compilation of Genuine Church Music (1832)}
-{meta: public_domain Text 1787, tune 1832: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1787, tune 1832: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 How [G]firm a foun[C]dation, ye [G]saints of the Lord,
@@ -255,14 +255,14 @@ That [G]soul, though all [C]hell should en[G]deavor to shake,
 I'll [C]never, no [G]never, no [D]never for[G]sake."
 {end_of_verse}
 )WRHYMN" },
-        { u8"doxology", u8"Doxology (Praise God, from Whom All Blessings Flow)", u8"Thomas Ken", 1674, u8"OLD HUNDREDTH", u8"Louis Bourgeois, Genevan Psalter", 1551, u8"Text 1674, tune 1551: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"doxology", u8"Doxology (Praise God, from Whom All Blessings Flow)", u8"Thomas Ken", 1674, u8"OLD HUNDREDTH", u8"Louis Bourgeois, Genevan Psalter", 1551, u8"Text 1674, tune 1551: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Doxology (Praise God, from Whom All Blessings Flow)}
 {artist: Thomas Ken}
 {key: G}
 {tempo: 76}
 {time: 4/4}
 {meta: tune OLD HUNDREDTH - Louis Bourgeois, Genevan Psalter (1551)}
-{meta: public_domain Text 1674, tune 1551: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1674, tune 1551: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Doxology}
 [G]Praise God, from [D]whom all [Em]bless[C]ings [D]flow;
@@ -271,14 +271,14 @@ I'll [C]never, no [G]never, no [D]never for[G]sake."
 [Em]Praise Father, [D]Son, and [C]Ho[D]ly [G]Ghost. A[C]men[G].
 {end_of_verse}
 )WRHYMN" },
-        { u8"crown-him", u8"Crown Him with Many Crowns", u8"Matthew Bridges (1851), Godfrey Thring (1874)", 1851, u8"DIADEMATA", u8"George J. Elvey", 1868, u8"Text 1851, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"crown-him", u8"Crown Him with Many Crowns", u8"Matthew Bridges (1851), Godfrey Thring (1874)", 1851, u8"DIADEMATA", u8"George J. Elvey", 1868, u8"Text 1851, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Crown Him with Many Crowns}
 {artist: Matthew Bridges (1851), Godfrey Thring (1874)}
 {key: D}
 {tempo: 96}
 {time: 4/4}
 {meta: tune DIADEMATA - George J. Elvey (1868)}
-{meta: public_domain Text 1851, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1851, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Crown Him with [G]many [D]crowns, the [Bm]Lamb up[E]on His [A]throne;
@@ -299,14 +299,14 @@ No [D]angel in the sky can [G]fully [D]bear that sight,
 But [G]downward [D]bends his [A]burning [Bm]eye at [G]myster[A]ies so [D]bright.
 {end_of_verse}
 )WRHYMN" },
-        { u8"all-hail-the-power", u8"All Hail the Power of Jesus' Name", u8"Edward Perronet", 1779, u8"CORONATION", u8"Oliver Holden", 1793, u8"Text 1779, tune 1793: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"all-hail-the-power", u8"All Hail the Power of Jesus' Name", u8"Edward Perronet", 1779, u8"CORONATION", u8"Oliver Holden", 1793, u8"Text 1779, tune 1793: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: All Hail the Power of Jesus' Name}
 {artist: Edward Perronet}
 {key: G}
 {tempo: 92}
 {time: 4/4}
 {meta: tune CORONATION - Oliver Holden (1793)}
-{meta: public_domain Text 1779, tune 1793: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1779, tune 1793: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 All [G]hail the power of [C]Jesus' [G]name! Let [D]angels prostrate [G]fall;
@@ -324,14 +324,14 @@ To [G]Him all majes[D]ty ascribe, and [G]crown Him, crown Him, [D]crown Him,
 And [G]crown Him [C]Lord [D]of [G]all.
 {end_of_verse}
 )WRHYMN" },
-        { u8"joyful-joyful", u8"Joyful, Joyful, We Adore Thee", u8"Henry van Dyke", 1907, u8"HYMN TO JOY", u8"Ludwig van Beethoven (1824), arr. Edward Hodges (1864)", 1864, u8"Text 1907, tune 1864: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"joyful-joyful", u8"Joyful, Joyful, We Adore Thee", u8"Henry van Dyke", 1907, u8"HYMN TO JOY", u8"Ludwig van Beethoven (1824), arr. Edward Hodges (1864)", 1864, u8"Text 1907, tune 1864: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Joyful, Joyful, We Adore Thee}
 {artist: Henry van Dyke}
 {key: G}
 {tempo: 100}
 {time: 4/4}
 {meta: tune HYMN TO JOY - Ludwig van Beethoven (1824), arr. Edward Hodges (1864) (1864)}
-{meta: public_domain Text 1907, tune 1864: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1907, tune 1864: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [G]Joyful, joyful, [C]we a[G]dore Thee, [G]God of glory, [D]Lord of [G]love;
@@ -352,14 +352,14 @@ And [G]crown Him [C]Lord [D]of [G]all.
 [G]Joyful music [C]leads us [G]sunward [G]in the triumph [D]song of [G]life.
 {end_of_verse}
 )WRHYMN" },
-        { u8"fairest-lord-jesus", u8"Fairest Lord Jesus", u8"German, Münster Gesangbuch (1677); tr. anonymous, Church Chorals and Choir Studies (1850)", 1850, u8"ST. ELIZABETH", u8"Silesian folk melody, Schlesische Volkslieder", 1842, u8"Text 1850, tune 1842: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"fairest-lord-jesus", u8"Fairest Lord Jesus", u8"German, Münster Gesangbuch (1677); tr. anonymous, Church Chorals and Choir Studies (1850)", 1850, u8"ST. ELIZABETH", u8"Silesian folk melody, Schlesische Volkslieder", 1842, u8"Text 1850, tune 1842: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Fairest Lord Jesus}
 {artist: German, Münster Gesangbuch (1677); tr. anonymous, Church Chorals and Choir Studies (1850)}
 {key: D}
 {tempo: 72}
 {time: 4/4}
 {meta: tune ST. ELIZABETH - Silesian folk melody, Schlesische Volkslieder (1842)}
-{meta: public_domain Text 1850, tune 1842: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1850, tune 1842: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Fairest Lord [A]Jesus, [D]ruler of all [A]nature,
@@ -380,14 +380,14 @@ And [G]crown Him [C]Lord [D]of [G]all.
 [D]Than all the [G]angels [A]heaven can [D]boast.
 {end_of_verse}
 )WRHYMN" },
-        { u8"rock-of-ages", u8"Rock of Ages, Cleft for Me", u8"Augustus M. Toplady", 1776, u8"TOPLADY", u8"Thomas Hastings", 1830, u8"Text 1776, tune 1830: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"rock-of-ages", u8"Rock of Ages, Cleft for Me", u8"Augustus M. Toplady", 1776, u8"TOPLADY", u8"Thomas Hastings", 1830, u8"Text 1776, tune 1830: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Rock of Ages, Cleft for Me}
 {artist: Augustus M. Toplady}
 {key: C}
 {tempo: 76}
 {time: 3/4}
 {meta: tune TOPLADY - Thomas Hastings (1830)}
-{meta: public_domain Text 1776, tune 1830: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1776, tune 1830: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [C]Rock of Ages, [F]cleft for [C]me,
@@ -414,14 +414,14 @@ Helpless, look to [G]Thee for [C]grace;
 Wash me, Savior, [G7]or I [C]die.
 {end_of_verse}
 )WRHYMN" },
-        { u8"blessed-assurance", u8"Blessed Assurance", u8"Fanny J. Crosby", 1873, u8"ASSURANCE", u8"Phoebe P. Knapp", 1873, u8"Text 1873, tune 1873: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"blessed-assurance", u8"Blessed Assurance", u8"Fanny J. Crosby", 1873, u8"ASSURANCE", u8"Phoebe P. Knapp", 1873, u8"Text 1873, tune 1873: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Blessed Assurance}
 {artist: Fanny J. Crosby}
 {key: D}
 {tempo: 88}
 {time: 9/8}
 {meta: tune ASSURANCE - Phoebe P. Knapp (1873)}
-{meta: public_domain Text 1873, tune 1873: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1873, tune 1873: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Blessed as[G]surance, [D]Jesus is mine!
@@ -448,14 +448,14 @@ I in my Sav[E]ior am [A]happy and [A7]blest,
 [G]Filled with His [D]goodness, [A]lost in His [D]love.
 {end_of_verse}
 )WRHYMN" },
-        { u8"nearer-my-god", u8"Nearer, My God, to Thee", u8"Sarah F. Adams", 1841, u8"BETHANY", u8"Lowell Mason", 1856, u8"Text 1841, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"nearer-my-god", u8"Nearer, My God, to Thee", u8"Sarah F. Adams", 1841, u8"BETHANY", u8"Lowell Mason", 1856, u8"Text 1841, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Nearer, My God, to Thee}
 {artist: Sarah F. Adams}
 {key: G}
 {tempo: 72}
 {time: 6/4}
 {meta: tune BETHANY - Lowell Mason (1856)}
-{meta: public_domain Text 1841, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1841, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [G]Nearer, my [C]God, to [G]Thee, nearer to [D]Thee!
@@ -476,14 +476,14 @@ Angels to [D]beckon me [G]nearer, my [D]God, to Thee,
 [G]Nearer, my [C]God, to [G]Thee, [D]nearer to [G]Thee!
 {end_of_verse}
 )WRHYMN" },
-        { u8"what-a-friend", u8"What a Friend We Have in Jesus", u8"Joseph M. Scriven", 1855, u8"CONVERSE", u8"Charles C. Converse", 1868, u8"Text 1855, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"what-a-friend", u8"What a Friend We Have in Jesus", u8"Joseph M. Scriven", 1855, u8"CONVERSE", u8"Charles C. Converse", 1868, u8"Text 1855, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: What a Friend We Have in Jesus}
 {artist: Joseph M. Scriven}
 {key: G}
 {tempo: 84}
 {time: 4/4}
 {meta: tune CONVERSE - Charles C. Converse (1868)}
-{meta: public_domain Text 1855, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1855, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [G]What a friend we [C]have in [G]Jesus, all our sins and [D]griefs to [G]bear!
@@ -504,14 +504,14 @@ Angels to [D]beckon me [G]nearer, my [D]God, to Thee,
 [G]In His arms He'll [C]take and [G]shield thee; thou wilt find a [D]solace [G]there.
 {end_of_verse}
 )WRHYMN" },
-        { u8"when-i-survey", u8"When I Survey the Wondrous Cross", u8"Isaac Watts", 1707, u8"HAMBURG", u8"Lowell Mason", 1824, u8"Text 1707, tune 1824: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"when-i-survey", u8"When I Survey the Wondrous Cross", u8"Isaac Watts", 1707, u8"HAMBURG", u8"Lowell Mason", 1824, u8"Text 1707, tune 1824: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: When I Survey the Wondrous Cross}
 {artist: Isaac Watts}
 {key: G}
 {tempo: 66}
 {time: 4/4}
 {meta: tune HAMBURG - Lowell Mason (1824)}
-{meta: public_domain Text 1707, tune 1824: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1707, tune 1824: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 When [G]I sur[C]vey the [G]wondrous [D]cross
@@ -538,14 +538,14 @@ Love [G]so a[C]mazing, [G]so di[Em]vine,
 De[C]mands my [G]soul, my [D]life, my [G]all.
 {end_of_verse}
 )WRHYMN" },
-        { u8"o-worship-the-king", u8"O Worship the King", u8"Robert Grant", 1833, u8"LYONS", u8"attr. Johann Michael Haydn, in Gardiner's Sacred Melodies", 1815, u8"Text 1833, tune 1815: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"o-worship-the-king", u8"O Worship the King", u8"Robert Grant", 1833, u8"LYONS", u8"attr. Johann Michael Haydn, in Gardiner's Sacred Melodies", 1815, u8"Text 1833, tune 1815: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: O Worship the King}
 {artist: Robert Grant}
 {key: G}
 {tempo: 100}
 {time: 3/4}
 {meta: tune LYONS - attr. Johann Michael Haydn, in Gardiner's Sacred Melodies (1815)}
-{meta: public_domain Text 1833, tune 1815: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1833, tune 1815: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 O [G]worship the King, all [C]glorious a[G]bove,
@@ -566,14 +566,14 @@ Thy [G]mercies how [D]tender, how [G]firm to the [D]end,
 Our [G]Maker, De[C]fender, Re[G]deemer, [D]and [G]Friend.
 {end_of_verse}
 )WRHYMN" },
-        { u8"praise-to-the-lord", u8"Praise to the Lord, the Almighty", u8"Joachim Neander (1680); tr. Catherine Winkworth (1863)", 1863, u8"LOBE DEN HERREN", u8"Stralsund Gesangbuch", 1665, u8"Text 1863, tune 1665: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"praise-to-the-lord", u8"Praise to the Lord, the Almighty", u8"Joachim Neander (1680); tr. Catherine Winkworth (1863)", 1863, u8"LOBE DEN HERREN", u8"Stralsund Gesangbuch", 1665, u8"Text 1863, tune 1665: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Praise to the Lord, the Almighty}
 {artist: Joachim Neander (1680); tr. Catherine Winkworth (1863)}
 {key: G}
 {tempo: 96}
 {time: 3/4}
 {meta: tune LOBE DEN HERREN - Stralsund Gesangbuch (1665)}
-{meta: public_domain Text 1863, tune 1665: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1863, tune 1665: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [G]Praise to the [Em]Lord, the Al[D]mighty, the [G]King of cre[D]ation!
@@ -594,14 +594,14 @@ Our [G]Maker, De[C]fender, Re[G]deemer, [D]and [G]Friend.
 [G]Gladly for[C]aye we a[D]dore [G]Him.
 {end_of_verse}
 )WRHYMN" },
-        { u8"jesus-paid-it-all", u8"Jesus Paid It All", u8"Elvina M. Hall", 1865, u8"ALL TO CHRIST", u8"John T. Grape", 1868, u8"Text 1865, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"jesus-paid-it-all", u8"Jesus Paid It All", u8"Elvina M. Hall", 1865, u8"ALL TO CHRIST", u8"John T. Grape", 1868, u8"Text 1865, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Jesus Paid It All}
 {artist: Elvina M. Hall}
 {key: D}
 {tempo: 80}
 {time: 4/4}
 {meta: tune ALL TO CHRIST - John T. Grape (1868)}
-{meta: public_domain Text 1865, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1865, tune 1868: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 I [D]hear the Savior say, "Thy [G]strength indeed is [D]small;
@@ -620,14 +620,14 @@ And [D]when before the throne I [G]stand in Him com[D]plete,
 "Jesus died my soul to save," my [E7]lips shall still re[A]peat.
 {end_of_verse}
 )WRHYMN" },
-        { u8"nothing-but-the-blood", u8"Nothing but the Blood", u8"Robert Lowry", 1876, u8"PLAINFIELD", u8"Robert Lowry", 1876, u8"Text 1876, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"nothing-but-the-blood", u8"Nothing but the Blood", u8"Robert Lowry", 1876, u8"PLAINFIELD", u8"Robert Lowry", 1876, u8"Text 1876, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Nothing but the Blood}
 {artist: Robert Lowry}
 {key: G}
 {tempo: 104}
 {time: 4/4}
 {meta: tune PLAINFIELD - Robert Lowry (1876)}
-{meta: public_domain Text 1876, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1876, tune 1876: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 What can [G]wash away my sin? Nothing but the blood of [D]Jesus;
@@ -646,14 +646,14 @@ This is [G]all my hope and peace, nothing but the blood of [D]Jesus;
 This is [G]all my righteousness, [C]nothing but the [D]blood of [G]Jesus.
 {end_of_verse}
 )WRHYMN" },
-        { u8"i-surrender-all", u8"I Surrender All", u8"Judson W. Van DeVenter", 1896, u8"SURRENDER", u8"Winfield S. Weeden", 1896, u8"Text 1896, tune 1896: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"i-surrender-all", u8"I Surrender All", u8"Judson W. Van DeVenter", 1896, u8"SURRENDER", u8"Winfield S. Weeden", 1896, u8"Text 1896, tune 1896: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: I Surrender All}
 {artist: Judson W. Van DeVenter}
 {key: D}
 {tempo: 76}
 {time: 4/4}
 {meta: tune SURRENDER - Winfield S. Weeden (1896)}
-{meta: public_domain Text 1896, tune 1896: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1896, tune 1896: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 All to [D]Jesus I sur[G]render, all to [D]Him I freely [A]give;
@@ -672,14 +672,14 @@ All to [D]Jesus I sur[G]render; Lord, I [D]give myself to [A]Thee;
 Fill me [D]with Thy love and [G]power; let Thy [D]blessing [A]fall on [D]me.
 {end_of_verse}
 )WRHYMN" },
-        { u8"christ-the-lord-is-risen", u8"Christ the Lord Is Risen Today", u8"Charles Wesley", 1739, u8"EASTER HYMN", u8"Lyra Davidica", 1708, u8"Text 1739, tune 1708: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"christ-the-lord-is-risen", u8"Christ the Lord Is Risen Today", u8"Charles Wesley", 1739, u8"EASTER HYMN", u8"Lyra Davidica", 1708, u8"Text 1739, tune 1708: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Christ the Lord Is Risen Today}
 {artist: Charles Wesley}
 {key: C}
 {tempo: 100}
 {time: 4/4}
 {meta: tune EASTER HYMN - Lyra Davidica (1708)}
-{meta: public_domain Text 1739, tune 1708: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1739, tune 1708: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [C]Christ the Lord is [F]risen to[C]day, [F]Al[C]le[G]lu[C]ia!
@@ -700,14 +700,14 @@ Fill me [D]with Thy love and [G]power; let Thy [D]blessing [A]fall on [D]me.
 [C]Where thy victory, [G]O [C]grave? [F]Al[C]le[G]lu[C]ia!
 {end_of_verse}
 )WRHYMN" },
-        { u8"come-thou-almighty-king", u8"Come, Thou Almighty King", u8"Anonymous, in Collection of Hymns for Social Worship", 1757, u8"ITALIAN HYMN", u8"Felice de Giardini", 1769, u8"Text 1757, tune 1769: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"come-thou-almighty-king", u8"Come, Thou Almighty King", u8"Anonymous, in Collection of Hymns for Social Worship", 1757, u8"ITALIAN HYMN", u8"Felice de Giardini", 1769, u8"Text 1757, tune 1769: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Come, Thou Almighty King}
 {artist: Anonymous, in Collection of Hymns for Social Worship}
 {key: G}
 {tempo: 104}
 {time: 3/4}
 {meta: tune ITALIAN HYMN - Felice de Giardini (1769)}
-{meta: public_domain Text 1757, tune 1769: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1757, tune 1769: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [G]Come, Thou Al[D]mighty [G]King, help us Thy [D]name to sing,
@@ -728,14 +728,14 @@ Fill me [D]with Thy love and [G]power; let Thy [D]blessing [A]fall on [D]me.
 [G]Love and a[D]dore[G]!
 {end_of_verse}
 )WRHYMN" },
-        { u8"abide-with-me", u8"Abide with Me", u8"Henry F. Lyte", 1847, u8"EVENTIDE", u8"William H. Monk", 1861, u8"Text 1847, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"abide-with-me", u8"Abide with Me", u8"Henry F. Lyte", 1847, u8"EVENTIDE", u8"William H. Monk", 1861, u8"Text 1847, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Abide with Me}
 {artist: Henry F. Lyte}
 {key: D}
 {tempo: 60}
 {time: 4/4}
 {meta: tune EVENTIDE - William H. Monk (1861)}
-{meta: public_domain Text 1847, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1847, tune 1861: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 A[D]bide with [A]me; [D]fast falls the [G]even[D]tide;
@@ -756,14 +756,14 @@ Where [D]is death's [A]sting? Where, [D]grave, thy [G]victo[D]ry?
 I [G]triumph [D]still, if [A]Thou a[A7]bide with [D]me.
 {end_of_verse}
 )WRHYMN" },
-        { u8"leaning-on-the-everlasting-arms", u8"Leaning on the Everlasting Arms", u8"Elisha A. Hoffman", 1887, u8"SHOWALTER", u8"Anthony J. Showalter", 1887, u8"Text 1887, tune 1887: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"leaning-on-the-everlasting-arms", u8"Leaning on the Everlasting Arms", u8"Elisha A. Hoffman", 1887, u8"SHOWALTER", u8"Anthony J. Showalter", 1887, u8"Text 1887, tune 1887: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Leaning on the Everlasting Arms}
 {artist: Elisha A. Hoffman}
 {key: D}
 {tempo: 108}
 {time: 4/4}
 {meta: tune SHOWALTER - Anthony J. Showalter (1887)}
-{meta: public_domain Text 1887, tune 1887: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1887, tune 1887: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 What a [D]fellowship, what a joy divine, [G]leaning on the ever[D]lasting arms;
@@ -782,14 +782,14 @@ What have [D]I to dread, what have I to fear, [G]leaning on the ever[D]lasting a
 I have blessed peace with my Lord so near, [A]leaning on the ever[D]lasting arms.
 {end_of_verse}
 )WRHYMN" },
-        { u8"tis-so-sweet", u8"'Tis So Sweet to Trust in Jesus", u8"Louisa M. R. Stead", 1882, u8"TRUST IN JESUS", u8"William J. Kirkpatrick", 1882, u8"Text 1882, tune 1882: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"tis-so-sweet", u8"'Tis So Sweet to Trust in Jesus", u8"Louisa M. R. Stead", 1882, u8"TRUST IN JESUS", u8"William J. Kirkpatrick", 1882, u8"Text 1882, tune 1882: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: 'Tis So Sweet to Trust in Jesus}
 {artist: Louisa M. R. Stead}
 {key: G}
 {tempo: 92}
 {time: 3/4}
 {meta: tune TRUST IN JESUS - William J. Kirkpatrick (1882)}
-{meta: public_domain Text 1882, tune 1882: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1882, tune 1882: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 'Tis so [G]sweet to trust in Jesus, just to [D]take Him at His word;
@@ -808,14 +808,14 @@ I'm so [G]glad I learned to trust Thee, precious [D]Jesus, Savior, Friend;
 And I [G]know that Thou art with me, wilt be [D]with me to the [G]end.
 {end_of_verse}
 )WRHYMN" },
-        { u8"there-is-a-fountain", u8"There Is a Fountain Filled with Blood", u8"William Cowper", 1772, u8"CLEANSING FOUNTAIN", u8"American camp-meeting melody (19th cent.)", 1840, u8"Text 1772, tune 1840: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"there-is-a-fountain", u8"There Is a Fountain Filled with Blood", u8"William Cowper", 1772, u8"CLEANSING FOUNTAIN", u8"American camp-meeting melody (19th cent.)", 1840, u8"Text 1772, tune 1840: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: There Is a Fountain Filled with Blood}
 {artist: William Cowper}
 {key: C}
 {tempo: 88}
 {time: 4/4}
 {meta: tune CLEANSING FOUNTAIN - American camp-meeting melody (19th cent.) (1840)}
-{meta: public_domain Text 1772, tune 1840: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1772, tune 1840: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 There [C]is a fountain filled with blood drawn [F]from Im[C]manuel's veins;
@@ -836,14 +836,14 @@ And shall be [F]till I [C]die, and shall be [G]till I [C]die;
 Redeeming love has been my theme, and [G]shall be till I [C]die.
 {end_of_verse}
 )WRHYMN" },
-        { u8"o-for-a-thousand-tongues", u8"O for a Thousand Tongues to Sing", u8"Charles Wesley", 1739, u8"AZMON", u8"Carl G. Gläser (1828), arr. Lowell Mason", 1839, u8"Text 1739, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"o-for-a-thousand-tongues", u8"O for a Thousand Tongues to Sing", u8"Charles Wesley", 1739, u8"AZMON", u8"Carl G. Gläser (1828), arr. Lowell Mason", 1839, u8"Text 1739, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: O for a Thousand Tongues to Sing}
 {artist: Charles Wesley}
 {key: G}
 {tempo: 96}
 {time: 4/4}
 {meta: tune AZMON - Carl G. Gläser (1828), arr. Lowell Mason (1839)}
-{meta: public_domain Text 1739, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1739, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 O [G]for a [D]thousand [G]tongues to [C]sing
@@ -864,14 +864,14 @@ That [G]bids our [D]sorrows [G]cease[D];
 'Tis [C]life, [G]and [D]health, and [G]peace.
 {end_of_verse}
 )WRHYMN" },
-        { u8"savior-like-a-shepherd", u8"Savior, Like a Shepherd Lead Us", u8"attr. Dorothy A. Thrupp, Hymns for the Young", 1836, u8"BRADBURY", u8"William B. Bradbury", 1859, u8"Text 1836, tune 1859: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"savior-like-a-shepherd", u8"Savior, Like a Shepherd Lead Us", u8"attr. Dorothy A. Thrupp, Hymns for the Young", 1836, u8"BRADBURY", u8"William B. Bradbury", 1859, u8"Text 1836, tune 1859: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Savior, Like a Shepherd Lead Us}
 {artist: attr. Dorothy A. Thrupp, Hymns for the Young}
 {key: D}
 {tempo: 84}
 {time: 4/4}
 {meta: tune BRADBURY - William B. Bradbury (1859)}
-{meta: public_domain Text 1836, tune 1859: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1836, tune 1859: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Savior, like a [G]shepherd [D]lead us, much we need Thy [A]tender [D]care;
@@ -886,14 +886,14 @@ Keep Thy flock, from [G]sin de[D]fend us, seek us when we [A]go a[D]stray.
 [D]Blessed Jesus, [G]blessed [D]Jesus! Hear, O hear us [A]when we [D]pray.
 {end_of_verse}
 )WRHYMN" },
-        { u8"just-as-i-am", u8"Just As I Am", u8"Charlotte Elliott", 1835, u8"WOODWORTH", u8"William B. Bradbury", 1849, u8"Text 1835, tune 1849: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"just-as-i-am", u8"Just As I Am", u8"Charlotte Elliott", 1835, u8"WOODWORTH", u8"William B. Bradbury", 1849, u8"Text 1835, tune 1849: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Just As I Am}
 {artist: Charlotte Elliott}
 {key: D}
 {tempo: 72}
 {time: 4/4}
 {meta: tune WOODWORTH - William B. Bradbury (1849)}
-{meta: public_domain Text 1835, tune 1849: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1835, tune 1849: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 Just [D]as I am, with[G]out one [D]plea,
@@ -914,14 +914,14 @@ Be[D]cause Thy promise [G]I be[D]lieve,
 O Lamb of [G]God, I [A]come, I [D]come.
 {end_of_verse}
 )WRHYMN" },
-        { u8"jesus-loves-me", u8"Jesus Loves Me", u8"Anna B. Warner", 1860, u8"JESUS LOVES ME", u8"William B. Bradbury", 1862, u8"Text 1860, tune 1862: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"jesus-loves-me", u8"Jesus Loves Me", u8"Anna B. Warner", 1860, u8"JESUS LOVES ME", u8"William B. Bradbury", 1862, u8"Text 1860, tune 1862: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Jesus Loves Me}
 {artist: Anna B. Warner}
 {key: C}
 {tempo: 96}
 {time: 4/4}
 {meta: tune JESUS LOVES ME - William B. Bradbury (1862)}
-{meta: public_domain Text 1860, tune 1862: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1860, tune 1862: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [C]Jesus loves me! this I know, [F]for the Bible [C]tells me so;
@@ -936,14 +936,14 @@ Little ones to Him belong; [F]they are weak, but [C]He [G]is [C]strong.
 He will wash away my sin, [F]let His little [C]child [G]come [C]in.
 {end_of_verse}
 )WRHYMN" },
-        { u8"softly-and-tenderly", u8"Softly and Tenderly Jesus Is Calling", u8"Will L. Thompson", 1880, u8"THOMPSON", u8"Will L. Thompson", 1880, u8"Text 1880, tune 1880: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"softly-and-tenderly", u8"Softly and Tenderly Jesus Is Calling", u8"Will L. Thompson", 1880, u8"THOMPSON", u8"Will L. Thompson", 1880, u8"Text 1880, tune 1880: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Softly and Tenderly Jesus Is Calling}
 {artist: Will L. Thompson}
 {key: G}
 {tempo: 72}
 {time: 6/8}
 {meta: tune THOMPSON - Will L. Thompson (1880)}
-{meta: public_domain Text 1880, tune 1880: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1880, tune 1880: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [G]Softly and tenderly [C]Jesus is [G]calling,
@@ -963,14 +963,14 @@ Pleading for you and for [D]me?
 Mercies for [D]you and for [G]me?
 {end_of_verse}
 )WRHYMN" },
-        { u8"to-god-be-the-glory", u8"To God Be the Glory", u8"Fanny J. Crosby", 1875, u8"TO GOD BE THE GLORY", u8"William H. Doane", 1875, u8"Text 1875, tune 1875: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"to-god-be-the-glory", u8"To God Be the Glory", u8"Fanny J. Crosby", 1875, u8"TO GOD BE THE GLORY", u8"William H. Doane", 1875, u8"Text 1875, tune 1875: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: To God Be the Glory}
 {artist: Fanny J. Crosby}
 {key: G}
 {tempo: 104}
 {time: 4/4}
 {meta: tune TO GOD BE THE GLORY - William H. Doane (1875)}
-{meta: public_domain Text 1875, tune 1875: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1875, tune 1875: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 To [G]God be the glory, great [C]things He hath [G]done;
@@ -997,14 +997,14 @@ But [G]purer, and higher, and [C]greater will [G]be
 Our [C]wonder, our [G]transport, when [D]Jesus we [G]see.
 {end_of_verse}
 )WRHYMN" },
-        { u8"joy-to-the-world", u8"Joy to the World", u8"Isaac Watts", 1719, u8"ANTIOCH", u8"arr. Lowell Mason", 1839, u8"Text 1719, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"joy-to-the-world", u8"Joy to the World", u8"Isaac Watts", 1719, u8"ANTIOCH", u8"arr. Lowell Mason", 1839, u8"Text 1719, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Joy to the World}
 {artist: Isaac Watts}
 {key: D}
 {tempo: 100}
 {time: 2/4}
 {meta: tune ANTIOCH - arr. Lowell Mason (1839)}
-{meta: public_domain Text 1719, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1719, tune 1839: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [D]Joy to the [G]world! [A]the Lord is [D]come;
@@ -1028,14 +1028,14 @@ And wonders of His love, and wonders of His love,
 And [G]wonders, [D]wonders [A]of His [D]love.
 {end_of_verse}
 )WRHYMN" },
-        { u8"o-come-all-ye-faithful", u8"O Come, All Ye Faithful", u8"attr. John F. Wade (c. 1743); tr. Frederick Oakeley (1841)", 1841, u8"ADESTE FIDELES", u8"attr. John F. Wade", 1751, u8"Text 1841, tune 1751: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"o-come-all-ye-faithful", u8"O Come, All Ye Faithful", u8"attr. John F. Wade (c. 1743); tr. Frederick Oakeley (1841)", 1841, u8"ADESTE FIDELES", u8"attr. John F. Wade", 1751, u8"Text 1841, tune 1751: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: O Come, All Ye Faithful}
 {artist: attr. John F. Wade (c. 1743); tr. Frederick Oakeley (1841)}
 {key: G}
 {tempo: 92}
 {time: 4/4}
 {meta: tune ADESTE FIDELES - attr. John F. Wade (1751)}
-{meta: public_domain Text 1841, tune 1751: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1841, tune 1751: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 O [G]come, all ye [D]faithful, [G]joyful and tri[D]umphant,
@@ -1052,14 +1052,14 @@ O [Em]sing, all ye [D]citi[A]zens of [D]heaven above!
 [G]Glory to [C]God, all [G]glory in the [D]highest;
 {end_of_verse}
 )WRHYMN" },
-        { u8"silent-night", u8"Silent Night, Holy Night", u8"Joseph Mohr (1818); tr. John F. Young (1859)", 1859, u8"STILLE NACHT", u8"Franz X. Gruber", 1818, u8"Text 1859, tune 1818: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"silent-night", u8"Silent Night, Holy Night", u8"Joseph Mohr (1818); tr. John F. Young (1859)", 1859, u8"STILLE NACHT", u8"Franz X. Gruber", 1818, u8"Text 1859, tune 1818: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Silent Night, Holy Night}
 {artist: Joseph Mohr (1818); tr. John F. Young (1859)}
 {key: C}
 {tempo: 66}
 {time: 6/8}
 {meta: tune STILLE NACHT - Franz X. Gruber (1818)}
-{meta: public_domain Text 1859, tune 1818: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1859, tune 1818: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [C]Silent night, holy night,
@@ -1083,14 +1083,14 @@ O [Em]sing, all ye [D]citi[A]zens of [D]heaven above!
 [G]Jesus, Lord, at Thy [C]birth, Jesus, [G]Lord, at Thy [C]birth.
 {end_of_verse}
 )WRHYMN" },
-        { u8"hark-the-herald", u8"Hark! The Herald Angels Sing", u8"Charles Wesley (1739), alt. George Whitefield (1753)", 1753, u8"MENDELSSOHN", u8"Felix Mendelssohn (1840), adapt. William H. Cummings (1856)", 1856, u8"Text 1753, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"hark-the-herald", u8"Hark! The Herald Angels Sing", u8"Charles Wesley (1739), alt. George Whitefield (1753)", 1753, u8"MENDELSSOHN", u8"Felix Mendelssohn (1840), adapt. William H. Cummings (1856)", 1856, u8"Text 1753, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Hark! The Herald Angels Sing}
 {artist: Charles Wesley (1739), alt. George Whitefield (1753)}
 {key: G}
 {tempo: 100}
 {time: 4/4}
 {meta: tune MENDELSSOHN - Felix Mendelssohn (1840), adapt. William H. Cummings (1856) (1856)}
-{meta: public_domain Text 1753, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1753, tune 1856: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [G]Hark! the herald [D]angels [G]sing, "Glory [C]to the [G]new-born [D]King;
@@ -1107,14 +1107,14 @@ O [Em]sing, all ye [D]citi[A]zens of [D]heaven above!
 [C]Hark! the herald [Am]angels [D]sing, "Glory [G]to the [D]new-born [G]King."
 {end_of_verse}
 )WRHYMN" },
-        { u8"have-thine-own-way", u8"Have Thine Own Way, Lord", u8"Adelaide A. Pollard", 1907, u8"ADELAIDE", u8"George C. Stebbins", 1907, u8"Text 1907, tune 1907: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"have-thine-own-way", u8"Have Thine Own Way, Lord", u8"Adelaide A. Pollard", 1907, u8"ADELAIDE", u8"George C. Stebbins", 1907, u8"Text 1907, tune 1907: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Have Thine Own Way, Lord}
 {artist: Adelaide A. Pollard}
 {key: D}
 {tempo: 72}
 {time: 3/4}
 {meta: tune ADELAIDE - George C. Stebbins (1907)}
-{meta: public_domain Text 1907, tune 1907: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1907, tune 1907: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 Have Thine own [D]way, Lord! [G]Have Thine own [D]way!
@@ -1135,14 +1135,14 @@ Fill with Thy [D]Spirit till [G]all shall [D]see
 Christ only, [A]always, living in [D]me!
 {end_of_verse}
 )WRHYMN" },
-        { u8"holy-god-we-praise", u8"Holy God, We Praise Thy Name", u8"Ignaz Franz (1771); tr. Clarence A. Walworth (1853)", 1853, u8"GROSSER GOTT", u8"Katholisches Gesangbuch, Vienna", 1774, u8"Text 1853, tune 1774: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.",
+        { u8"holy-god-we-praise", u8"Holy God, We Praise Thy Name", u8"Ignaz Franz (1771); tr. Clarence A. Walworth (1853)", 1853, u8"GROSSER GOTT", u8"Katholisches Gesangbuch, Vienna", 1774, u8"Text 1853, tune 1774: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.",
           R"WRHYMN({title: Holy God, We Praise Thy Name}
 {artist: Ignaz Franz (1771); tr. Clarence A. Walworth (1853)}
 {key: F}
 {tempo: 88}
 {time: 3/4}
 {meta: tune GROSSER GOTT - Katholisches Gesangbuch, Vienna (1774)}
-{meta: public_domain Text 1853, tune 1774: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Tabernacle Tools. Original verses only, no modern additions.}
+{meta: public_domain Text 1853, tune 1774: both published before 1931 (US public domain); all authors, translators and composers died over 70 years ago. Chords and section layout: original simple arrangement by Bearing Live. Original verses only, no modern additions.}
 
 {start_of_verse: Verse 1}
 [F]Holy God, we [C]praise Thy [F]name; Lord of all, we [C]bow be[F]fore Thee!

@@ -1,4 +1,4 @@
-# Tabernacle Tools seat service (v0.11)
+# Bearing Live seat service (v0.11)
 Church plan seats: Sign in with Apple → leader creates a team from a verified Church subscription → single-use invite codes → members get Ed25519-signed entitlement tokens (paid-through date, 30-day offline cap).
 - `npm test`: 17 tests, fake Apple (RSA JWKS, ECDSA x5c chain with Apple OIDs, mocked Server API), node:sqlite
 - `npm run typecheck`

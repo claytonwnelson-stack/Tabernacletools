@@ -1,4 +1,4 @@
-// Safari share preprocessing for the Tabernacle Tools extension: returns what is already on screen (the selection, or the
+// Safari share preprocessing for the Bearing Live extension: returns what is already on screen (the selection, or the
 // page's visible text) - no network requests. The app's importer crops the chord chart out of the page text.
 var WRPreprocess = function() {};
 WRPreprocess.prototype = {

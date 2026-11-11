@@ -1,4 +1,4 @@
-// Shared app processor for every Tabernacle Tools app (Guitar now; Bass, Keys, Chart-only later; the Core Test Harness).
+// Shared app processor for every Bearing Live app (Guitar now; Bass, Keys, Chart-only later; the Core Test Harness).
 // Owns everything instrument-agnostic: the library (AppStore), LiveSession, MIDI router (footswitches, external cues,
 // MIDI clock), voice cues + TTS, the click engine hooks, band sync (leader / follower + Link + roster) and projector.
 // An instrument app derives, owns its DSP, returns its ClickEngine from clickEngine(), and renders in renderAudio().
@@ -139,7 +139,7 @@ public:
     const std::vector<wr::StoreEntitlement>& storeEntitlements() const { return storeEnt_; }
     bool allows (wr::Feature f) const { return entitlements.allows (f, (int64_t) juce::Time::currentTimeMillis() / 1000); }
     std::vector<wr::StoreEntitlement> storeEnt_; wr::IntroEligibility intro_ = wr::IntroEligibility::Unknown;
-    // v0.18 cross-app: StoreKit trials the seat service refused (this person already had a trial in another Tabernacle Tools app)
+    // v0.18 cross-app: StoreKit trials the seat service refused (this person already had a trial in another Bearing Live app)
     std::set<std::string> trialRefusedOtids_; std::set<std::string> postedJws_;
     wr::LapseGuard lapse_;   // a lapse never silences audio (rig, click, backing tracks) in the running app
     bool audioKeepsRunning() const { return lapse_.latched(); }

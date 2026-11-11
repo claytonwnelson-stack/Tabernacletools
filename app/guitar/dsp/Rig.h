@@ -1,4 +1,4 @@
-// Tabernacle Tools - the two-lane rig engine (BEFORE AMP / AFTER AMP), routing, trims, tuner, scenes.
+// Bearing Live - the two-lane rig engine (BEFORE AMP / AFTER AMP), routing, trims, tuner, scenes.
 // Threading: the UI/message thread builds a Chain and calls setChain(); it posts Commands with post().
 // The audio thread calls process(). No locks or allocation on the audio thread.
 #pragma once

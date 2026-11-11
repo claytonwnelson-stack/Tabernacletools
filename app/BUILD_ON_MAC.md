@@ -1,4 +1,4 @@
-# Build Tabernacle Tools on your Mac and put it on your iPad (free Apple ID)
+# Build Bearing Live on your Mac and put it on your iPad (free Apple ID)
 
 This guide assumes you have **never used Xcode before**. Follow it top to bottom. It takes about an hour the first time (most of it is downloads).
 
@@ -17,8 +17,8 @@ Two apps are built from one shared core:
 
 | Xcode scheme | App on the iPad | Bundle id | What it is |
 |---|---|---|---|
-| **TabernacleGuitar_Standalone** (+ AUv3 extension) | Tabernacle Tools - Electric Guitar | `<prefix>.guitar` | The full guitar app |
-| **TabernacleCoreTest_Standalone** | Tabernacle Tools Core Test | `<prefix>.coretest` | Setlist / chart / click / sync / projector only |
+| **TabernacleGuitar_Standalone** (+ AUv3 extension) | Bearing Live Guitar | `<prefix>.guitar` | The full guitar app |
+| **TabernacleCoreTest_Standalone** | Bearing Live Core Test | `<prefix>.coretest` | Setlist / chart / click / sync / projector only |
 
 ## Step 1. Get the code and JUCE
 Open **Terminal** (Applications > Utilities) and paste one line at a time:
@@ -88,9 +88,9 @@ Tip: add `-DWR_TEAM_ID=XXXXXXXXXX` to step 2 to skip this by hand. Find the 10-c
 **Free account limits:** 3 sideloaded apps per device, 10 new App IDs per 7 days (Guitar app + AUv3 + Core Test = 3 IDs; the optional share extension = 1 more), 7-day app expiry. No App Groups, In-App Purchase or Sign in with Apple.
 
 ## Optional extras (free account)
-- **Share extension:** add `-DWR_SHARE_EXTENSION=ON` to step 2 (costs one more App ID). Then in Safari/Notes/Files: select chords > **Share** > **Tabernacle Tools**, then open Tabernacle Tools - Electric Guitar to see the import preview. Without it, use **Open in / Copy to Tabernacle Tools - Electric Guitar** from Files or Mail, or **Paste chart** in the Setlist builder.
+- **Share extension:** add `-DWR_SHARE_EXTENSION=ON` to step 2 (costs one more App ID). Then in Safari/Notes/Files: select chords > **Share** > **Bearing Live**, then open Bearing Live Guitar to see the import preview. Without it, use **Open in / Copy to Bearing Live Guitar** from Files or Mail, or **Paste chart** in the Setlist builder.
 - **Your own cab IRs (v0.12):** put `.wav` impulse responses in iCloud Drive / On My iPad. In WORKSHOP > amp section tap **Load IR file...**, pick the file. The app copies it into its own storage (so it still works if the original is moved). **Replace IR** / **Remove** sit next to it. WAV, mono or stereo, up to 8 MB; IRs longer than about 21 ms are shortened.
-- **Amp anti-aliasing (v0.12):** AUDIO / MIDI > *Amp & drive anti-aliasing (oversampling)*: Off / 2x / 4x (default) / 8x. "Reduce automatically when the iPad is busy" steps it down if the audio thread gets close to running out of time. The menu shows the added latency (about 0.1 ms per amp or drive pedal at 4x).
+- **Amp anti-aliasing (v0.12):** Settings > *Amp & drive anti-aliasing (oversampling)*: Off / 2x / 4x (default) / 8x. "Reduce automatically when the iPad is busy" steps it down if the audio thread gets close to running out of time. The menu shows the added latency (about 0.1 ms per amp or drive pedal at 4x).
 
 ## App Store build (later, needs the paid $99/year Apple Developer Program)
 Subscriptions (Individual $4.99/month, Church $19.99/month, 14-day free trial), the church seat service and Sign in with Apple only exist in the **store build**. A free Personal Team **cannot** sign it, so skip this until you have a paid account. The normal sideload build above has everything unlocked.
@@ -105,7 +105,7 @@ cmake -S . -B build-store -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMEN
 
 ### Then, in Xcode (once)
 1. **TabernacleGuitar_Standalone > Signing & Capabilities > + Capability**: add **In-App Purchase** and **Sign in with Apple** (and **App Groups** if you use `-DWR_USE_APP_GROUP=ON`).
-2. **Local purchase testing without App Store Connect:** File > New > File... > **StoreKit Configuration File** (name it `TabernacleTools.storekit`, tick "Sync with App Store Connect" only once the products exist there). Add an **Auto-Renewable Subscription** group "Tabernacle Tools" with:
+2. **Local purchase testing without App Store Connect:** File > New > File... > **StoreKit Configuration File** (name it `TabernacleTools.storekit`, tick "Sync with App Store Connect" only once the products exist there). Add an **Auto-Renewable Subscription** group "Bearing Live" with:
    - `com.tabernacletools.guitar.individual.monthly` - 1 month - $4.99 - Introductory offer: Free trial, 2 weeks
    - `com.tabernacletools.guitar.church.monthly` - 1 month - $19.99 - same free trial; rank it above Individual (upgrade).
    Then Product > Scheme > **Edit Scheme...** > Run > Options > **StoreKit Configuration**: choose the file. Purchases are now fake and instant on the iPad; Debug > StoreKit > **Manage Transactions** lets you expire / refund them to test the read-only mode.
@@ -123,9 +123,9 @@ cmake -S . -B build-store -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMEN
 | OUT 3 / OUT 4 | Simplifier **loop RETURN** L / R (the AFTER AMP lane, stereo) |
 
 - Connect the M4 to the iPad through a **powered USB-C hub**. Plug the two Chocolate Plus pedals into the same hub.
-- In the app, tap **AUDIO / MIDI** (top right), then *Audio interface...*. Choose the MOTU M4 at 48 kHz with a **64 or 128** sample buffer, and enable inputs 1-2 and outputs 1-4.
+- In the app, tap **Settings** (top right), then *Audio interface...*. Choose the MOTU M4 at 48 kHz with a **64 or 128** sample buffer, and enable inputs 1-2 and outputs 1-4.
 - OUT 1 is line level. The app starts it at **-10 dB** (adjust it in WORKSHOP under *OUT 1 TRIM*), so it doesn't overload the amp's front end.
-- If you only have 2 outputs, the app automatically runs **2-cable** mode: everything comes out of outs 1/2. You can also force this with *AUDIO / MIDI > Routing: 2-cable*.
+- If you only have 2 outputs, the app automatically runs **2-cable** mode: everything comes out of outs 1/2. You can also force this with *Settings > Routing: 2-cable*.
 
 ## 7. Chocolate Plus setup (both units)
 In the M-Vave app (or with the pedal's own setup mode), set each switch to send **CC, momentary** (127 on press, 0 on release). The app needs the release message to detect long presses.
@@ -139,8 +139,8 @@ If your units send different numbers, go to SETLIST, tap a switch box at the bot
 
 ## 8. Cubase (optional)
 - On the iPad, the app turns on the **CoreMIDI network session**. On the Mac, open **Audio MIDI Setup > MIDI Studio > Network**, find the iPad's session, and click **Connect**.
-- Cubase **MIDI Clock** out sets the app's tempo (turn it on or off in *AUDIO / MIDI > Follow MIDI Clock*).
-- **Program Change n** or **note (C1 = 36) + n** on **channel 16** jumps to section n (0 = first section) and switches the chart to section view. CC 102 and CC 103 (value 127) mean next and previous section. You can change the channel in AUDIO / MIDI.
+- Cubase **MIDI Clock** out sets the app's tempo (turn it on or off in *Settings > Follow MIDI Clock*).
+- **Program Change n** or **note (C1 = 36) + n** on **channel 16** jumps to section n (0 = first section) and switches the chart to section view. CC 102 and CC 103 (value 127) mean next and previous section. You can change the channel in Settings.
 
 ## v0.7 features to try
 - **Practice tracks:** tap the song title on Live > *Practice track...* to pick an mp3 / m4a / wav from Files. Practice mode plays it through the main outs (1/2), with speed (no pitch change), section loop and section marks. It's off in live mode and while following a leader.
@@ -160,8 +160,8 @@ cmake -S . -B build-mac -DCMAKE_BUILD_TYPE=Release && cmake --build build-mac -j
 ```
 
 ## Other troubleshooting
-- *No input sound*: Settings > Tabernacle Tools - Electric Guitar > **Microphone** > allow (iOS asks once on first launch).
-- *M4 not seen*: the Camera Adapter needs a charger in its Lightning port; check the M4's USB light. AUDIO / MIDI > Audio interface... > MOTU M4.
+- *No input sound*: Settings > Bearing Live Guitar > **Microphone** > allow (iOS asks once on first launch).
+- *M4 not seen*: the Camera Adapter needs a charger in its Lightning port; check the M4's USB light. Settings > Audio interface... > MOTU M4.
 - *Crackles*: buffer 128, or anti-aliasing 2x / Off. The 2017 A10X is slower than newer iPads.
 
 
@@ -176,9 +176,9 @@ cmake -S . -B build-mac -DCMAKE_BUILD_TYPE=Release && cmake --build build-mac -j
 - Recorded voice cues: copy WAVs named as in resources/voice/RECORDING_SCRIPT.md into the app's `Voice/` data folder (Files app); they replace the built-in ones on next launch.
 
 ## v0.17 MIDI Clock
-- Settings > MIDI Clock: Off / Send / Receive. Send creates a virtual **Tabernacle Tools Clock** port (other apps) and can also target USB / Bluetooth / network MIDI outs. Receive follows external tempo + transport (smoothed).
+- Settings > MIDI Clock: Off / Send / Receive. Send creates a virtual **Bearing Live Clock** port (other apps) and can also target USB / Bluetooth / network MIDI outs. Receive follows external tempo + transport (smoothed).
 - Ableton Link stays OFF. Band sync is Wi-Fi leader/follower; use MIDI Clock to talk to Cubase, AUM, Loopy, etc.
-- Cubase: enable its MIDI Clock out and set Tabernacle Tools to Receive (or the other way around).
+- Cubase: enable its MIDI Clock out and set Bearing Live to Receive (or the other way around).
 
 ## v0.19 rename
-- The app is now **Tabernacle Tools**. The Xcode project is `TabernacleTools.xcodeproj`, the scheme `TabernacleGuitar_Standalone`, the home-screen name **TT Guitar**. Default bundle prefix `com.tabernacletools` (use your own prefix for Personal Team sideloads). The data folder is now `TabernacleTools` - copy any test library from the old `WorshipRig` folder in the Files app if you need it.
+- The app is now **Bearing Live** (company **Bearing**). The Xcode project is `TabernacleTools.xcodeproj`, the scheme `TabernacleGuitar_Standalone`. Set the home-screen name in Xcode to **Bearing Live** (target TabernacleGuitar_Standalone, General, Display Name). Do not edit CMakeLists.txt to do that. Default bundle prefix `com.tabernacletools` (use your own prefix for Personal Team sideloads). The data folder is now `TabernacleTools` - copy any test library from the old `WorshipRig` folder in the Files app if you need it.

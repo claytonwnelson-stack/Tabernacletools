@@ -36,7 +36,7 @@ public:
     SeatResult leave();
     SeatResult removeMember (const std::string& memberId);
     SeatResult deleteAccount();      // clears session + token locally too
-    // v0.18 one subscription for every Tabernacle Tools app: post this app's signed StoreKit 2 transaction (purchase, renewal,
+    // v0.18 one subscription for every Bearing Live app: post this app's signed StoreKit 2 transaction (purchase, renewal,
     // Restore Purchases), and read what the person is covered by across all apps (GET /v1/entitlement)
     struct PurchasePost { bool ok = false, trialOk = true; std::string plan, duplicateApp, error; };
     SeatResult postPurchase (const std::string& signedTransaction, PurchasePost* out = nullptr);

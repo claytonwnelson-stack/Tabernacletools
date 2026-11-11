@@ -1,6 +1,6 @@
-# Tabernacle Tools
+# Bearing Live
 
-Existing v0.19 source for the Tabernacle Tools iPad music app (JUCE 8 / C++17).
+Existing v0.19 source for the Bearing Live iPad music app (JUCE 8 / C++17).
 
 - `app/` — CMake project. Build notes: `app/BUILD_ON_MAC.md`. What the code does today: `app/STATUS.md`.
 - `seat-service/` — church-seat worker. Deploy notes: `seat-service/DEPLOY.md`.

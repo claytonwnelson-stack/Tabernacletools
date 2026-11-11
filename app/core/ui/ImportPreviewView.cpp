@@ -20,7 +20,7 @@ ImportPreviewView::ImportPreviewView() {
 }
 
 void ImportPreviewView::open (const juce::String& text, const juce::String& fallbackTitle, Done onImport) {
-    if (text.startsWith ("[unsupported]")) { p_ = {}; p_.notes.push_back ((text.substring (13) + " isn't a chart format Tabernacle Tools reads (use text, ChordPro or a text PDF; photo/OCR import is on the to-do list).").toStdString()); }
+    if (text.startsWith ("[unsupported]")) { p_ = {}; p_.notes.push_back ((text.substring (13) + " isn't a chart format Bearing Live reads (use text, ChordPro or a text PDF; photo/OCR import is on the to-do list).").toStdString()); }
     else p_ = previewImport (text.toStdString(), fallbackTitle.toStdString());
     done_ = std::move (onImport);
     title_.setText (juce::String (p_.chart.title), false); artist_.setText (juce::String (p_.chart.artist), false);

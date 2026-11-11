@@ -7,7 +7,7 @@ TabernacleGuitarProcessor::TabernacleGuitarProcessor()
     : CoreProcessor (BusesProperties()
           .withInput ("Input", juce::AudioChannelSet::discreteChannels (2), true)      // in1 guitar (Hi-Z), in2 amp loop send
           .withOutput ("Output", juce::AudioChannelSet::discreteChannels (4), true),  // out1 amp input, out2 click, outs 3/4 loop return
-          "Tabernacle Tools - Electric Guitar") {
+          "Bearing Live Guitar") {
     rig.prepare (48000, 512);
     if (! store.lib.rigs.empty()) loadRig (store.lib.rigs.front());
     coreInit();

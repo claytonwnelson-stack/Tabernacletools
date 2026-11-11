@@ -1,4 +1,4 @@
-// Shared editor base for every Tabernacle Tools app: look-and-feel, AUDIO/MIDI settings menu (click, cues, count-in,
+// Shared editor base for every Bearing Live app: look-and-feel, AUDIO/MIDI settings menu (click, cues, count-in,
 // MIDI clock, band sync, projector), the band roster panel, join/drop toasts, crash-recovery note, text / image prompts.
 // The app adds its pages (Live / Setlist / instrument pages) and instrument settings via the hooks.
 #pragma once

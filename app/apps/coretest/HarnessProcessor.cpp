@@ -3,7 +3,7 @@
 using namespace wr;
 
 HarnessProcessor::HarnessProcessor()
-    : CoreProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true), "Tabernacle Tools Core Test") {
+    : CoreProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true), "Bearing Live Core Test") {
     click.prepare (48000, 512);
     coreInit();
 }

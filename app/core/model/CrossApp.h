@@ -1,4 +1,4 @@
-// v0.18 one Tabernacle Tools subscription unlocks every app (Guitar, Keys, Bass, Charts). Each app is a separate App Store app with
+// v0.18 one Bearing Live subscription unlocks every app (Guitar, Keys, Bass, Charts). Each app is a separate App Store app with
 // its own products + subscription group; the seat service links purchases to the Sign in with Apple account.
 // Pure C++ (tested on Linux): paywall mode, trial honesty across apps, and "never go silent on lapse".
 #pragma once
@@ -11,8 +11,8 @@
 namespace wr {
 struct FamilyApp { const char* bundleId; const char* name; };
 inline const std::vector<FamilyApp>& familyApps() {
-    static const std::vector<FamilyApp> a = { { "com.tabernacletools.guitar", "Tabernacle Tools - Electric Guitar" }, { "com.tabernacletools.keys", "Tabernacle Tools - Keys" },
-                                              { "com.tabernacletools.bass", "Tabernacle Tools - Bass" }, { "com.tabernacletools.charts", "Tabernacle Tools - Charts" } };
+    static const std::vector<FamilyApp> a = { { "com.tabernacletools.guitar", "Bearing Live Guitar" }, { "com.tabernacletools.keys", "Bearing Live Keys" },
+                                              { "com.tabernacletools.bass", "Bearing Live Bass" }, { "com.tabernacletools.charts", "Bearing Live Charts" } };
     return a;
 }
 // this app's products: <bundleId>.individual.monthly / <bundleId>.church.monthly (Guitar keeps its v0.12 ids, which match)

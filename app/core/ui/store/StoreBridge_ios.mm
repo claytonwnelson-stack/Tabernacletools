@@ -16,7 +16,7 @@ namespace wr::store {
 #if WR_STORE_BUILD
 static id bridge() {
     static id b = nil;
-    if (b == nil) { if (@available (iOS 15.0, macOS 12.0, *)) { Class c = NSClassFromString (@"WRStoreKitBridge"); if (c) b = [[c alloc] init]; else NSLog (@"Tabernacle Tools: StoreKit bridge not found (WRStoreKitBridge Swift class missing - check -ObjC / target membership)"); } }
+    if (b == nil) { if (@available (iOS 15.0, macOS 12.0, *)) { Class c = NSClassFromString (@"WRStoreKitBridge"); if (c) b = [[c alloc] init]; else NSLog (@"Bearing Live: StoreKit bridge not found (WRStoreKitBridge Swift class missing - check -ObjC / target membership)"); } }
     return b;
 }
 static std::string S (id v) { return [v isKindOfClass: [NSString class]] ? std::string ([(NSString*) v UTF8String]) : std::string(); }

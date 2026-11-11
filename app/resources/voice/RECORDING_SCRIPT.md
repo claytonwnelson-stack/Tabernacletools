@@ -8,7 +8,7 @@ These replace the placeholder TTS voice (its Lessac dataset licence doesn't clea
 **Combinations** are built by the app ("Verse" + "two", "Pre-chorus", "Last" + "chorus", "Half" + "time", "All" + "in"). Don't record phrases.
 
 **Swapping in:** name the files exactly as listed below.
-- To test without rebuilding: copy the files into the iPad's Files app, under On My iPad > Tabernacle Tools > Voice. Matching names override the bundled ones the next time the app launches.
+- To test without rebuilding: copy the files into the iPad's Files app, under On My iPad > Bearing Live > Voice. Matching names override the bundled ones the next time the app launches.
 - To bundle them: replace the files in `app/resources/voice/` and rebuild.
 
 The test `v016_voice_manifest` checks that every word in `core/audio/VoiceManifest.h` has a file.

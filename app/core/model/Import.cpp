@@ -118,7 +118,7 @@ std::string guessKey (const Chart& c) {
 ImportPreview previewImport (const std::string& raw, const std::string& fallbackTitle) {
     ImportPreview p; auto t = trimS (raw);
     if (! t.empty() && t.find ('\n') == std::string::npos && (startsWithI (t, "http://") || startsWithI (t, "https://"))) {
-        p.urlOnly = true; p.notes.push_back ("Only a link was shared. Tabernacle Tools doesn't download web pages: select the chords on the page and share or copy the text instead."); return p; }
+        p.urlOnly = true; p.notes.push_back ("Only a link was shared. Bearing Live doesn't download web pages: select the chords on the page and share or copy the text instead."); return p; }
     p.chart = parseChart (normalizeSharedText (raw, &p.notes), fallbackTitle);
     for (auto& s : p.chart.sections) for (auto& it : s.items) if (it.kind == ChartItem::Line) { p.chordCount += (int) it.line.chords.size(); if (! trimS (it.line.lyric).empty()) ++p.lyricLines; }
     {   // the text parser guesses from the first chord; use the better whole-song guess instead

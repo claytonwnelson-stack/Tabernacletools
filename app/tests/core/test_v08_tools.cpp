@@ -80,7 +80,7 @@ static void testStats() {
 }
 static void testBundle() {
     Library L = lib(); L.settings.stageMode = true; L.settings.autoScroll = false; L.settings.sectionColors["verse"] = "teal"; logPlay (L, "m", "2026-10-25"); enableDefaultBanks (L.controllers[0]);
-    auto txt = exportBundle (L, "Tabernacle Tools - Electric Guitar", 1790000000);
+    auto txt = exportBundle (L, "Bearing Live Guitar", 1790000000);
     CHECK (txt.find ("\"format\":\"worship-rig-backup\"") != S::npos || txt.find ("worship-rig-backup") != S::npos);
     Library R = seedLibrary(); auto rep = importBundle (txt, R, ImportMode::Replace); CHECK (rep.ok); CHECK_EQ (rep.songs, (int) L.songs.size());
     CHECK (! R.settings.stageMode); CHECK (! R.settings.autoScroll); CHECK_EQ (R.settings.sectionColors["verse"], S ("teal")); CHECK_EQ ((int) R.playLog.size(), 1); CHECK_EQ ((int) R.controllers[0].banks.size(), 2);

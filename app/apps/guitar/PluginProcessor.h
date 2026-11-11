@@ -1,4 +1,4 @@
-// Tabernacle Tools - Electric Guitar - JUCE AudioProcessor (iOS standalone app + AUv3). CoreProcessor (setlists, charts, click, cues,
+// Bearing Live Guitar - JUCE AudioProcessor (iOS standalone app + AUv3). CoreProcessor (setlists, charts, click, cues,
 // band sync, projector) + the guitar layer: two-lane pedal rig, 4-cable routing, tails, scenes, tuner.
 #pragma once
 #include "CoreProcessor.h"

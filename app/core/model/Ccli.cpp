@@ -59,7 +59,7 @@ std::string exportSummary (const Library& lib, const ExportOptions& o) {
     std::map<std::string, T> per; for (auto& e : v) { auto& t = per[e.songId]; t.title = e.title; t.number = e.ccliNumber; t.authors = e.authors; ++t.uses; t.projected += e.projected; t.charts += e.chart; }
     std::vector<T> rows; for (auto& kv : per) rows.push_back (kv.second);
     std::sort (rows.begin(), rows.end(), [] (auto& a, auto& b) { return a.uses != b.uses ? a.uses > b.uses : a.title < b.title; });
-    std::string s = "Tabernacle Tools - song usage for CCLI\nPeriod: " + (o.from.empty() ? std::string ("start") : o.from) + " to " + (o.to.empty() ? std::string ("today") : o.to) + "\n";
+    std::string s = "Bearing Live - song usage for CCLI\nPeriod: " + (o.from.empty() ? std::string ("start") : o.from) + " to " + (o.to.empty() ? std::string ("today") : o.to) + "\n";
     s += std::to_string (v.size()) + " uses of " + std::to_string (rows.size()) + " songs" + (o.includePublicDomain ? " (public-domain songs included)" : " (public-domain songs left out)") + "\n\n";
     for (auto& r : rows) s += "- " + r.title + "  |  CCLI # " + (r.number.empty() ? std::string ("MISSING") : r.number) + "  |  used " + std::to_string (r.uses)
         + "x  |  lyrics projected " + std::to_string (r.projected) + "x  |  charts " + std::to_string (r.charts) + "x" + (r.authors.empty() ? std::string() : "  |  " + r.authors) + "\n";
@@ -68,7 +68,7 @@ std::string exportSummary (const Library& lib, const ExportOptions& o) {
     s += "\nHow to enter: sign in at ccli.com > Reporting > Search & Report. Search each song by its CCLI # (or title + author),\n"
          "press REPORT SONG, and use (+) for each additional use. 'Times used' = services; lyrics projected count as Digital.\n"
          "Print, recording and translation uses aren't tracked here - add them by hand.\n"
-         "Tabernacle Tools does not send anything to CCLI.\n";
+         "Bearing Live does not send anything to CCLI.\n";
     return s;
 }
 

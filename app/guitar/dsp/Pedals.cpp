@@ -1,4 +1,4 @@
-// Tabernacle Tools - pedal implementations. Pure C++17. Each class = one pedal; register it in pedalCatalog()/createPedal().
+// Bearing Live - pedal implementations. Pure C++17. Each class = one pedal; register it in pedalCatalog()/createPedal().
 #include "Oversampler.h"
 #include "Pedal.h"
 #include <map>

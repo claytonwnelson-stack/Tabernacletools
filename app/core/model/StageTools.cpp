@@ -48,11 +48,11 @@ std::string exportBundle (const Library& l, const std::string& app, long long no
 }
 ImportReport importBundle (const std::string& text, Library& lib, ImportMode mode) {
     ImportReport r; bool ok = false; Json j = Json::parse (text, &ok);
-    if (! ok || ! j.isObject()) { r.error = "Not a Tabernacle Tools backup (not JSON)"; return r; }
+    if (! ok || ! j.isObject()) { r.error = "Not a Bearing Live backup (not JSON)"; return r; }
     Json L;
     if (j["format"].str() == "worship-rig-backup") { if (j["bundleVersion"].integer (0) > 1) { r.error = "Backup is from a newer version of the app"; return r; } L = j["library"]; }
     else if (j.has ("songs") && j.has ("settings")) L = j;   // bare library.json
-    else { r.error = "Not a Tabernacle Tools backup"; return r; }
+    else { r.error = "Not a Bearing Live backup"; return r; }
     if (! L.isObject() || ! L.has ("songs")) { r.error = "Backup has no library"; return r; }
     Library in = libraryFromJson (L);
     if (mode == ImportMode::Replace) { r.songs = (int) in.songs.size(); r.setlists = (int) in.setlists.size(); r.rigs = (int) in.rigs.size();

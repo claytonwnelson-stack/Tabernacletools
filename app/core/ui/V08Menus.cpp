@@ -98,7 +98,7 @@ void wr::ui::addV08Settings (CoreEditor& ed, juce::PopupMenu& m, juce::Component
     bk.addItem ("Export everything (one file -> Files / AirDrop)...", [e, sp] { auto f = e->core.exportEverything(); wr::platform::shareFiles ({ f }, sp.getComponent()); });
     for (int mode = 0; mode < 2; ++mode)
         bk.addItem (mode == 0 ? "Import a backup - add missing songs / setlists / rigs..." : "Import a backup - REPLACE everything...", [e, mode] {
-            auto ch = std::make_shared<juce::FileChooser> ("Tabernacle Tools backup", juce::File(), "*.json;*.wrbackup", true, false, e);
+            auto ch = std::make_shared<juce::FileChooser> ("Bearing Live backup", juce::File(), "*.json;*.wrbackup", true, false, e);
             ch->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [e, mode, ch] (const juce::FileChooser& fc) {
                 auto f = fc.getResult(); if (! f.existsAsFile()) return; auto r = e->core.importEverything (f, mode == 0 ? ImportMode::Merge : ImportMode::Replace);
                 juce::AlertWindow::showMessageBoxAsync (r.ok ? juce::MessageBoxIconType::InfoIcon : juce::MessageBoxIconType::WarningIcon, "Import backup",

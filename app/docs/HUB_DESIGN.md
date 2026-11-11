@@ -1,8 +1,8 @@
-# Tabernacle Tools - Hub: design (draft)
+# Bearing Live Hub: design (draft)
 *Design only, no code. Drafted Nov 3, 2026 (America/Chicago) against app v0.11; updated the same day with Clayton's decisions (§19). Prices are rough planning ranges, not quotes.*
 
 ## 1. What it is (and isn't)
-**Tabernacle Tools - Hub** is an optional desktop app for Mac and Windows, built in JUCE on the shared `worship_core` plus the guitar and keys DSP. In Hub mode, one computer with a multi-input audio interface does all the sound for the band. Each player's iPad becomes that player's **remote and in-ear receiver**.
+**Bearing Live Hub** is an optional desktop app for Mac and Windows, built in JUCE on the shared `worship_core` plus the guitar and keys DSP. In Hub mode, one computer with a multi-input audio interface does all the sound for the band. Each player's iPad becomes that player's **remote and in-ear receiver**.
 
 - **Standalone mode is unchanged.** iPads over Wi-Fi still each make their own sound and use leader/follower band sync (v0.6+). Hub is an extra mode, not a replacement.
 - **The hub does:** every player's rig DSP (pedals, amp/cab/IR, keys patches), vocal channel strips, timing (click, count-ins, spoken cues, section changes, MIDI clock out), setlist and live session, projector lyrics, the FOH mix, a separate livestream mix, every player's in-ear mix, and multitrack plus stereo recording.
