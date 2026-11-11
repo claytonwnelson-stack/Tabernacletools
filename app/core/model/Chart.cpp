@@ -190,6 +190,13 @@ namespace {
 struct Parser {
     std::vector<std::pair<std::string, std::string>> colorSpecs; // v0.8 {x_section_color: token=colour}, resolved after parsing
     Chart c; Section* cur = nullptr; std::string hl; bool inTab = false; TabBlock tab; std::vector<std::string> pendingChordLine; bool havePending = false; std::string pendingRaw;
+    bool gap = false, holding = false; std::string heldRaw;
+    bool chorusOpener (const std::string& lyric) const {
+        auto want = lower (trim (lyric)); if (want.size() < 2) return false;
+        for (auto& s : c.sections) if (s.kind == "chorus") for (auto& it : s.items) if (it.kind == ChartItem::Line && ! trim (it.line.lyric).empty())
+            return lower (trim (it.line.lyric)) == want;
+        return false;
+    }
     void ensureSection() { if (! cur) startSection ("Intro"); }
     void startSection (std::string name, int repeat = 1) {
         flushPending(); Section s; s.name = trim (name); s.label = sectionLabelFor (s.name, &s.kind, &s.color); s.repeat = repeat; c.sections.push_back (s); cur = &c.sections.back();
@@ -233,16 +240,32 @@ struct Parser {
         // end_of_verse / end_of_chorus etc. need nothing
         return true;
     }
-    bool header (const std::string& t) { // [Verse 1] x2  |  Chorus:  |  VERSE 2
+    bool header (const std::string& t) { // [Verse 1] x2  |  Chorus:  |  VERSE 2  |  Verse 2 (soft)  |  V2
         std::string s = t; int rep = 1;
         auto xr = lower (s); auto xp = xr.rfind ('x');
         if (xp != std::string::npos && xp + 1 < xr.size() && std::all_of (xr.begin() + (long) xp + 1, xr.end(), ::isdigit) && (xp == 0 || xr[xp - 1] == ' ' || xr[xp - 1] == ']' || xr[xp - 1] == '(')) {
             rep = std::atoi (xr.c_str() + xp + 1); s = trim (s.substr (0, xp)); if (! s.empty() && s.back() == '(') s.pop_back(); s = trim (s); }
-        if (s.size() > 2 && s.front() == '[' && s.back() == ']') { std::string in = s.substr (1, s.size() - 2); if (! isChordToken (in) && s.find (']') == s.size() - 1) { startSection (in, rep); return true; } }
-        std::string l = lower (s); if (! l.empty() && l.back() == ':') l.pop_back();
+        auto paren = s.rfind ('('); if (paren != std::string::npos && ! s.empty() && s.back() == ')') s = trim (s.substr (0, paren));
+        if (s.size() > 2 && s.front() == '[' && s.back() == ']') { std::string in = trim (s.substr (1, s.size() - 2)); if (! isChordToken (in) && s.find (']') == s.size() - 1) { startSection (in, rep); return true; } }
+        while (! s.empty() && ! std::isalnum ((unsigned char) s.front())) s.erase (s.begin());
+        std::string l = lower (s); if (! l.empty() && (l.back() == ':' || l.back() == '.')) l.pop_back(); l = trim (l);
+        if (l.empty() || isChordToken (l)) return false;
+        auto wordNum = [] (const std::string& w) { if (w == "one") return 1; if (w == "two") return 2; if (w == "three") return 3; if (w == "four") return 4; if (w == "five") return 5; return 0; };
         static const char* words[] = { "verse", "chorus", "pre-chorus", "prechorus", "pre chorus", "bridge", "tag", "intro", "outro", "interlude", "instrumental", "ending", "turnaround", "refrain" };
-        for (auto* w : words) if (startsWith (l, w)) { std::string rest = trim (l.substr (std::string (w).size())); if (rest.size() <= 3 && std::all_of (rest.begin(), rest.end(), [] (char ch) { return std::isdigit ((unsigned char) ch) || ch == ' '; })) {
-            std::string nm = s; if (! nm.empty() && nm.back() == ':') nm.pop_back(); startSection (nm, rep); return true; } }
+        for (auto* w : words) if (startsWith (l, w)) {
+            std::string rest = trim (l.substr (std::string (w).size()));
+            std::string compact; for (char ch : rest) if (ch != ' ') compact += ch;
+            int wn = wordNum (compact);
+            bool digits = ! compact.empty() && std::all_of (compact.begin(), compact.end(), [] (char ch) { return std::isdigit ((unsigned char) ch); });
+            if (compact.empty() || digits || wn > 0) {
+                std::string nm = s; if (! nm.empty() && (nm.back() == ':' || nm.back() == '.')) nm.pop_back(); nm = trim (nm);
+                if (wn > 0) { std::string base = w; if (! base.empty()) base[0] = (char) std::toupper ((unsigned char) base[0]); nm = base + " " + std::to_string (wn); }
+                startSection (nm, rep); return true;
+            }
+        }
+        auto named = [&] (const char* key, const char* nm) { if (l == key) { startSection (nm, rep); return true; } return false; };
+        if (named ("v1", "Verse 1") || named ("v2", "Verse 2") || named ("v3", "Verse 3") || named ("v4", "Verse 4")
+            || named ("ch", "Chorus") || named ("ch2", "Chorus 2") || named ("pc", "Pre-Chorus") || named ("br", "Bridge")) return true;
         return false;
     }
     static bool isChordLine (const std::string& t) { auto toks = splitWs (t); if (toks.empty()) return false; int n = 0; for (auto& x : toks) { if (! isChordToken (x)) return false; if (x != "|" && x != "/" && x != "-") ++n; } return n > 0; }
@@ -255,17 +278,24 @@ struct Parser {
         std::string t = trim (raw);
         if (inTab && t.size() > 1 && t.front() == '{') { directive (t); return; }
         if (inTab) { if (isTabLine (t)) tab.strings.push_back (t); else if (! t.empty()) { flushTab(); tab.title = "Tab"; } return; }
-        if (t.empty()) { flushPending(); return; }
+        if (t.empty()) { flushPending(); gap = true; holding = false; return; }
         if (t[0] == '#') return; // ChordPro comment
         if (directive (t)) return;
         if (isTabLine (t)) { flushPending(); if (tab.strings.empty()) { tab.title = "Tab"; } tab.strings.push_back (t); if (tab.strings.size() == 6) flushTab(); return; }
         if (! tab.strings.empty()) flushTab();
-        if (header (t)) return;
+        if (header (t)) { gap = false; holding = false; return; }
         if (c.title.empty() && c.sections.empty() && ! havePending && ! isChordLine (t) && t.find ('[') == std::string::npos) { c.title = t; return; } // plain text: first line = title
         ChartLine il; if (inlineChords (t, il)) { flushPending(); addLine (il); return; }
         std::string rr = raw; while (! rr.empty() && (rr.back() == ' ' || rr.back() == '\r')) rr.pop_back();
-        if (isChordLine (t)) { flushPending(); havePending = true; pendingRaw = rr; return; }
-        // lyric line; pair with pending chord line by column
+        if (isChordLine (t)) {
+            flushPending();
+            if (gap) { holding = true; heldRaw = rr; gap = false; return; }
+            havePending = true; pendingRaw = rr; return;
+        }
+        // lyric line; a blank line then a repeat of a chorus's first line starts another chorus
+        if ((holding || gap) && chorusOpener (trim (rr))) startSection ("Chorus");
+        gap = false;
+        if (holding) { havePending = true; pendingRaw = heldRaw; holding = false; }
         ChartLine l; l.lyric = rr;
         size_t lead = l.lyric.find_first_not_of (' '); if (lead != std::string::npos && lead > 0) l.lyric = l.lyric.substr (lead); else lead = 0;
         if (havePending) {
@@ -450,6 +480,166 @@ int practiceSectionAt (const std::vector<double>& marks, double sec) {
     for (int i = 0; i < (int) marks.size(); ++i) if (marks[(size_t) i] >= 0 && marks[(size_t) i] <= sec + 1e-6 && marks[(size_t) i] >= bt) { best = i; bt = marks[(size_t) i]; }
     return best;
 }
+namespace {
+std::vector<ChartItem> parseBodyItems (const std::string& text) {
+    std::vector<ChartItem> items; bool pending = false; std::string raw; bool inTab = false; TabBlock tab;
+    auto flushTab = [&] { if (! tab.strings.empty()) { ChartItem it; it.kind = ChartItem::Tab; if (tab.title.empty()) tab.title = "Tab"; it.tab = tab; items.push_back (std::move (it)); } tab = TabBlock(); inTab = false; };
+    auto flushChord = [&] {
+        if (! pending) return; pending = false; ChartLine l; size_t i = 0;
+        while (i < raw.size()) { if (raw[i] == ' ') { ++i; continue; } size_t j = i; while (j < raw.size() && raw[j] != ' ') ++j; l.chords.push_back ({ (int) i, raw.substr (i, j - i) }); i = j; }
+        ChartItem it; it.kind = ChartItem::Line; it.line = std::move (l); items.push_back (std::move (it));
+    };
+    std::istringstream is (text); std::string ln;
+    while (std::getline (is, ln)) {
+        if (! ln.empty() && ln.back() == '\r') ln.pop_back();
+        std::string t = trim (ln);
+        if (t.size() > 1 && t.front() == '{' && t.back() == '}') {
+            std::string in = t.substr (1, t.size() - 2), k, v; auto colon = in.find (':');
+            k = lower (trim (colon == std::string::npos ? in : in.substr (0, colon))); v = colon == std::string::npos ? std::string() : trim (in.substr (colon + 1));
+            if (k == "comment" || k == "c") { flushChord(); flushTab(); ChartItem it; it.kind = ChartItem::Comment; it.text = v; items.push_back (std::move (it)); }
+            else if (k == "start_of_tab" || k == "sot") { flushChord(); inTab = true; tab = TabBlock(); tab.title = v.empty() ? "Tab" : v; }
+            else if (k == "end_of_tab" || k == "eot") flushTab();
+            continue;
+        }
+        if (t.empty()) { flushChord(); if (inTab) flushTab(); continue; }
+        if (inTab || isTabLine (t)) { flushChord(); inTab = true; if (tab.title.empty()) tab.title = "Tab"; tab.strings.push_back (t); continue; }
+        auto toks = splitWs (t); bool chordLine = ! toks.empty(); int chords = 0;
+        for (auto& x : toks) { if (! isChordToken (x)) { chordLine = false; break; } if (x != "|" && x != "/" && x != "-") ++chords; }
+        if (chordLine && chords > 0) { flushChord(); pending = true; raw = ln; while (! raw.empty() && (raw.back() == ' ' || raw.back() == '\r')) raw.pop_back(); continue; }
+        ChartLine l; std::string rr = ln; while (! rr.empty() && (rr.back() == ' ' || rr.back() == '\r')) rr.pop_back();
+        if (t.find ('[') != std::string::npos) {
+            std::string lyr; std::vector<ChordAt> ch; size_t i = 0; bool ok = true;
+            while (i < t.size()) { if (t[i] == '[') { auto e = t.find (']', i); if (e == std::string::npos) { ok = false; break; } std::string tok = t.substr (i + 1, e - i - 1); if (! isChordToken (tok)) { ok = false; break; } ch.push_back ({ (int) lyr.size(), tok }); i = e + 1; } else lyr += t[i++]; }
+            if (ok && ! ch.empty()) { flushChord(); l.chords = ch; l.lyric = lyr; ChartItem it; it.kind = ChartItem::Line; it.line = std::move (l); items.push_back (std::move (it)); continue; }
+        }
+        l.lyric = rr; size_t lead = l.lyric.find_first_not_of (' '); if (lead != std::string::npos && lead > 0) l.lyric = l.lyric.substr (lead); else lead = 0;
+        if (pending) { pending = false; size_t i = 0; while (i < raw.size()) { if (raw[i] == ' ') { ++i; continue; } size_t j = i; while (j < raw.size() && raw[j] != ' ') ++j; l.chords.push_back ({ std::max (0, (int) i - (int) lead), raw.substr (i, j - i) }); i = j; } }
+        ChartItem it; it.kind = ChartItem::Line; it.line = std::move (l); items.push_back (std::move (it));
+    }
+    flushChord(); flushTab();
+    items.erase (std::remove_if (items.begin(), items.end(), [] (const ChartItem& i) { return i.kind == ChartItem::Line && i.line.chords.empty() && trim (i.line.lyric).empty(); }), items.end());
+    return items;
+}
+int nonTabCount (const Section& s) { int n = 0; for (auto& it : s.items) if (it.kind != ChartItem::Tab) ++n; return n; }
+int nonTabAt (const Section& s, int line) {
+    int seen = 0; for (int i = 0; i < (int) s.items.size(); ++i) if (s.items[(size_t) i].kind != ChartItem::Tab) { if (seen == line) return i; ++seen; } return -1;
+}
+void labelNew (Section& s, const std::string& name) {
+    s.name = trim (name); if (s.name.empty()) s.name = "New section";
+    s.label = sectionLabelFor (s.name, &s.kind, &s.color); s.customColor.clear(); s.occurrence = 1; s.source = -1;
+}
+} // namespace
+
+std::string sectionBodyText (const Section& s) {
+    std::string o;
+    for (auto& it : s.items) {
+        if (it.kind == ChartItem::Tab) continue;
+        if (it.kind == ChartItem::Comment) { o += "{comment: " + it.text + "}\n"; continue; }
+        o += inlineChords (it.line) + "\n";
+    }
+    return o;
+}
+bool setSectionBody (Section& s, const std::string& text) {
+    auto parsed = parseBodyItems (text); bool anyTab = false; for (auto& it : parsed) if (it.kind == ChartItem::Tab) anyTab = true;
+    if (anyTab) { s.items = std::move (parsed); return true; }
+    std::vector<ChartItem> tabs; for (auto& it : s.items) if (it.kind == ChartItem::Tab) tabs.push_back (it);
+    s.items = std::move (parsed); for (auto& t : tabs) s.items.push_back (std::move (t)); return true;
+}
+ChartEdit duplicateSection (Chart& c, int index) {
+    ChartEdit e; const int n = (int) c.sections.size(); if (index < 0 || index >= n) return e;
+    Section copy = c.sections[(size_t) index]; copy.occurrence = 1; copy.source = -1;
+    c.sections.insert (c.sections.begin() + index + 1, std::move (copy));
+    e.oldToNew.resize ((size_t) n); for (int i = 0; i < n; ++i) e.oldToNew[(size_t) i] = i <= index ? i : i + 1; e.ok = true; return e;
+}
+ChartEdit splitSection (Chart& c, int index, int firstLineOfNew, const std::string& newName) {
+    ChartEdit e; const int n = (int) c.sections.size(); if (index < 0 || index >= n || firstLineOfNew < 1) return e;
+    Section& src = c.sections[(size_t) index]; if (firstLineOfNew >= nonTabCount (src)) return e;
+    const int at = nonTabAt (src, firstLineOfNew); if (at <= 0) return e;
+    Section neu; labelNew (neu, newName); neu.repeat = 1; neu.bars = 0;
+    neu.items.assign (src.items.begin() + at, src.items.end()); src.items.erase (src.items.begin() + at, src.items.end());
+    c.sections.insert (c.sections.begin() + index + 1, std::move (neu));
+    e.oldToNew.resize ((size_t) n); for (int i = 0; i < n; ++i) e.oldToNew[(size_t) i] = i <= index ? i : i + 1; e.ok = true; return e;
+}
+ChartEdit mergeSections (Chart& c, int index) {
+    ChartEdit e; const int n = (int) c.sections.size(); if (index < 0 || index + 1 >= n) return e;
+    auto& a = c.sections[(size_t) index]; auto& b = c.sections[(size_t) index + 1];
+    a.items.insert (a.items.end(), b.items.begin(), b.items.end()); if (a.bars > 0 && b.bars > 0) a.bars += b.bars;
+    c.sections.erase (c.sections.begin() + index + 1);
+    e.oldToNew.resize ((size_t) n); for (int i = 0; i < n; ++i) e.oldToNew[(size_t) i] = i < index ? i : i == index || i == index + 1 ? index : i - 1; e.ok = true; return e;
+}
+ChartEdit moveSection (Chart& c, int from, int to) {
+    ChartEdit e; const int n = (int) c.sections.size(); if (from < 0 || to < 0 || from >= n || to >= n) return e;
+    if (from != to) { Section s = std::move (c.sections[(size_t) from]); c.sections.erase (c.sections.begin() + from); c.sections.insert (c.sections.begin() + to, std::move (s)); }
+    std::vector<int> id ((size_t) n); for (int i = 0; i < n; ++i) id[(size_t) i] = i;
+    if (from != to) { int moving = id[(size_t) from]; id.erase (id.begin() + from); id.insert (id.begin() + to, moving); }
+    e.oldToNew.assign ((size_t) n, 0); for (int i = 0; i < n; ++i) e.oldToNew[(size_t) id[(size_t) i]] = i; e.ok = true; return e;
+}
+ChartEdit deleteSection (Chart& c, int index) {
+    ChartEdit e; const int n = (int) c.sections.size(); if (index < 0 || index >= n) return e;
+    c.sections.erase (c.sections.begin() + index);
+    e.oldToNew.resize ((size_t) n); for (int i = 0; i < n; ++i) e.oldToNew[(size_t) i] = i < index ? i : i == index ? -1 : i - 1; e.ok = true; return e;
+}
+ChartEdit renameSection (Chart& c, int index, const std::string& name) {
+    ChartEdit e; const int n = (int) c.sections.size(); if (index < 0 || index >= n || trim (name).empty()) return e;
+    labelNew (c.sections[(size_t) index], name); e.oldToNew.resize ((size_t) n); for (int i = 0; i < n; ++i) e.oldToNew[(size_t) i] = i; e.ok = true; return e;
+}
+void remapArrangement (std::vector<std::string>& tokens, const Chart& before, const Chart& after, const std::vector<int>& oldToNew) {
+    if (tokens.empty() || oldToNew.empty()) return;
+    std::vector<std::string> out;
+    for (auto& t : tokens) {
+        const int i = resolveArrangementToken (before, t);
+        if (i < 0 || i >= (int) oldToNew.size()) { out.push_back (t); continue; }
+        const int j = oldToNew[(size_t) i]; if (j < 0 || j >= (int) after.sections.size()) continue;
+        const auto& s = after.sections[(size_t) j];
+        out.push_back (resolveArrangementToken (after, s.label) == j ? s.label : s.name);
+    }
+    tokens.swap (out);
+}
+void commitChartEdit (Library& lib, const std::string& songId, const Chart& before, Chart after, const std::vector<int>& oldToNew) {
+    Song* s = lib.song (songId); if (! s) return;
+    applySectionColors (after, lib.settings.sectionColors);
+    auto songTokens = before.arrangement; remapArrangement (songTokens, before, after, oldToNew); after.arrangement = songTokens;
+    for (auto& set : lib.setlists) for (auto& e : set.entries) if (e.songId == songId && ! e.arrangement.empty()) remapArrangement (e.arrangement, before, after, oldToNew);
+    s->chart = std::move (after);
+}
+std::vector<TabPart> parseTabText (const std::string& text) {
+    struct Acc { std::string title; std::vector<std::string> strings; };
+    std::vector<Acc> parts; Acc cur;
+    auto flush = [&] { if (! cur.strings.empty()) { if (cur.title.empty()) cur.title = "Tab"; parts.push_back (cur); } cur.strings.clear(); };
+    std::istringstream is (text); std::string ln;
+    while (std::getline (is, ln)) {
+        if (! ln.empty() && ln.back() == '\r') ln.pop_back();
+        std::string t = trim (ln);
+        if (t.empty()) { flush(); continue; }
+        if (isTabLine (t)) cur.strings.push_back (t);
+        else { flush(); cur.title = t; }
+    }
+    flush();
+    std::vector<TabPart> out;
+    for (auto& p : parts) {
+        if ((int) p.strings.size() >= 12 && p.strings.size() % 6 == 0) {
+            for (size_t i = 0; i < p.strings.size(); i += 6) {
+                TabPart part; part.title = p.title + (i == 0 ? std::string() : " " + std::to_string (i / 6 + 1));
+                part.tab.title = part.title; part.tab.strings.assign (p.strings.begin() + (long) i, p.strings.begin() + (long) i + 6); out.push_back (std::move (part));
+            }
+        } else { TabPart part; part.title = p.title; part.tab.title = p.title; part.tab.strings = p.strings; out.push_back (std::move (part)); }
+    }
+    return out;
+}
+static int tabIndexAt (const Section& s, int tabIndex) {
+    int seen = 0; for (int i = 0; i < (int) s.items.size(); ++i) if (s.items[(size_t) i].kind == ChartItem::Tab) { if (seen == tabIndex) return i; ++seen; } return -1;
+}
+int sectionTabCount (const Section& s) { int n = 0; for (auto& it : s.items) if (it.kind == ChartItem::Tab) ++n; return n; }
+bool addSectionTab (Section& s, TabBlock tab) {
+    if (tab.strings.empty()) return false; if (tab.title.empty()) tab.title = "Tab";
+    ChartItem it; it.kind = ChartItem::Tab; it.tab = std::move (tab); s.items.push_back (std::move (it)); return true;
+}
+bool removeSectionTab (Section& s, int tabIndex) { int i = tabIndexAt (s, tabIndex); if (i < 0) return false; s.items.erase (s.items.begin() + i); return true; }
+bool replaceSectionTab (Section& s, int tabIndex, TabBlock tab) {
+    int i = tabIndexAt (s, tabIndex); if (i < 0 || tab.strings.empty()) return false; if (tab.title.empty()) tab.title = s.items[(size_t) i].tab.title;
+    s.items[(size_t) i].tab = std::move (tab); return true;
+}
+
 std::vector<double> estimatePracticeMarks (const Chart& c, double bpm, double t0) {
     std::vector<double> m (c.sections.size(), -1.0); if (bpm <= 0) return m;
     int bpb = std::atoi (c.time.c_str()); if (bpb < 1 || bpb > 16) bpb = 4; double t = t0;

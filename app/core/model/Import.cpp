@@ -1,5 +1,6 @@
 #include "Import.h"
 #include <cctype>
+#include <cstring>
 #include <sstream>
 #include <map>
 #include <algorithm>
@@ -18,6 +19,19 @@ bool isChordLine (const std::string& l) {   // every token is a chord (allow "|"
         if (t.empty() || t == "-" || t == "/" || t == "%" || (t.size() >= 2 && (t[0] == 'x' || t[0] == 'X') && std::isdigit ((unsigned char) t[1]))) continue;
         if (! isChordToken (t)) return false; ++chords; }
     return chords > 0;
+}
+bool isPlainHeader (const std::string& line) {   // "Verse 2", "Verse 2 (soft)", "Chorus:", "V2" — not only [Verse 2]
+    auto t = trimS (line); if (t.empty()) return false;
+    auto paren = t.rfind ('('); if (paren != std::string::npos && t.back() == ')') t = trimS (t.substr (0, paren));
+    auto l = lowerS (t); if (! l.empty() && (l.back() == ':' || l.back() == '.')) l.pop_back(); l = trimS (l);
+    const char* words[] = { "verse", "chorus", "pre-chorus", "prechorus", "pre chorus", "bridge", "tag", "intro", "outro", "interlude", "instrumental", "ending", "turnaround", "refrain" };
+    for (auto* w : words) if (startsWithI (l, w)) {
+        std::string rest = l.size() > std::strlen (w) ? trimS (l.substr (std::strlen (w))) : std::string();
+        rest.erase (std::remove (rest.begin(), rest.end(), ' '), rest.end());
+        if (rest.empty() || std::all_of (rest.begin(), rest.end(), [] (unsigned char c) { return std::isdigit (c); })
+            || rest == "one" || rest == "two" || rest == "three" || rest == "four" || rest == "five") return true;
+    }
+    return l == "v1" || l == "v2" || l == "v3" || l == "v4" || l == "ch" || l == "ch2" || l == "pc" || l == "br";
 }
 bool isSectionTag (const std::string& l) {   // [Verse 1], [Chorus], [Pre-Chorus], [Intro], [Bridge]...
     auto t = trimS (l); if (t.size() < 3 || t.front() != '[' || t.back() != ']') return false;
@@ -51,7 +65,7 @@ std::string normalizeSharedText (const std::string& raw, std::vector<std::string
     auto lines = splitLines (s);
     // find the chart inside a shared page: from the first section tag / chord line to the last one (+ its lyric line)
     int first = -1, last = -1;
-    for (int i = 0; i < (int) lines.size(); ++i) if (isSectionTag (lines[(size_t) i]) || isChordLine (lines[(size_t) i]) || isTabLine (lines[(size_t) i])) { if (first < 0) first = i; last = i; }
+    for (int i = 0; i < (int) lines.size(); ++i) if (isSectionTag (lines[(size_t) i]) || isPlainHeader (lines[(size_t) i]) || isChordLine (lines[(size_t) i]) || isTabLine (lines[(size_t) i])) { if (first < 0) first = i; last = i; }
     if (first < 0) return s;
     int end = last; if (isChordLine (lines[(size_t) last]) && last + 1 < (int) lines.size() && ! trimS (lines[(size_t) last + 1]).empty() && ! isSectionTag (lines[(size_t) last + 1])) end = last + 1;
     // metadata above the chart (kept as ChordPro directives so the normal parser picks them up)

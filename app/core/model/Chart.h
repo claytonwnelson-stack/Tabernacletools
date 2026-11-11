@@ -39,6 +39,29 @@ std::string formatArrangement (const std::vector<std::string>&);
 int resolveArrangementToken (const Chart&, const std::string& token);       // written section index or -1
 Chart arrangedChart (const Chart&, const std::vector<std::string>& arrangement, std::vector<std::string>* unresolved = nullptr); // empty = as written
 std::string firstChord (const Chart&);
+
+// Song editor. oldToNew[i] is the section's index after the edit, or -1 if that section was removed.
+// These never change the global section-colour defaults. Renaming clears a per-section colour override
+// so the section picks up its kind's default colour.
+struct ChartEdit { bool ok = false; std::vector<int> oldToNew; };
+ChartEdit duplicateSection (Chart&, int index);
+ChartEdit splitSection (Chart&, int index, int firstLineOfNew, const std::string& newName = "New section");
+ChartEdit mergeSections (Chart&, int index);          // index and the next section become one
+ChartEdit moveSection (Chart&, int from, int to);     // `to` is the index the section occupies afterwards
+ChartEdit deleteSection (Chart&, int index);
+ChartEdit renameSection (Chart&, int index, const std::string& name);
+std::string sectionBodyText (const Section&);         // chords and lyrics, not the tabs
+bool setSectionBody (Section&, const std::string& text);
+void remapArrangement (std::vector<std::string>& tokens, const Chart& before, const Chart& after, const std::vector<int>& oldToNew);
+void commitChartEdit (Library&, const std::string& songId, const Chart& before, Chart after, const std::vector<int>& oldToNew);
+
+// Tabs pasted or imported beside the chord chart. Several snippets can sit on one section.
+struct TabPart { std::string title; TabBlock tab; };
+std::vector<TabPart> parseTabText (const std::string& text);
+int sectionTabCount (const Section&);
+bool addSectionTab (Section&, TabBlock tab);
+bool removeSectionTab (Section&, int tabIndex);
+bool replaceSectionTab (Section&, int tabIndex, TabBlock tab);
 // --- v0.7 practice track markers (marks[i] = start second of arranged section i, -1 = not marked)
 int practiceSectionAt (const std::vector<double>& marks, double sec);       // last marked section starting at or before sec; -1 none
 std::vector<double> estimatePracticeMarks (const Chart& arranged, double bpm, double firstDownbeatSec); // from bars x meter x tempo (stops at a section without bars)                                      // first chord in play order ("" if none)
