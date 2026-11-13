@@ -68,7 +68,7 @@ public:
     int version() const { return version_; }                  // bumps on every visible change
     // --- v0.7
     std::vector<std::string> arrangement() const;             // effective play order (setlist override, else song's; empty = as written)
-    void setArrangement (const std::vector<std::string>& a, bool forSetlistOnly); // edits the song (or this setlist entry) + rebuilds
+    void setArrangement (const std::vector<std::string>& a, bool forSetlistOnly, const std::vector<int>& passBars = {}); // edits the song (or this setlist entry) + rebuilds
     bool songEnded() const { return songEnded_; }             // auto-advance ran off the end (or the leader's song ended)
     bool inLastSection() const { return ! chart_.sections.empty() && secIdx_ == (int) chart_.sections.size() - 1 && pass_ >= chart_.sections.back().repeat; }
     bool showNextSong() const { return nextSongInfo().valid && (songEnded_ || (inLastSection() && pendingIdx_ < 0)); }
@@ -89,9 +89,11 @@ public:
     // beat-based auto-advance (no MIDI clock): Play starts the bar grid; sections with bars > 0 advance on bar boundaries
     bool playing() const { return playing_; }
     void setPlaying (bool p, double nowSec);
-    int beatsPerBar() const { return beatsPerBarFor (chart_.time); }
+    int beatsPerBar() const;
     double beatInSection() const { return beatPos_; }
-    int barInSection() const { return (int) (beatPos_ / beatsPerBar()) + 1; }
+    int barInSection() const { return (int) (beatPos_ / std::max (1, beatsPerBar())) + 1; }
+    int barsInSection() const { return secIdx_ >= 0 && secIdx_ < (int) chart_.sections.size() ? chart_.sections[(size_t) secIdx_].bars : 0; }
+    std::string barsCountdown() const;   // "3/8" while this section has a bar count; "" when it waits for a cue
     // capo (per song, per setlist entry override)
     int capo() const { return chart_.capo; }
     std::string capoText() const { return capoLabel (chart_.key, chart_.capo); }

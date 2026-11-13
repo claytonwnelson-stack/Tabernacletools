@@ -6,6 +6,7 @@
 #include "sync/Roster.h"
 #include "model/Projector.h"
 #include "model/Chart.h"
+#include "model/StageTools.h"
 #include "audio/Click.h"
 #include <chrono>
 #include <thread>
@@ -471,6 +472,94 @@ static void testChartConflict() {
     CHECK_EQ (blank.FL.song ("brand-new")->rigPreset, std::string ("Worship Ambient"));
 }
 
+static void testVersionSetlistPlaybackStems() {
+    CHECK (protocolCompatible (kProtocolVersion, kProtocolVersion));
+    CHECK (protocolCompatible (kProtocolVersion, 0));
+    CHECK (! protocolCompatible (kProtocolVersion, kProtocolVersion + 1));
+    CHECK_EQ (std::string (versionWarningText()), std::string ("Update Bearing Live on this iPad to join this leader"));
+
+    Band ver; ver.lead.start (ver.LL.setlists[0], 1, 0);
+    auto newer = encode ("hello", -1, Json::object().set ("name", "Future").set ("proto", kProtocolVersion + 1));
+    Msg reply; CHECK (decode (ver.leader.onFollowerLine (newer, ver.lead, ver.clock, 0), reply));
+    CHECK_EQ (reply.type, std::string ("ver"));
+    auto older = encode ("hello", -1, Json::object().set ("name", "Older").set ("proto", 1));
+    CHECK (decode (ver.leader.onFollowerLine (older, ver.lead, ver.clock, 0), reply));
+    CHECK_EQ (reply.type, std::string ("snap"));
+    ver.join (0); ver.step (0.1);
+    CHECK (ver.follower.versionWarning().empty());
+    State bad = ver.leader.capture (ver.lead, ver.clock, 0.1);
+    auto badLine = encode ("snap", ver.follower.sessionId().empty() ? 1 : 99, Json::object().set ("proto", kProtocolVersion + 1).set ("session", "future").set ("state", toJson (bad)));
+    ver.follower.onLine (badLine, ver.fol, ver.FL, ver.clock, 0.2);
+    CHECK_EQ (ver.follower.versionWarning(), std::string (versionWarningText()));
+
+    Band dirty;
+    Setlist mine; mine.date = "2026-11-01"; mine.name = "Rehearsal"; mine.entries.push_back ({ "he-who-was", "", 0, "lead" });
+    dirty.fol.loadSetlist (mine, 0, 0);
+    dirty.lead.start (dirty.LL.setlists[0], 1, 0); dirty.join (0); dirty.step (0.1);
+    CHECK (dirty.follower.setlistSaveWaiting());
+    CHECK (! dirty.follower.chartPromptWaiting());
+    dirty.follower.answerSetlistSave (true, dirty.fol, dirty.FL, dirty.clock, 0.2);
+    bool stored = false; for (auto& s : dirty.FL.setlists) if (s.date == "2026-11-01" && s.name == "Rehearsal") stored = true;
+    CHECK (stored);
+    CHECK_EQ (dirty.fol.setlist().name, std::string ("Sunday AM"));
+
+    Band skip; skip.lead.start (skip.LL.setlists[0], 1, 0); skip.join (0); skip.step (0.1);
+    CHECK (! skip.follower.setlistSaveWaiting());
+    Setlist same = skip.fol.setlist(); skip.FL.setlists.push_back (same);
+    Band kept; kept.FL.setlists.push_back (same); kept.fol.loadSetlist (same, 0, 0);
+    kept.LL.setlists[0].name = "Leader set"; kept.lead.start (kept.LL.setlists[0], 1, 0); kept.join (0); kept.step (0.1);
+    CHECK (! kept.follower.setlistSaveWaiting());
+    CHECK_EQ (kept.fol.setlist().name, std::string ("Leader set"));
+
+    Band live; live.lead.start (live.LL.setlists[0], 1, 0); live.join (0); live.step (0.1);
+    if (live.follower.chartPromptWaiting()) live.follower.answerChartPrompt (ChartImportChoice::KeepMine, true, RigImportChoice::CopyMine, live.fol, live.FL, 0.15);
+    live.fol.setPlaying (true, 0.2);
+    live.LL.song ("morning-song")->chart.sections[0].items[0].line.lyric = "changed while playing";
+    live.step (0.3);
+    CHECK (! live.follower.chartPromptWaiting());
+    CHECK_EQ (live.fol.sectionIndex(), 0);
+    live.lead.handle ({ Action::GotoSection, 1 }, 0.35); live.step (0.4);
+    CHECK (! live.follower.chartPromptWaiting());
+    CHECK (live.fol.sectionIndex() != 0);
+    live.fol.setPlaying (false, 0.5); live.step (0.6);
+    CHECK (live.follower.chartPromptWaiting());
+
+    auto parts = splitAudio ("morning-song", "Electric", "S1", "stem", "abcdefghij", 4);
+    CHECK_EQ ((int) parts.size(), 3);
+    AudioAssembler box; box.add (parts[0]); CHECK (box.progress() > 0.3f && box.progress() < 0.4f); CHECK (! box.complete());
+    box.add (parts[2]); box.add (parts[1]); CHECK (box.complete()); CHECK_EQ (box.bytes(), std::string ("abcdefghij"));
+    CHECK (sharedAudioPlayable ("", false, ""));
+    CHECK (sharedAudioPlayable ("S1", true, "S1"));
+    CHECK (! sharedAudioPlayable ("S1", false, "S1"));
+    CHECK (! sharedAudioPlayable ("S1", true, "other"));
+
+    Band audio; mt::Stem stem; stem.name = "Electric"; stem.file = "/leader/electric.wav";
+    audio.LL.song ("morning-song")->multitrack.stems.push_back (stem);
+    audio.lead.start (audio.LL.setlists[0], 1, 0); audio.join (0); audio.step (0.1);
+    CHECK (audio.FL.song ("morning-song") != nullptr);
+    CHECK_EQ (audio.FL.song ("morning-song")->leaderAudioNote, std::string ("Audio is on the leader's iPad"));
+    CHECK (audio.FL.song ("morning-song")->multitrack.empty());
+
+    Library pack = seedLibrary();
+    mt::Stem own; own.name = "Mine"; own.file = "mine.wav"; pack.songs[0].multitrack.stems.push_back (own);
+    mt::Stem borrowed; borrowed.name = "Theirs"; borrowed.file = "theirs.wav"; borrowed.sharedSession = "S1"; pack.songs[0].multitrack.stems.push_back (borrowed);
+    pack.songs[0].practice.file = "practice.wav"; pack.songs[0].practice.sharedSession = "S1";
+    const std::string bundle = exportBundle (pack, "Bearing Live", 1);
+    CHECK (bundle.find ("Theirs") == std::string::npos);
+    CHECK (bundle.find ("practice.wav") == std::string::npos);
+    CHECK (bundle.find ("Mine") != std::string::npos);
+
+    Band drive; drive.LL.settings.countIn = 0; drive.LL.settings.quantizeSections = false; drive.LL.settings.autoAdvance = true;
+    auto* song = drive.LL.song ("he-who-was"); CHECK (song != nullptr);
+    if (song) { song->autoAdvance = true; song->chart.bpm = 120; song->chart.time = "4/4"; if (! song->chart.sections.empty()) { song->chart.sections[0].bars = 1; song->chart.sections[0].time.clear(); } }
+    drive.lead.start (drive.LL.setlists[0], 0, 0); drive.join (0); drive.step (0.1);
+    drive.lead.setPlaying (true, 0.1);
+    for (int i = 2; i <= 250; ++i) drive.step (0.1 + i * 0.01);
+    CHECK (drive.lead.sectionIndex() > 0);
+    CHECK_EQ (drive.fol.sectionIndex(), drive.lead.sectionIndex());
+    CHECK (drive.fol.following());
+}
+
 int main() { setvbuf (stdout, nullptr, _IONBF, 0);
-    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp(); testClockLock(); testChartConflict();
+    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp(); testClockLock(); testChartConflict(); testVersionSetlistPlaybackStems();
     std::printf ("%d checks, %d failures\n", checks, fails); return fails ? 1 : 0; }

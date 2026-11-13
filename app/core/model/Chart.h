@@ -38,6 +38,7 @@ std::vector<std::string> parseArrangement (const std::string& text);        // "
 std::string formatArrangement (const std::vector<std::string>&);
 int resolveArrangementToken (const Chart&, const std::string& token);       // written section index or -1
 Chart arrangedChart (const Chart&, const std::vector<std::string>& arrangement, std::vector<std::string>* unresolved = nullptr); // empty = as written
+void applyPassBars (Chart& arranged, const std::vector<int>& passBars);   // passBars[i] > 0 replaces that play-order section's bars
 std::string firstChord (const Chart&);
 // Section names, chords, lyrics and tabs. Ignores colours, highlights and transpose notes.
 bool chartContentEquals (const Chart&, const Chart&);

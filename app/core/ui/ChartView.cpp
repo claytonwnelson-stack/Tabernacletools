@@ -35,7 +35,7 @@ float ChartView::drawSection (juce::Graphics& g, const Section& s, int idx, juce
     auto cue = [&] (const juce::String& t, juce::Colour c) { float w = juce::GlyphArrangement::getStringWidth (font (12, true), t) + 18; juce::Rectangle<float> r (hx, hdr.getY(), w, 20); g.setColour (c.withMultipliedAlpha (alpha)); g.fillRoundedRectangle (r, 10); g.setColour (inkOn (c)); g.setFont (font (12, true)); g.drawText (t, r, juce::Justification::centred); hx += w + 6; };
     if (song) if (auto* sc = song->sceneForSection (s)) cue ("Scene - " + juce::String (sc->name), accent (s.color));
     auto pc = L.performerCue (idx); if (! pc.empty()) cue (pc, accentText);
-    if (cur) { g.setColour (accentText); g.setFont (font (12, true)); g.drawText ("NOW", hdr, juce::Justification::centredRight); }
+    if (cur) { g.setColour (accentText); g.setFont (font (12, true)); auto count = L.barsCountdown(); g.drawText (count.empty() ? juce::String ("NOW") : juce::String (count), hdr, juce::Justification::centredRight); }
 
     float y = box.getY() + 36; const float x0 = box.getX() + 16; int shown = 0;
     for (auto& it : s.items) {

@@ -22,17 +22,19 @@ private:
     std::vector<wr::Chart> undo_; std::vector<std::vector<int>> undoOrigin_;
     std::function<void (wr::Chart)> onSave_; int sel_ = 0, splitAt_ = 1, dragFrom_ = -1, dragTo_ = -1; bool dragged_ = false;
     juce::TextEditor name_, body_; std::vector<wr::TabPart> pending_; std::unique_ptr<juce::FileChooser> files_;
-    juce::Rectangle<int> close_, save_, undoR_, list_, kindArea_, splitDec_, splitInc_, splitGo_, paste_, importB_, tabArea_;
-    std::vector<juce::Rectangle<int>> rows_, kinds_, tabRows_, partRows_;
+    juce::Rectangle<int> close_, save_, undoR_, list_, kindArea_, splitDec_, splitInc_, splitGo_, paste_, importB_, tabArea_, autoR_;
+    std::vector<juce::Rectangle<int>> rows_, kinds_, tabRows_, partRows_, passRows_;
+    std::vector<std::pair<juce::Rectangle<int>, int>> barBtns_, timeBtns_;
+    bool autoOn_ = true;
     std::vector<std::pair<juce::Rectangle<int>, int>> actions_;
 };
 
 // Full-screen overlay: the play order as chips (drag to reorder, tap for duplicate / remove), written sections to add.
 class ArrangementEditor : public juce::Component {
 public:
-    using Done = std::function<void (std::vector<std::string> tokens, int scope)>;  // scope 0 = song, 1 = this setlist item
+    using Done = std::function<void (std::vector<std::string> tokens, int scope, std::vector<int> passBars)>;  // scope 0 = song, 1 = this setlist item; passBars[i] 0 = section default
     // songId: v0.8 the SECTION COLOURS row edits this song's per-section colours (committed with either SAVE button)
-    void open (const wr::Chart& written, std::vector<std::string> tokens, bool setlistScope, Done done, std::string songId = {});
+    void open (const wr::Chart& written, std::vector<std::string> tokens, bool setlistScope, Done done, std::string songId = {}, std::vector<int> passBars = {});
     std::function<void (const std::string& songId, std::vector<std::string> customColors)> onColours;  // set by CoreEditor
     const wr::SectionColorMap* defaults = nullptr;                                                     // global kind colours (display)
     void paint (juce::Graphics&) override;
@@ -42,7 +44,7 @@ public:
 private:
     std::string tokenFor (int section) const;
     int chipAt (juce::Point<int>) const;
-    wr::Chart written_; std::vector<std::string> tok_; bool setlistScope_ = false, asWritten_ = false; Done done_;
+    wr::Chart written_; std::vector<std::string> tok_; std::vector<int> passBars_; bool setlistScope_ = false, asWritten_ = false; Done done_;
     juce::Rectangle<int> box_; std::vector<juce::Rectangle<int>> chips_; std::vector<std::pair<juce::Rectangle<int>, int>> palette_, buttons_, swatches_;
     std::string songId_; bool coloursDirty_ = false; juce::Rectangle<int> resetColours_;
     void recolour() { wr::applySectionColors (written_, defaults ? *defaults : wr::SectionColorMap()); }

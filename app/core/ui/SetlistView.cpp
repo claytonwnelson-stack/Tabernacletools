@@ -149,13 +149,14 @@ void SetlistView::entryMenu (int idx) {
     m.addItem ("Sing + play", true, e.role == "sing", [this, idx] { working_.entries[(size_t) idx].role = "sing"; repaint(); });
     // v0.7 arrangement (this set or the song) + service notes
     if (s) { auto arr = e.arrangement.empty() ? s->chart.arrangement : e.arrangement; std::string sid = s->id;
-        m.addItem ("Arrangement...  (" + juce::String (arr.empty() ? std::string ("as written") : formatArrangement (arr)) + (e.arrangement.empty() ? "" : ", this set") + ")", [this, idx, arr, sid] {
+        auto barsNow = e.arrangement.empty() ? s->chart.arrangementBars : e.arrangementBars;
+        m.addItem ("Arrangement...  (" + juce::String (arr.empty() ? std::string ("as written") : formatArrangement (arr)) + (e.arrangement.empty() ? "" : ", this set") + ")", [this, idx, arr, sid, barsNow] {
             auto* so = ed.core.store.lib.song (sid); if (! so) return;
-            ed.arrangementEditor().open (so->chart, arr, true, [this, idx, sid] (std::vector<std::string> t, int scope) {
+            ed.arrangementEditor().open (so->chart, arr, true, [this, idx, sid] (std::vector<std::string> t, int scope, std::vector<int> passBars) {
                 if (idx >= (int) working_.entries.size()) return;
-                if (scope == 1) working_.entries[(size_t) idx].arrangement = t;
-                else { if (auto* so2 = ed.core.store.lib.song (sid)) so2->chart.arrangement = t; working_.entries[(size_t) idx].arrangement.clear(); }
-                saveSet(); }, sid); });
+                if (scope == 1) { working_.entries[(size_t) idx].arrangement = t; working_.entries[(size_t) idx].arrangementBars = passBars; }
+                else { if (auto* so2 = ed.core.store.lib.song (sid)) { so2->chart.arrangement = t; so2->chart.arrangementBars = passBars; } working_.entries[(size_t) idx].arrangement.clear(); working_.entries[(size_t) idx].arrangementBars.clear(); }
+                saveSet(); }, sid, barsNow); });
         m.addItem ("Service notes... (" + juce::String ((int) e.notes.size()) + ")", [this, idx, sid] {
             auto* so = ed.core.store.lib.song (sid); if (! so || idx >= (int) working_.entries.size()) return;
             wr::ui::editServiceNotes (working_.entries[(size_t) idx].notes, so->chart, this, [this, idx] (std::vector<ServiceNote> n) { if (idx < (int) working_.entries.size()) { working_.entries[(size_t) idx].notes = n; saveSet(); } }); }); }

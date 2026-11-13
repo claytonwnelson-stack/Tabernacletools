@@ -59,6 +59,7 @@ void BandSync::poll (double now) {
         ev.pinged = [&] (long long pid) { roster_.pingSent (pid, now); };
         ev.line = [&] (int id, const std::string& l) {
             Msg m; if (decode (l, m)) roster_.line (id, m, h, leader_->seq(), clock().beatAt (now), live_.bpm(), now);
+            wr::sync::Msg got; if (wr::sync::decode (l, got) && got.type == "getaudio" && ! live_.playing()) sendLeaderAudio (id, got.body["song"].str());
             auto r = leader_->onFollowerLine (l, live_, clock(), now); if (! r.empty()) server_.send (id, r); };
         server_.poll (now, ev); leader_->tick (live_, clock(), now);
         for (auto& l : leader_->update (live_, clock(), now)) server_.broadcast (l);
@@ -70,11 +71,61 @@ void BandSync::poll (double now) {
         client_.poll (now, ev);
         if (! linkActive_.load() && follower_.clockLock().engaged()) { localClock_.b0 = follower_.clockLock().beatAt (now); localClock_.t0 = now; localClock_.bpm = follower_.clockLock().bpm(); }
         follower_.tick (live_, clock(), now);
+        if (! live_.playing()) installSharedAudio();
         if (follower_.wasKicked() && client_.attempts() >= 0) client_.disconnect();   // removed by the leader: stay off until the user rejoins
         if (! linkActive_.load() && std::abs (localClock_.tempo() - live_.bpm()) > 0.05) localClock_.setTempo (live_.bpm(), now);
-        if (! chartPromptOpen_) showChartPrompt();
+        if (! versionShown_ && ! follower_.versionWarning().empty()) { versionShown_ = true; auto text = follower_.versionWarning(); follower_.clearVersionWarning(); juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "Band sync", text); }
+        if (! live_.playing() && ! setlistPromptOpen_ && follower_.setlistSaveWaiting()) showSetlistPrompt();
+        if (! live_.playing() && ! chartPromptOpen_ && ! follower_.setlistSaveWaiting()) showChartPrompt();
     }
 }
+void BandSync::showSetlistPrompt() {
+    if (live_.playing() || ! follower_.setlistSaveWaiting()) return;
+    setlistPromptOpen_ = true;
+    auto* w = new juce::AlertWindow ("Save your setlist?", "The leader's setlist will replace the one loaded here. Save yours first?", juce::AlertWindow::QuestionIcon);
+    w->addButton ("Save", 1); w->addButton ("Don't save", 2);
+    w->enterModalState (true, juce::ModalCallbackFunction::create ([this] (int result) {
+        setlistPromptOpen_ = false;
+        follower_.answerSetlistSave (result == 1, live_, lib_, clock(), wr::sync::nowSec());
+        saveLib_ = true;
+    }), true);
+}
+void BandSync::requestLeaderAudio() {
+    if (mode_ != Mode::Following || live_.playing()) return;
+    const auto& set = live_.setlist();
+    std::string song = live_.songIndex() >= 0 && live_.songIndex() < (int) set.entries.size() ? set.entries[(size_t) live_.songIndex()].songId : std::string();
+    client_.send (encode ("getaudio", -1, Json::object().set ("song", song)));
+}
+void BandSync::sendLeaderAudio (int followerId, const std::string& songId) {
+    if (live_.playing()) return;
+    auto hexOf = [] (const std::string& in) { static const char* h = "0123456789abcdef"; std::string o; o.resize (in.size() * 2); for (size_t i = 0; i < in.size(); ++i) { auto c = (unsigned char) in[i]; o[i * 2] = h[c >> 4]; o[i * 2 + 1] = h[c & 15]; } return o; };
+    auto sendFile = [&] (const std::string& id, const std::string& name, const std::string& kind, const juce::File& file) {
+        if (! file.existsAsFile()) return;
+        juce::MemoryBlock mb; if (! file.loadFileAsData (mb) || mb.getSize() == 0) return;
+        auto chunks = wr::sync::splitAudio (id, name, leader_->sessionId(), kind, std::string ((const char*) mb.getData(), mb.getSize()), 24 * 1024);
+        for (auto& c : chunks) server_.send (followerId, wr::sync::encode ("audio", -1, Json::object().set ("song", c.songId).set ("name", c.name).set ("session", c.session).set ("kind", c.kind).set ("i", c.index).set ("n", c.count).set ("data", hexOf (c.data))));
+    };
+    auto one = [&] (const Song& s) {
+        for (auto& st : s.multitrack.stems) sendFile (s.id, st.name.empty() ? st.id : st.name, "stem", juce::File (st.file));
+        if (! s.practice.file.empty()) sendFile (s.id, "Practice", "practice", juce::File (s.practice.file));
+    };
+    if (! songId.empty()) { if (auto* s = lib_.song (songId)) one (*s); return; }
+    for (auto& e : live_.setlist().entries) if (auto* s = lib_.song (e.songId)) one (*s);
+}
+void BandSync::installSharedAudio() {
+    wr::sync::AudioChunk done;
+    while (follower_.takeFinishedAudio (done)) {
+        auto* s = lib_.song (done.songId); if (! s || done.data.empty()) continue;
+        auto dir = juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory).getChildFile ("BearingLive").getChildFile ("SharedAudio").getChildFile (done.session).getChildFile (done.songId);
+        dir.createDirectory();
+        auto file = dir.getChildFile (juce::File::createLegalFileName (done.name.empty() ? done.kind : done.name) + ".wav");
+        file.replaceWithData (done.data.data(), done.data.size());
+        if (done.kind == "practice") { s->practice.file = file.getFullPathName().toStdString(); s->practice.sharedSession = done.session; }
+        else { mt::Stem st; st.id = done.name; st.name = done.name; st.file = file.getFullPathName().toStdString(); st.sharedSession = done.session; s->multitrack.stems.push_back (st); }
+        s->leaderAudioNote.clear(); saveLib_ = true;
+    }
+}
+std::string BandSync::sessionId() const { if (mode_ == Mode::Leading && leader_) return leader_->sessionId(); if (mode_ == Mode::Following) return follower_.sessionId(); return {}; }
 void BandSync::showChartPrompt() {
     if (! follower_.chartPromptWaiting()) return;
     auto p = follower_.chartPrompt();

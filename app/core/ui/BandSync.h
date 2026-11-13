@@ -41,6 +41,9 @@ public:
     std::string statusLine() const;
     std::string clockStatus() const;
     bool takeLibrarySave() { bool d = saveLib_; saveLib_ = false; return d; }
+    std::string sessionId() const;
+    void requestLeaderAudio();
+    float leaderAudioProgress() const { return follower_.audioProgress(); }
     bool useLink = true;
     // v0.14 backing tracks: leader publishes its transport; followers read the leader's
     void setTracksTransport (const wr::mt::Transport& t) { if (leader_) leader_->setTransport (t); }
@@ -57,6 +60,9 @@ private:
     std::unique_ptr<wr::sync::LinkClock> link_; std::atomic<wr::sync::LinkClock*> linkRt_ { nullptr }; std::atomic<bool> linkActive_ { false };
     void showChartPrompt();
     void showRigPrompt (wr::sync::ChartImportChoice choice, bool applyAll);
+    void showSetlistPrompt();
+    void sendLeaderAudio (int followerId, const std::string& songId);
+    void installSharedAudio();
     std::string host_; int port_ = 0; wr::sync::Roster roster_;
-    bool chartPromptOpen_ = false, saveLib_ = false;
+    bool chartPromptOpen_ = false, setlistPromptOpen_ = false, versionShown_ = false, saveLib_ = false;
 };

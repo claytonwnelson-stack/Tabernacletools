@@ -184,6 +184,8 @@ bool CoreProcessor::loadPracticeTrack() {
     auto* s = practiceSong(); practice.play (false);
     practiceSongId_ = s ? s->id : std::string();
     if (! s || s->practice.file.empty()) { practice.setTrack (nullptr); practiceAudio_.reset(); return false; }
+    if (! wr::sync::sharedAudioPlayable (s->practice.sharedSession, sync_->mode() == BandSync::Mode::Following, sync_->sessionId())) {
+        status = "Practice audio plays only while connected to the leader"; practice.setTrack (nullptr); practiceAudio_.reset(); return false; }
     juce::File f (s->practice.file); if (! f.existsAsFile()) { status = "Practice track missing: " + f.getFileName(); practice.setTrack (nullptr); return false; }
     juce::AudioFormatManager fm; fm.registerBasicFormats();   // wav / aiff everywhere; mp3 / m4a via CoreAudio on iOS + Mac
     std::unique_ptr<juce::AudioFormatReader> r (fm.createReaderFor (f));

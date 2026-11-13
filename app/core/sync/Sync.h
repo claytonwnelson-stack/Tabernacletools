@@ -29,7 +29,11 @@
 namespace wr::sync {
 
 constexpr int kProtocolVersion = 1;
+constexpr int kAppVersion = 11;
 constexpr int kDefaultPort = 52741;
+// A newer leader than this build is incompatible. An older or equal leader is fine, and says nothing.
+inline bool protocolCompatible (int localProto, int remoteProto) { if (remoteProto <= 0) remoteProto = 1; return remoteProto <= localProto; }
+inline const char* versionWarningText() { return "Update Bearing Live on this iPad to join this leader"; }
 inline const char* serviceType() { return "_tabernacle._tcp"; }
 
 // The shared beat timeline. App: Ableton Link (Source/LinkClock.h). Tests: FakeClock.
@@ -62,11 +66,32 @@ enum class RigImportChoice { CopyMine = 1, Fresh = 2 };
 std::string sharedChartTitle (const Library&, const std::string& title);   // "Title (shared)", then "Title (shared 2)"
 // Leader section index -> a section on the follower's chart. Match name (nth time), then clamp.
 int mapLeaderSection (const Chart& local, const std::vector<std::string>& leaderNames, int leaderIndex);
+bool setlistNeedsSave (const Library& lib, const Setlist& current);   // false when empty or already stored unchanged
+// Shared leader audio plays only while connected to that session. An empty tag is the follower's own file.
+inline bool sharedAudioPlayable (const std::string& sharedSession, bool connected, const std::string& currentSession) {
+    return sharedSession.empty() || (connected && ! currentSession.empty() && sharedSession == currentSession);
+}
+struct AudioChunk { std::string songId, name, session, kind; int index = 0, count = 0; std::string data; };
+std::vector<AudioChunk> splitAudio (const std::string& songId, const std::string& name, const std::string& session, const std::string& kind, const std::string& bytes, size_t chunkBytes);
+struct AudioAssembler {
+    void add (const AudioChunk&);
+    float progress() const { return count_ <= 0 ? 0 : (float) got_ / (float) count_; }
+    bool complete() const { return count_ > 0 && got_ == count_; }
+    const std::string& bytes() const { return data_; }
+    const std::string& session() const { return session_; }
+    const std::string& name() const { return name_; }
+    const std::string& songId() const { return songId_; }
+    const std::string& kind() const { return kind_; }
+private:
+    std::string songId_, name_, session_, kind_, data_; int count_ = 0, got_ = 0; std::vector<char> have_; std::vector<std::string> parts_;
+};
 
 // ---------------------------------------------------------------- shared state (snapshot)
 struct SongRef { Song song; std::string key; double bpm = 0;       // leader's song (chart + leader's sounding key + tempo)
                  std::vector<std::string> arrangement;              // v0.7 effective play order (so section indices match)
-                 std::vector<ServiceNote> notes; };                 // v0.7 service notes for this setlist item
+                 std::vector<int> passBars;                         // bars for each arrangement pass (0 = the section's own count)
+                 std::vector<ServiceNote> notes;                    // v0.7 service notes for this setlist item
+                 std::vector<std::string> leaderStemNames; bool leaderPractice = false; };
 struct State {
     std::string setlistName, setlistDate; std::vector<SongRef> songs;
     int songIndex = 0, sectionIndex = 0, pass = 1;
@@ -157,6 +182,14 @@ public:
     // choice applies to the first queued song, or to every queued song when applyAll is set.
     // rig is ignored for KeepMine. CopyMine is the default the UI offers.
     void answerChartPrompt (ChartImportChoice choice, bool applyAll, RigImportChoice rig, LiveSession& live, Library& lib, double now);
+    bool setlistSaveWaiting() const { return haveSaveWait_; }
+    void answerSetlistSave (bool save, LiveSession& live, Library& lib, const BeatClock& clock, double now);
+    const std::string& versionWarning() const { return versionWarn_; }
+    void clearVersionWarning() { versionWarn_.clear(); }
+    const std::string& sessionId() const { return session_; }
+    // Leader audio offer. Empty until a transfer finishes. progress is 0..1 while chunks arrive.
+    float audioProgress() const { return audio_.progress(); }
+    bool takeFinishedAudio (AudioChunk& out);   // one completed file (stem or practice)
 private:
     void applySnapshot (const State& st, LiveSession& live, Library& lib, const BeatClock& clock, double now);
     void applyCue (int idx, int pass, double cueBeat, double dueBeat, LiveSession& live, const BeatClock& clock, double now);
@@ -173,6 +206,13 @@ private:
     std::vector<std::vector<std::string>> leaderNames_;
     std::vector<char> leaderMatch_;
     int leaderSection_ = 0, leaderPass_ = 1;
+    bool haveDeferred_ = false, haveSaveWait_ = false, skipSaveCheck_ = false, haveApplied_ = false;
+    Setlist lastApplied_;
+    State deferred_, saveWait_;
+    Library* libHold_ = nullptr;
+    std::string versionWarn_;
+    AudioAssembler audio_;
+    std::vector<AudioChunk> finishedAudio_;
 };
 
 // fixed-tempo shared timeline for tests (and for "no Link" fallback: beats from local time at the leader's tempo)

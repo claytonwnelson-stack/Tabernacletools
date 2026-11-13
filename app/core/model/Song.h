@@ -26,6 +26,7 @@ struct Section {
     std::string customColor; // v0.8 per-song override ("" = use the kind default). ChordPro {x_section_color: Verse 1=teal}
     int repeat = 1;        // "x2"
     int bars = 0;          // length in bars for beat-based auto-advance (0 = manual only)
+    std::string time;      // per-section meter ("6/8"); empty = the song's time signature
     std::vector<ChartItem> items;
     int occurrence = 1;    // v0.7 arrangement: 2nd, 3rd... time this section is played in the arranged order ("Chorus again")
     int source = -1;       // index of the written section this copy came from (-1 = not arranged)
@@ -37,10 +38,11 @@ inline double clampBpm (double b) { if (! (b == b) || b <= 0) return 0; b = b < 
 inline int countInBeats (int code, int beatsPerBar) { return code >= 101 && code <= 104 ? (code - 100) * beatsPerBar : code < 0 ? 0 : code; }
 
 struct Chart { std::string title, artist, key; double bpm = 0; std::string time; int capo = 0; /* key = sounding key; capo > 0 -> chords shown as shapes */ std::vector<Section> sections; std::vector<std::string> warnings;
-               std::vector<std::string> arrangement; /* v0.7: play order as section tokens ("V1 C V2 C B C C"); empty = as written. ChordPro {arrangement: ...} */ };
+               std::vector<std::string> arrangement; /* v0.7: play order as section tokens ("V1 C V2 C B C C"); empty = as written. ChordPro {arrangement: ...} */
+               std::vector<int> arrangementBars; /* parallel to arrangement: bars for that pass, 0 = the written section's bars */ };
 
 // v0.7 practice track: an audio file per song + where each arranged section starts in it (seconds, -1 = not marked)
-struct PracticeTrack { std::string file; std::vector<double> marks; bool empty() const { return file.empty(); } };
+struct PracticeTrack { std::string file; std::vector<double> marks; std::string sharedSession; bool empty() const { return file.empty(); } };
 
 // ---------------------------------------------------------------- rig + scenes
 struct PedalDef { std::string uid, type; bool enabled = false; std::map<std::string, float> params; std::string file; }; // file: v0.10 user IR path (amp/cab)
@@ -57,11 +59,13 @@ struct Song {
     SwitchAssign switchC, switchD;
     std::map<std::string, std::string> cues;
     bool clickDefault = false;                                                 // click on when this song loads
+    bool autoAdvance = true;                                                   // this song moves on when a section's bars elapse (still needs the global switch)
     int countIn = -1;                                                          // -1 = global setting; else as AppSettings::countIn
     // v0.15 CCLI details (optional; for the usage log the user enters on CCLI's site by hand - nothing is sent anywhere)
     struct Ccli { std::string number, title, authors; bool publicDomain = false; /* built-in hymns: PD, excluded from exports by default */ } ccli;
     mt::MultitrackSet multitrack;                                              // v0.14 backing-track stems (files stay on this device; mutes remembered)
     PracticeTrack practice;                                                    // v0.7 (library only; the file stays on this device)
+    std::string leaderAudioNote;                                               // "Audio is on the leader's iPad" when stems were not copied here
     const Scene* scene (const std::string& n) const { for (auto& s : scenes) if (s.name == n) return &s; return nullptr; }
     const Scene* sceneForSection (const Section& s) const;
 };
@@ -72,6 +76,7 @@ struct Song {
 struct ServiceNote { std::string text, at = "start"; bool operator== (const ServiceNote& o) const { return text == o.text && at == o.at; } };
 struct SetlistEntry { std::string songId; std::string keyOverride; double bpmOverride = 0; std::string role = "lead"; int capoOverride = -1; // role: lead / sing / both
                       std::vector<std::string> arrangement;   // v0.7: per-setlist arrangement override (empty = song's)
+                      std::vector<int> arrangementBars;       // parallel to arrangement; 0 = the written section's bars
                       std::vector<ServiceNote> notes; };      // v0.7
 // a musician on the team: their own key (e.g. a capo player or a different sounding key) per song, used for exports
 struct PlayerPart { std::string key; int capo = -1; };                         // key "" = setlist key; capo -1 = player default

@@ -66,8 +66,10 @@ void CoreEditor::openSongEditor (const std::string& songId, std::function<void()
 void CoreEditor::openLiveArrangement() {
     if (! requireAccess (wr::Feature::Edit)) return;
     auto& L = core.live(); auto* s = L.song(); if (! s) return;
-    arr_->open (s->chart, L.arrangement(), true, [this] (std::vector<std::string> t, int scope) {
-        core.live().setArrangement (t, scope == 1); core.store.save(); if (core.practiceMode()) core.loadPracticeTrack(); }, s->id);
+    const auto& ent = L.songIndex() >= 0 && L.songIndex() < (int) L.setlist().entries.size() ? L.setlist().entries[(size_t) L.songIndex()] : SetlistEntry();
+    auto bars = ent.arrangement.empty() ? s->chart.arrangementBars : ent.arrangementBars;
+    arr_->open (s->chart, L.arrangement(), true, [this] (std::vector<std::string> t, int scope, std::vector<int> passBars) {
+        core.live().setArrangement (t, scope == 1, passBars); core.store.save(); if (core.practiceMode()) core.loadPracticeTrack(); }, s->id, bars);
 }
 void CoreEditor::chooseStems() {
     if (! requireAccess (wr::Feature::Import)) return;

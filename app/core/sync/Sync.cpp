@@ -10,7 +10,10 @@ Json toJson (const State& s) {
     Json songs = Json::array();
     for (auto& r : s.songs) { Json ar = Json::array(), ns = Json::array(); for (auto& t : r.arrangement) ar.push (t);
         for (auto& n : r.notes) ns.push (Json::object().set ("text", n.text).set ("at", n.at));
-        songs.push (Json::object().set ("song", wr::toJson (r.song)).set ("key", r.key).set ("bpm", r.bpm).set ("arr", ar).set ("notes", ns)); }
+        Json audio = Json::array(); for (auto& n : r.leaderStemNames) audio.push (n);
+        Json pb = Json::array(); for (int b : r.passBars) pb.push (b);
+        songs.push (Json::object().set ("song", wr::toJson (r.song)).set ("key", r.key).set ("bpm", r.bpm).set ("arr", ar).set ("notes", ns)
+            .set ("passBars", pb).set ("audioStems", audio).set ("audioPractice", r.leaderPractice)); }
     return Json::object().set ("v", kProtocolVersion).set ("setlist", s.setlistName).set ("date", s.setlistDate).set ("songs", songs)
         .set ("song", s.songIndex).set ("section", s.sectionIndex).set ("pass", s.pass)
         .set ("pending", s.pendingIdx).set ("pendingPass", s.pendingPass).set ("cueBeat", s.cueBeat).set ("dueBeat", s.dueBeat)
@@ -21,7 +24,10 @@ State stateFromJson (const Json& j) {
     State s; s.setlistName = j["setlist"].str(); s.setlistDate = j["date"].str();
     for (auto& o : j["songs"].items()) { SongRef r; r.song = songFromJson (o["song"]); r.key = o["key"].str(); r.bpm = o["bpm"].num();
         for (auto& t : o["arr"].items()) r.arrangement.push_back (t.str());
+        for (auto& b : o["passBars"].items()) r.passBars.push_back (b.integer());
         for (auto& n : o["notes"].items()) r.notes.push_back ({ n["text"].str(), n["at"].str ("start") });
+        for (auto& n : o["audioStems"].items()) r.leaderStemNames.push_back (n.str());
+        r.leaderPractice = o["audioPractice"].boolean();
         s.songs.push_back (std::move (r)); }
     s.songIndex = j["song"].integer(); s.sectionIndex = j["section"].integer(); s.pass = j["pass"].integer (1);
     s.pendingIdx = j["pending"].integer (-1); s.pendingPass = j["pendingPass"].integer (1); s.cueBeat = j["cueBeat"].num(); s.dueBeat = j["dueBeat"].num();
@@ -59,11 +65,16 @@ State Leader::capture (const LiveSession& live, const BeatClock&, double) const 
     State s; const auto& set = live.setlist(); const Library& lib = live.library();
     s.setlistName = set.name; s.setlistDate = set.date;
     for (auto& e : set.entries) {
-        SongRef r; if (auto* so = const_cast<Library&> (lib).song (e.songId)) r.song = *so; else r.song.id = e.songId;
+        SongRef r; if (auto* so = const_cast<Library&> (lib).song (e.songId)) {
+            r.song = *so;
+            for (auto& st : so->multitrack.stems) if (! st.name.empty()) r.leaderStemNames.push_back (st.name);
+            r.leaderPractice = ! so->practice.file.empty();
+        } else r.song.id = e.songId;
         r.key = e.keyOverride.empty() ? r.song.chart.key : e.keyOverride; r.bpm = e.bpmOverride > 0 ? e.bpmOverride : r.song.chart.bpm;
-        r.arrangement = e.arrangement.empty() ? r.song.chart.arrangement : e.arrangement; r.notes = e.notes;
+        r.arrangement = e.arrangement.empty() ? r.song.chart.arrangement : e.arrangement;
+        r.passBars = e.arrangement.empty() ? r.song.chart.arrangementBars : e.arrangementBars; r.notes = e.notes;
         r.song.practice = PracticeTrack();   // the audio file stays on the leader's device
-        r.song.multitrack = mt::MultitrackSet(); // v0.14 stems stay on the leader too: followers only follow the transport
+        r.song.multitrack = mt::MultitrackSet(); // names travel in leaderStemNames; the bytes are a separate transfer
         s.songs.push_back (std::move (r));
     }
     s.songIndex = live.songIndex(); s.sectionIndex = live.sectionIndex(); s.pass = live.pass();
@@ -75,7 +86,7 @@ State Leader::capture (const LiveSession& live, const BeatClock&, double) const 
 static bool sameSetlist (const State& a, const State& b) {
     if (a.setlistDate != b.setlistDate || a.setlistName != b.setlistName || a.songs.size() != b.songs.size()) return false;
     for (size_t i = 0; i < a.songs.size(); ++i) if (a.songs[i].song.id != b.songs[i].song.id || a.songs[i].key != b.songs[i].key
-        || a.songs[i].arrangement != b.songs[i].arrangement || ! (a.songs[i].notes == b.songs[i].notes)) return false;
+        || a.songs[i].arrangement != b.songs[i].arrangement || a.songs[i].passBars != b.songs[i].passBars || ! (a.songs[i].notes == b.songs[i].notes)) return false;
     if (a.sectionColors != b.sectionColors) return false;   // v0.8: colour edits on the leader re-send the snapshot
     for (size_t i = 0; i < a.songs.size(); ++i) {
         if (! chartContentEquals (a.songs[i].song.chart, b.songs[i].song.chart)) return false;   // chords, lyrics, tabs, section names
@@ -93,7 +104,7 @@ std::vector<std::string> Leader::update (const LiveSession& live, BeatClock& clo
     }
     State s = capture (live, clock, now);
     if (! have_) { last_ = s; have_ = true; return out; }
-    if (! sameSetlist (s, last_)) { out.push_back (encode ("snap", ++seq_, Json::object().set ("session", session_).set ("state", toJson (s)).set ("mt", mt::toJson (mt_)))); last_ = s; lastMt_ = mt_; announcedPlay_ = s.playing; return out; }
+    if (! sameSetlist (s, last_)) { out.push_back (encode ("snap", ++seq_, Json::object().set ("session", session_).set ("state", toJson (s)).set ("mt", mt::toJson (mt_)).set ("proto", kProtocolVersion).set ("app", kAppVersion))); last_ = s; lastMt_ = mt_; announcedPlay_ = s.playing; return out; }
     if (s.songIndex != last_.songIndex) out.push_back (ev ("song", Json::object().set ("song", s.songIndex)));
     if (std::abs (s.bpm - last_.bpm) >= 0.05) out.push_back (ev ("tempo", Json::object().set ("bpm", s.bpm)));
     if (s.pendingIdx >= 0 && (s.pendingIdx != last_.pendingIdx || s.pendingPass != last_.pendingPass || s.cueBeat != last_.cueBeat))
@@ -119,11 +130,15 @@ void Leader::tick (LiveSession& live, const BeatClock& clock, double now) {
 }
 std::string Leader::snapshotLine (const LiveSession& live, const BeatClock& clock, double now) {
     State s = capture (live, clock, now); s.playing = live.playing() || playPending_;
-    return encode ("snap", seq_, Json::object().set ("session", session_).set ("state", toJson (s)).set ("mt", mt::toJson (mt_)));
+    return encode ("snap", seq_, Json::object().set ("session", session_).set ("state", toJson (s)).set ("mt", mt::toJson (mt_)).set ("proto", kProtocolVersion).set ("app", kAppVersion));
 }
 std::string Leader::onFollowerLine (const std::string& line, const LiveSession& live, const BeatClock& clock, double now) {
     Msg m; if (! decode (line, m)) return {};
-    if (m.type == "hello" || m.type == "resync") return snapshotLine (live, clock, now);
+    if (m.type == "hello" || m.type == "resync") {
+        const int remote = m.body.has ("proto") ? m.body["proto"].integer() : kProtocolVersion;
+        if (! protocolCompatible (kProtocolVersion, remote)) return encode ("ver", -1, Json::object().set ("ok", false).set ("proto", kProtocolVersion).set ("app", kAppVersion));
+        return snapshotLine (live, clock, now);
+    }
     if (m.type == "clk") return encode ("clk", -1, Json::object().set ("id", m.body["id"].num()).set ("t1", m.body["t1"].num()).set ("t2", now).set ("t3", now).set ("beat", clock.beatAt (now)).set ("bpm", clock.tempo()));
     return {};
 }
@@ -132,7 +147,7 @@ std::string Leader::onFollowerLine (const std::string& line, const LiveSession& 
 void Follower::onConnected() {
     connected_ = true; discAt_ = -1; haveSnap_ = false; wantSnap_ = true;
     kicked_ = false; lastHb_ = -1; lastClk_ = -1; lock_.reset();
-    send_ (encode ("hello", -1, Json::object().set ("name", name_).set ("role", role).set ("last", (double) last_).set ("session", session_)));
+    send_ (encode ("hello", -1, Json::object().set ("name", name_).set ("role", role).set ("last", (double) last_).set ("session", session_).set ("proto", kProtocolVersion).set ("app", kAppVersion)));
 }
 void Follower::onDisconnected (double now) { if (connected_ || discAt_ < 0) discAt_ = now; connected_ = false; haveSnap_ = false; }
 std::string Follower::banner (double) const {
@@ -181,6 +196,41 @@ std::string freshSharedId (Library& lib, const std::string& base) {
 }
 Song withoutLeaderRig (Song s) { clearFollowerRig (s); s.multitrack = {}; s.practice = {}; return s; }
 }
+static bool setlistBodyEquals (const Setlist& a, const Setlist& b) {
+    if (a.name != b.name || a.date != b.date || a.entries.size() != b.entries.size()) return false;
+    for (size_t i = 0; i < a.entries.size(); ++i) {
+        const auto& x = a.entries[i]; const auto& y = b.entries[i];
+        if (x.songId != y.songId || x.keyOverride != y.keyOverride || x.bpmOverride != y.bpmOverride || x.role != y.role || x.capoOverride != y.capoOverride || x.arrangement != y.arrangement || x.arrangementBars != y.arrangementBars || ! (x.notes == y.notes)) return false;
+    }
+    return true;
+}
+bool setlistNeedsSave (const Library& lib, const Setlist& current) {
+    if (current.entries.empty()) return false;
+    for (auto& s : lib.setlists) if (s.date == current.date && setlistBodyEquals (s, current)) return false;
+    return true;
+}
+static bool setlistIdentityChanged (const Setlist& cur, const State& st) {
+    if (cur.name != st.setlistName || cur.date != st.setlistDate || cur.entries.size() != st.songs.size()) return true;
+    for (size_t i = 0; i < st.songs.size(); ++i) if (cur.entries[i].songId != st.songs[i].song.id) return true;
+    return false;
+}
+std::vector<AudioChunk> splitAudio (const std::string& songId, const std::string& name, const std::string& session, const std::string& kind, const std::string& bytes, size_t chunkBytes) {
+    if (chunkBytes < 1) chunkBytes = 1;
+    const int n = std::max (1, (int) ((bytes.size() + chunkBytes - 1) / chunkBytes));
+    std::vector<AudioChunk> out;
+    for (int i = 0; i < n; ++i) {
+        AudioChunk c; c.songId = songId; c.name = name; c.session = session; c.kind = kind; c.index = i; c.count = n;
+        const size_t off = (size_t) i * chunkBytes; c.data = off < bytes.size() ? bytes.substr (off, chunkBytes) : std::string();
+        out.push_back (std::move (c));
+    }
+    return out;
+}
+void AudioAssembler::add (const AudioChunk& c) {
+    if (count_ == 0) { songId_ = c.songId; name_ = c.name; session_ = c.session; kind_ = c.kind; count_ = std::max (1, c.count); have_.assign ((size_t) count_, 0); parts_.assign ((size_t) count_, {}); }
+    if (c.index < 0 || c.index >= count_ || have_[(size_t) c.index]) return;
+    have_[(size_t) c.index] = 1; parts_[(size_t) c.index] = c.data; ++got_;
+    if (complete()) { data_.clear(); for (auto& p : parts_) data_ += p; }
+}
 std::string sharedChartTitle (const Library& lib, const std::string& title) {
     auto taken = [&] (const std::string& t) { for (auto& s : lib.songs) if (s.chart.title == t) return true; return false; };
     const std::string base = title + " (shared)"; if (! taken (base)) return base;
@@ -216,6 +266,17 @@ Follower::ChartPrompt Follower::chartPrompt() const {
     ChartPrompt p; if (chartQueue_.empty()) return p;
     p.songId = chartQueue_.front().leader.id; p.title = chartQueue_.front().leader.chart.title; p.remaining = (int) chartQueue_.size() - 1; return p;
 }
+void Follower::answerSetlistSave (bool save, LiveSession& live, Library& lib, const BeatClock& clock, double now) {
+    if (! haveSaveWait_) return;
+    if (save) {
+        auto cur = live.setlist(); bool found = false;
+        for (auto& s : lib.setlists) if (s.date == cur.date) { s = cur; found = true; break; }
+        if (! found) lib.setlists.push_back (cur);
+    }
+    auto st = saveWait_; haveSaveWait_ = false; skipSaveCheck_ = true;
+    applySnapshot (st, live, lib, clock, now); skipSaveCheck_ = false;
+}
+bool Follower::takeFinishedAudio (AudioChunk& out) { if (finishedAudio_.empty()) return false; out = std::move (finishedAudio_.front()); finishedAudio_.erase (finishedAudio_.begin()); return true; }
 void Follower::answerChartPrompt (ChartImportChoice choice, bool applyAll, RigImportChoice rig, LiveSession& live, Library& lib, double now) {
     if (chartQueue_.empty()) return;
     std::vector<QueuedChart> batch; batch.push_back (std::move (chartQueue_.front())); chartQueue_.erase (chartQueue_.begin());
@@ -247,6 +308,10 @@ void Follower::answerChartPrompt (ChartImportChoice choice, bool applyAll, RigIm
     if (live.song()) live.followSection (mapSection (live, leaderSection_), leaderPass_, now);
 }
 void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, const BeatClock& clock, double now) {
+    libHold_ = &lib;
+    if (live.playing()) { deferred_ = st; haveDeferred_ = true; return; }   // setup changes wait until the song stops
+    const bool unchanged = haveApplied_ && setlistBodyEquals (live.setlist(), lastApplied_);
+    if (! skipSaveCheck_ && setlistIdentityChanged (live.setlist(), st) && setlistNeedsSave (lib, live.setlist()) && ! unchanged) { saveWait_ = st; haveSaveWait_ = true; return; }
     leaderSection_ = st.sectionIndex; leaderPass_ = st.pass;
     leaderNames_.clear(); leaderMatch_.clear();
     Setlist set; set.name = st.setlistName; set.date = st.setlistDate;
@@ -273,7 +338,9 @@ void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, 
             }
         }
         leaderNames_.push_back (std::move (names)); leaderMatch_.push_back (matched ? 1 : 0);
-        SetlistEntry e; e.songId = useId; e.bpmOverride = r.bpm; e.arrangement = r.arrangement; e.notes = r.notes;
+        if (auto* noted = lib.song (useId)) if ((! r.leaderStemNames.empty() || r.leaderPractice) && noted->multitrack.empty() && noted->practice.file.empty())
+            noted->leaderAudioNote = "Audio is on the leader's iPad";
+        SetlistEntry e; e.songId = useId; e.bpmOverride = r.bpm; e.arrangement = r.arrangement; e.arrangementBars = r.passBars; e.notes = r.notes;
         auto lk = localKey.find (r.song.id);
         if (lk != localKey.end() && ! followLeaderKey) { e.keyOverride = lk->second.first; e.capoOverride = lk->second.second; } else e.keyOverride = r.key;
         set.entries.push_back (e);
@@ -283,8 +350,9 @@ void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, 
         live.setFollowColors (st.sectionColors, per); }
     const auto& cur = live.setlist(); bool same = cur.date == set.date && cur.name == set.name && cur.entries.size() == set.entries.size();
     for (size_t i = 0; same && i < set.entries.size(); ++i) same = cur.entries[i].songId == set.entries[i].songId && cur.entries[i].keyOverride == set.entries[i].keyOverride
-        && cur.entries[i].arrangement == set.entries[i].arrangement && cur.entries[i].notes == set.entries[i].notes;
+        && cur.entries[i].arrangement == set.entries[i].arrangement && cur.entries[i].arrangementBars == set.entries[i].arrangementBars && cur.entries[i].notes == set.entries[i].notes;
     if (! same) live.loadSetlist (set, st.songIndex, now); else live.followSong (st.songIndex, now);
+    lastApplied_ = live.setlist(); haveApplied_ = true;
     if (std::abs (live.bpm() - st.bpm) >= 0.05) live.setBpm (st.bpm);
     cue_.active = false;
     { const int mapped = mapSection (live, st.sectionIndex);
@@ -299,10 +367,27 @@ void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, 
 }
 void Follower::onLine (const std::string& line, LiveSession& live, Library& lib, const BeatClock& clock, double now) {
     Msg m; if (! decode (line, m)) return; const Json& j = m.body;
+    libHold_ = &lib;
     if (m.type == "kick") { kicked_ = true; return; }
+    if (m.type == "ver" && ! m.body["ok"].boolean (true)) { versionWarn_ = versionWarningText(); return; }
+    if (m.type == "audio") {
+        auto unhex = [] (const std::string& in) {
+            if (in.size() % 2) return in;
+            auto v = [] (char c) { if (c >= '0' && c <= '9') return c - '0'; if (c >= 'a' && c <= 'f') return c - 'a' + 10; if (c >= 'A' && c <= 'F') return c - 'A' + 10; return -1; };
+            std::string o (in.size() / 2, '\0');
+            for (size_t i = 0; i < o.size(); ++i) { int a = v (in[i * 2]), b = v (in[i * 2 + 1]); if (a < 0 || b < 0) return in; o[i] = (char) ((a << 4) | b); }
+            return o;
+        };
+        AudioChunk c; c.songId = j["song"].str(); c.name = j["name"].str(); c.session = j["session"].str(); c.kind = j["kind"].str();
+        c.index = j["i"].integer(); c.count = j["n"].integer (1); c.data = unhex (j["data"].str());
+        audio_.add (c); if (audio_.complete()) { finishedAudio_.push_back (AudioChunk { audio_.songId(), audio_.name(), audio_.session(), audio_.kind(), 0, 1, audio_.bytes() }); audio_ = {}; }
+        return;
+    }
     if (m.type == "ping") { send_ (encode ("pong", -1, Json::object().set ("id", j["id"].num()))); return; }
     if (m.type == "clk" && j.has ("t2")) { lock_.observe (j["t1"].num(), j["t2"].num(), j["t3"].num(), now, j["beat"].num(), j["bpm"].num(), now); return; }
     if (m.type == "snap") {
+        const int remote = j.has ("proto") ? j["proto"].integer() : kProtocolVersion;
+        if (! protocolCompatible (kProtocolVersion, remote)) { versionWarn_ = versionWarningText(); return; }
         session_ = j["session"].str(); last_ = m.seq; haveSnap_ = true; wantSnap_ = false;
         transport = mt::transportFromJson (j["mt"]);
         live.setFollowing (true); applySnapshot (stateFromJson (j["state"]), live, lib, clock, now); return;
@@ -328,6 +413,7 @@ void Follower::onLine (const std::string& line, LiveSession& live, Library& lib,
 void Follower::tick (LiveSession& live, const BeatClock& clock, double now) {
     if (connected_ && (lastClk_ < 0 || now - lastClk_ >= 0.25)) { lastClk_ = now; send_ (encode ("clk", -1, Json::object().set ("id", (double) ++clkId_).set ("t1", now))); }
     lock_.steer (now);
+    if (haveDeferred_ && ! live.playing() && libHold_ != nullptr) { auto st = deferred_; haveDeferred_ = false; applySnapshot (st, live, *libHold_, clock, now); }
     const double b = lock_.engaged() ? lock_.beatAt (now) : clock.beatAt (now);
     if (connected_ && (lastHb_ < 0 || now - lastHb_ >= 1.0)) {   // heartbeat for the leader's roster
         lastHb_ = now; const auto& c = live.chart(); const int si = live.sectionIndex();

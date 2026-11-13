@@ -226,11 +226,13 @@ struct Parser {
             if (eq != std::string::npos) colorSpecs.push_back ({ trim (v.substr (0, eq)), trim (v.substr (eq + 1)) });
             else if (cur) { auto n = normalizeColor (v); if (! n.empty()) cur->customColor = n; } }
         else if (k == "bars") { if (cur) cur->bars = std::max (0, std::atoi (v.c_str())); }
+        else if (k == "section_time" || k == "meter") { if (cur) cur->time = v; }
         else if (k == "start_of_verse" || k == "sov") startSection (v.empty() ? "Verse" : v);
         else if (k == "start_of_chorus" || k == "soc") startSection (v.empty() ? "Chorus" : v);
         else if (k == "start_of_bridge" || k == "sob") startSection (v.empty() ? "Bridge" : v);
         else if (k == "start_of_part" || k == "section") { std::string nm = stripAttrs (v); int rep = 1; auto r = attr (v, "repeat"); if (! r.empty()) rep = std::atoi (r.c_str()); startSection (nm.empty() ? "Part" : nm, std::max (1, rep));
-            auto bz = attr (v, "bars"); if (! bz.empty() && cur) cur->bars = std::max (0, std::atoi (bz.c_str())); }
+            auto bz = attr (v, "bars"); if (! bz.empty() && cur) cur->bars = std::max (0, std::atoi (bz.c_str()));
+            auto tm = attr (v, "time"); if (! tm.empty() && cur) cur->time = tm; }
         else if (k == "start_of_tab" || k == "sot") { flushPending(); inTab = true; tab = TabBlock(); tab.title = stripAttrs (v); tab.color = attr (v, "color"); if (tab.title.empty()) tab.title = "Tab"; }
         else if (k == "end_of_tab" || k == "eot") { inTab = false; flushTab(); }
         else if (k == "start_of_highlight" || k == "soh") hl = v.empty() ? "orange" : v;
@@ -383,7 +385,7 @@ std::string chartToChordPro (const Chart& cIn) {
         int same = 0; for (auto& o2 : c.sections) if (lower (o2.name) == lower (s.name)) ++same;
         o += "{x_section_color: " + (same == 1 && s.name.find ('=') == std::string::npos ? s.name : "@" + std::to_string (i + 1)) + "=" + s.customColor + "}\n"; }
     for (auto& s : c.sections) {
-        o += "\n{start_of_part: " + s.name + (s.repeat > 1 ? " repeat=" + std::to_string (s.repeat) : std::string()) + (s.bars > 0 ? " bars=" + std::to_string (s.bars) : std::string()) + "}\n";
+        o += "\n{start_of_part: " + s.name + (s.repeat > 1 ? " repeat=" + std::to_string (s.repeat) : std::string()) + (s.bars > 0 ? " bars=" + std::to_string (s.bars) : std::string()) + (s.time.empty() ? std::string() : " time=" + s.time) + "}\n";
         std::string hl;
         for (auto& it : s.items) {
             if (it.kind == ChartItem::Line) {
@@ -469,6 +471,9 @@ Chart arrangedChart (const Chart& c, const std::vector<std::string>& arr, std::v
     }
     if (! secs.empty()) out.sections = std::move (secs);
     return out;
+}
+void applyPassBars (Chart& arranged, const std::vector<int>& passBars) {
+    for (size_t i = 0; i < arranged.sections.size() && i < passBars.size(); ++i) if (passBars[i] > 0) arranged.sections[i].bars = passBars[i];
 }
 std::string firstChord (const Chart& c) {
     for (auto& s : c.sections) for (auto& it : s.items) if (it.kind == ChartItem::Line && ! it.line.chords.empty()) return it.line.chords.front().chord;
@@ -644,7 +649,7 @@ static void appendContent (std::string& o, const Chart& c) {
     o += c.title; o += '\n';
     for (auto& s : c.sections) {
         o += s.name; o += '|'; o += s.kind; o += '|'; o += s.label; o += '|';
-        o += std::to_string (s.repeat); o += '|'; o += std::to_string (s.bars); o += '\n';
+        o += std::to_string (s.repeat); o += '|'; o += std::to_string (s.bars); if (! s.time.empty()) { o += '|'; o += s.time; } o += '\n';
         for (auto& it : s.items) {
             if (it.kind == ChartItem::Line) {
                 o += 'L'; o += it.line.lyric;
@@ -654,17 +659,23 @@ static void appendContent (std::string& o, const Chart& c) {
                 o += 'T'; o += it.tab.title;
                 for (auto& ln : it.tab.strings) { o += '\n'; o += ln; }
                 o += '\n';
-            } else { o += 'C'; o += it.text; o += '\n'; }
+            }             else { o += 'C'; o += it.text; o += '\n'; }
         }
     }
+    if (! c.arrangementBars.empty()) { o += "AB"; for (int b : c.arrangementBars) { o += std::to_string (b); o += ','; } }
 }
 bool chartContentEquals (const Chart& a, const Chart& b) { return chartContentKey (a) == chartContentKey (b); }
 std::string chartContentKey (const Chart& c) { std::string o; appendContent (o, c); return o; }
 
 std::vector<double> estimatePracticeMarks (const Chart& c, double bpm, double t0) {
     std::vector<double> m (c.sections.size(), -1.0); if (bpm <= 0) return m;
-    int bpb = std::atoi (c.time.c_str()); if (bpb < 1 || bpb > 16) bpb = 4; double t = t0;
-    for (size_t i = 0; i < c.sections.size(); ++i) { m[i] = t; if (c.sections[i].bars <= 0) break; t += c.sections[i].bars * std::max (1, c.sections[i].repeat) * bpb * 60.0 / bpm; }
+    double t = t0;
+    for (size_t i = 0; i < c.sections.size(); ++i) {
+        m[i] = t; if (c.sections[i].bars <= 0) break;
+        const std::string& sig = c.sections[i].time.empty() ? c.time : c.sections[i].time;
+        int bpb = std::atoi (sig.c_str()); if (bpb < 1 || bpb > 16) bpb = 4;
+        t += c.sections[i].bars * std::max (1, c.sections[i].repeat) * bpb * 60.0 / bpm;
+    }
     return m;
 }
 

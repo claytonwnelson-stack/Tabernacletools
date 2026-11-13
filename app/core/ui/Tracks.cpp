@@ -62,8 +62,12 @@ juce::String CoreProcessor::importStems (const juce::Array<juce::File>& picked) 
 }
 void CoreProcessor::reloadTracks() {
     auto* s = tracksSong(); tracksSongId_ = s ? s->id : std::string(); tracksArrVersion_ = -1;
-    if (sync_->mode() == BandSync::Mode::Following) { tracksLive_.unload(); return; }   // followers don't play stems
-    auto r = tracksLive_.loadSong (s, *live_, [] (const std::string& p) -> std::unique_ptr<mt::StemSource> { return mt::WavFileSource::open (p); }, allows (Feature::AudioEngine));
+    const bool inSession = sync_->mode() == BandSync::Mode::Following;
+    tracksGate_ = inSession ? "on:" + sync_->sessionId() : "off";
+    if (! s) { tracksLive_.unload(); return; }
+    Song playable = *s; playable.multitrack.stems.clear();
+    for (auto& st : s->multitrack.stems) if (wr::sync::sharedAudioPlayable (st.sharedSession, inSession, sync_->sessionId())) playable.multitrack.stems.push_back (st);
+    auto r = tracksLive_.loadSong (playable.multitrack.empty() ? nullptr : &playable, *live_, [] (const std::string& p) -> std::unique_ptr<mt::StemSource> { return mt::WavFileSource::open (p); }, allows (Feature::AudioEngine));
     if (! r.empty()) status = juce::String (r);
 }
 void CoreProcessor::tracksMixChanged() { if (auto* s = tracksSong()) { tracks.setMix (s->multitrack); store.saveSoon(); } }
@@ -92,8 +96,8 @@ void CoreProcessor::injectAction (Action a) {
 }
 void CoreProcessor::tracksTick() {
     auto* s = live_->song(); const std::string id = s ? s->id : std::string();
-    const bool following = sync_->mode() == BandSync::Mode::Following;
-    if (id != tracksSongId_ || (following && tracks.loaded())) reloadTracks();
+    const std::string gate = sync_->mode() == BandSync::Mode::Following ? "on:" + sync_->sessionId() : "off";
+    if (id != tracksSongId_ || gate != tracksGate_) reloadTracks();
     if (! fullAccess() && tracks.playing()) tracks.stop();                       // lapsed: locks like the rest of the audio
     { const auto arr = live_->arrangement(); std::string key; for (auto& a : arr) key += a + " ";   // arrangement edited (Live or setlist)
       const int h = (int) std::hash<std::string>() (key) & 0x7fffffff;
@@ -111,8 +115,18 @@ void TracksBar::paint (juce::Graphics& g) {
         juce::Rectangle<int> b (x, r.getY(), w, r.getHeight()); pill (g, b.toFloat(), lit ? purple.withAlpha (0.25f) : btn, lit ? purple : btnBorder, 8);
         g.setColour (lit ? purple : text); g.setFont (font (12, true)); g.drawText (s, b, juce::Justification::centred); btn_.push_back ({ b, id }); x += w + 6; };
     g.setColour (purple); g.setFont (font (11, true)); g.drawText ("TRACKS", x, r.getY(), 60, r.getHeight(), juce::Justification::centredLeft); x += 62;
-    if (L.following()) { const auto lt = P.sync().leaderTracks(); g.setColour (dim); g.setFont (font (12));
-        g.drawText (lt.loaded ? juce::String ("Leader's tracks ") + (lt.playing ? "playing" : "stopped") + (lt.loop >= 0 ? " - VAMP" : "") : juce::String ("Leader has no backing tracks"), x, r.getY(), r.getRight() - x, r.getHeight(), juce::Justification::centredLeft); return; }
+    if (L.following()) { const auto lt = P.sync().leaderTracks(); auto* song = L.song();
+        juce::String note = lt.loaded ? juce::String ("Leader's tracks ") + (lt.playing ? "playing" : "stopped") + (lt.loop >= 0 ? " - VAMP" : "") : juce::String ("Leader has no backing tracks");
+        if (song && ! song->leaderAudioNote.empty()) note << "   " << song->leaderAudioNote;
+        const float prog = (float) P.sync().leaderAudioProgress();
+        if (prog > 0.f && prog < 1.f) note << "   Getting audio " << (int) (prog * 100.f) << "%";
+        if (! L.playing() && song && ! song->leaderAudioNote.empty()) button ("GET AUDIO", 21, false, 96);
+        g.setColour (dim); g.setFont (font (12)); g.drawText (note, x, r.getY(), r.getRight() - x, r.getHeight(), juce::Justification::centredLeft, true); return; }
+    if (auto* song = L.song()) {
+        bool locked = false; for (auto& st : song->multitrack.stems) if (! wr::sync::sharedAudioPlayable (st.sharedSession, false, {})) locked = true;
+        if (song->practice.sharedSession.size() && ! wr::sync::sharedAudioPlayable (song->practice.sharedSession, false, {})) locked = true;
+        if (locked) { g.setColour (dim); g.setFont (font (11)); g.drawText ("Shared audio plays only while connected to the leader", r.getRight() - 360, r.getY(), 350, r.getHeight(), juce::Justification::centredRight, true); }
+    }
     if (! t.loaded()) { button ("IMPORT STEMS (files or folder)...", 20); g.setColour (dim); g.setFont (font (12));
         g.drawText ("Up to 16 stems per song. Main outs or in-ears (Out 2).", x + 6, r.getY(), r.getRight() - x - 10, r.getHeight(), juce::Justification::centredLeft, true); return; }
     button (t.playing() ? "STOP" : "PLAY", 1, t.playing(), 70); button ("< SECTION", 2); button ("SECTION >", 3);
@@ -127,7 +141,7 @@ void TracksBar::paint (juce::Graphics& g) {
 void TracksBar::mouseUp (const juce::MouseEvent& e) {
     auto& P = ed.core; auto& t = P.tracks;
     for (auto& b : btn_) if (b.first.contains (e.getPosition())) {
-        if (b.second != 20 && ! ed.requireAccess (Feature::AudioEngine)) return;   // read-only: locked like the rest of Live
+        if (b.second != 20 && b.second != 21 && ! ed.requireAccess (Feature::AudioEngine)) return;   // read-only: locked like the rest of Live
         Action a; switch (b.second) {
             case 1: a.type = Action::TracksPlay; P.injectAction (a); break;
             case 2: a.type = Action::PrevSection; P.injectAction (a); break;
@@ -137,6 +151,7 @@ void TracksBar::mouseUp (const juce::MouseEvent& e) {
             case 6: P.markTracksSectionHere(); break;
             case 7: showTempoMapMenu (ed, localAreaToGlobal (b.first)); break;
             case 20: ed.chooseStems(); break;
+            case 21: if (! P.live().playing()) P.sync().requestLeaderAudio(); break;
         }
         (void) t; repaint(); return;
     }
@@ -171,14 +186,18 @@ public:
         for (int i = 0; i < n_; ++i) { auto* v = vol_.add (new juce::Slider (juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight)); v->setRange (-60, 6, 0.5); v->setTextValueSuffix (" dB");
             v->setValue (s->multitrack.stems[(size_t) i].volumeDb, juce::dontSendNotification); v->onValueChange = [this, i, v] { edit (i, [v] (mt::Stem& st) { st.volumeDb = (float) v->getValue(); }); }; addAndMakeVisible (v);
             auto* p = pan_.add (new juce::Slider (juce::Slider::LinearHorizontal, juce::Slider::NoTextBox)); p->setRange (-1, 1, 0.01); p->setDoubleClickReturnValue (true, 0);
-            p->setValue (s->multitrack.stems[(size_t) i].pan, juce::dontSendNotification); p->onValueChange = [this, i, p] { edit (i, [p] (mt::Stem& st) { st.pan = (float) p->getValue(); }); }; addAndMakeVisible (p); }
+            p->setValue (s->multitrack.stems[(size_t) i].pan, juce::dontSendNotification); p->onValueChange = [this, i, p] { edit (i, [p] (mt::Stem& st) { st.pan = (float) p->getValue(); }); }; addAndMakeVisible (p);
+            if (! wr::sync::sharedAudioPlayable (s->multitrack.stems[(size_t) i].sharedSession, ed.core.sync().mode() == BandSync::Mode::Following, ed.core.sync().sessionId())) { v->setEnabled (false); p->setEnabled (false); } }
         setSize (620, 44 * std::max (1, n_) + 40); }
     void paint (juce::Graphics& g) override {
         g.fillAll (panel); auto* s = ed.core.tracksSong(); if (! s) return; btn_.clear();
         g.setColour (dim); g.setFont (font (11)); g.drawText ("Mutes are remembered for this song. IN-EARS = Out 2 click/cue bus only.", 10, getHeight() - 30, getWidth() - 20, 24, juce::Justification::centredLeft);
         for (int i = 0; i < n_; ++i) { const auto& st = s->multitrack.stems[(size_t) i]; auto row = juce::Rectangle<int> (0, i * 44, getWidth(), 44).reduced (8, 6);
             g.setColour (accent (juce::String (st.color))); g.fillRoundedRectangle (row.removeFromLeft (6).toFloat(), 3); row.removeFromLeft (6);
-            g.setColour (text); g.setFont (font (13, true)); g.drawText (st.name, row.removeFromLeft (120), juce::Justification::centredLeft, true);
+            const bool locked = ! wr::sync::sharedAudioPlayable (st.sharedSession, ed.core.sync().mode() == BandSync::Mode::Following, ed.core.sync().sessionId());
+            g.setColour (locked ? dim : text); g.setFont (font (13, true));
+            g.drawText (locked ? juce::String (st.name) + "  (leader only)" : juce::String (st.name), row.removeFromLeft (160), juce::Justification::centredLeft, true);
+            if (locked) continue;
             auto tog = [&] (const juce::String& t, bool on, juce::Colour c, int id) { auto b = row.removeFromLeft (64).reduced (2, 0); pill (g, b.toFloat(), on ? c.withAlpha (0.3f) : btn, on ? c : btnBorder, 6);
                 g.setColour (on ? c : text); g.setFont (font (11, true)); g.drawText (t, b, juce::Justification::centred); btn_.push_back ({ b, i * 10 + id }); };
             tog ("MUTE", st.mute, juce::Colour (0xffff4d4d), 0); tog ("SOLO", st.solo, orange, 1); tog (st.bus == mt::Bus::Cue ? "IN-EARS" : "MAIN", st.bus == mt::Bus::Cue, blue, 2); }

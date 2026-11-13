@@ -43,7 +43,13 @@ std::vector<SongStat> songStats (const Library& l) {
 
 // ---------------------------------------------------------------- bundle
 std::string exportBundle (const Library& l, const std::string& app, long long now) {
-    Json j = Json::object(); j.set ("format", "worship-rig-backup").set ("bundleVersion", 1).set ("app", app).set ("created", (double) now).set ("library", toJson (l));
+    Library copy = l;
+    for (auto& s : copy.songs) {
+        auto& stems = s.multitrack.stems;
+        stems.erase (std::remove_if (stems.begin(), stems.end(), [] (const mt::Stem& st) { return ! st.sharedSession.empty(); }), stems.end());
+        if (! s.practice.sharedSession.empty()) s.practice = {};
+    }
+    Json j = Json::object(); j.set ("format", "worship-rig-backup").set ("bundleVersion", 1).set ("app", app).set ("created", (double) now).set ("library", toJson (copy));
     return j.dump (1);
 }
 ImportReport importBundle (const std::string& text, Library& lib, ImportMode mode) {

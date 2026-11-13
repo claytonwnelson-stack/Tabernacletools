@@ -321,6 +321,36 @@ static void testAutoAdvance() {
     Chart bb = parseChart (chartToChordPro (b)); CHECK_EQ (bb.sections[0].bars, 8); CHECK_EQ (bb.sections[1].bars, 4); CHECK_EQ (chartFromJson (toJson (b)).sections[1].bars, 4);
     // play to the end stops
     for (int k = 0; k < 400 && ls.playing(); ++k) { ls.handle (nx, t); t += 0.01; } CHECK (ls.sectionIndex() == (int) ls.chart().sections.size() - 1);
+    // per-song switch off: bar counts stay, but Live waits for a cue. A footswitch still moves, then stays.
+    Library off = seedLibrary(); off.settings.countIn = 0; off.settings.quantizeSections = false; off.songs[0].autoAdvance = false; off.songs[0].chart.bpm = 120; off.songs[0].chart.time = "4/4";
+    for (auto& s : off.songs[0].chart.sections) s.bars = 2;
+    MockSink2 skOff; LiveSession held (off, skOff); held.start (off.setlists[0], 0, 0); held.setPlaying (true, 0);
+    for (double u = 0; u < 20; u += 0.01) held.tick (u); CHECK_EQ (held.sectionIndex(), 0);
+    Action step; step.type = Action::NextSection; held.handle (step, 20); CHECK_EQ (held.sectionIndex(), 1);
+    for (double u = 20; u < 40; u += 0.01) held.tick (u); CHECK_EQ (held.sectionIndex(), 1);
+    // a section meter replaces the song meter for that section only (2 bars of 3/4 at 120 = 3 s)
+    Library meter = seedLibrary(); meter.settings.countIn = 0; meter.settings.quantizeSections = false; meter.songs[0].chart.bpm = 120; meter.songs[0].chart.time = "4/4";
+    meter.songs[0].chart.sections[0].bars = 2; meter.songs[0].chart.sections[0].time = "3/4";
+    MockSink2 skM; LiveSession lm (meter, skM); lm.start (meter.setlists[0], 0, 0); CHECK_EQ (lm.beatsPerBar(), 3); lm.setPlaying (true, 0);
+    double tm = 0; for (; tm < 2.9; tm += 0.01) lm.tick (tm); CHECK_EQ (lm.sectionIndex(), 0); CHECK_EQ (lm.barsCountdown(), std::string ("2/2"));
+    for (; tm < 3.1; tm += 0.01) lm.tick (tm); CHECK_EQ (lm.sectionIndex(), 1); CHECK_EQ (lm.beatsPerBar(), 4);
+    // arrangement passes can be shorter than the written section. Followers do not run this themselves.
+    Library passes = seedLibrary(); auto& pc = passes.songs[0].chart; pc.bpm = 120; pc.time = "4/4"; pc.arrangement.clear(); pc.arrangementBars.clear();
+    pc.sections[0].bars = 2; pc.sections[1].bars = 8; pc.sections[0].repeat = 1; pc.sections[1].repeat = 1;
+    pc.arrangement = { pc.sections[0].name, pc.sections[1].name, pc.sections[1].name }; pc.arrangementBars = { 0, 4, 2 };
+    passes.settings.countIn = 0; passes.settings.quantizeSections = false;
+    MockSink2 skP; LiveSession lp (passes, skP); lp.start (passes.setlists[0], 0, 0);
+    CHECK_EQ ((int) lp.chart().sections.size(), 3); CHECK_EQ (lp.chart().sections[1].bars, 4); CHECK_EQ (lp.chart().sections[2].bars, 2);
+    lp.setPlaying (true, 0); double tp = 0; for (; tp < 4.05; tp += 0.01) lp.tick (tp); CHECK_EQ (lp.sectionIndex(), 1); CHECK_EQ (lp.barsCountdown(), std::string ("1/4"));
+    for (; tp < 12.1; tp += 0.01) lp.tick (tp); CHECK_EQ (lp.sectionIndex(), 2); CHECK_EQ (lp.barsCountdown(), std::string ("1/2"));
+    lp.setFollowing (true); int stayed = lp.sectionIndex(); for (double u = tp; u < tp + 20; u += 0.01) lp.tick (u); CHECK_EQ (lp.sectionIndex(), stayed);
+    Chart timed = parseChart ("{title: B}\n{time: 4/4}\n{start_of_part: Verse 1 bars=8 time=6/8}\n[A]la\n");
+    CHECK_EQ (timed.sections[0].time, std::string ("6/8")); CHECK_EQ (timed.sections[0].bars, 8);
+    CHECK_EQ (parseChart (chartToChordPro (timed)).sections[0].time, std::string ("6/8"));
+    CHECK_EQ (chartFromJson (toJson (timed)).sections[0].time, std::string ("6/8"));
+    timed.arrangement = { "Verse 1" }; timed.arrangementBars = { 5 };
+    Chart round = chartFromJson (toJson (timed)); CHECK_EQ (round.arrangementBars.size(), (size_t) 1); CHECK_EQ (round.arrangementBars[0], 5);
+    CHECK (! chartContentEquals (timed, parseChart ("{title: B}\n{start_of_part: Verse 1 bars=8 time=6/8}\n[A]la\n")));
 }
 
 static void testBackup() {

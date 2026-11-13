@@ -32,6 +32,7 @@ void LiveSession::enterSection (int idx, int pass, double) {
     const Song* s = song(); if (! s || chart_.sections.empty()) { ++version_; return; }
     secIdx_ = std::clamp (idx, 0, (int) chart_.sections.size() - 1); pass_ = pass; songEnded_ = false;
     if (const Scene* sc = s->sceneForSection (chart_.sections[(size_t) secIdx_])) { if (sc->name != sceneName_) { sink_.applyScene (*sc); sceneName_ = sc->name; } }
+    sink_.setMeter (beatsPerBar());
     if (playing_) ++midiLocateGen_; // v0.17: section jump while playing -> MIDI SPP
     ++version_;
 }
@@ -97,22 +98,34 @@ void LiveSession::setKeyOverride (const std::string& key) {
 }
 
 int beatsPerBarFor (const std::string& t) { int n = std::atoi (t.c_str()); return n >= 1 && n <= 16 ? n : 4; }
+static int meterOf (const Section& s, const Chart& c) { return beatsPerBarFor (s.time.empty() ? c.time : s.time); }
+int LiveSession::beatsPerBar() const {
+    if (secIdx_ >= 0 && secIdx_ < (int) chart_.sections.size()) return meterOf (chart_.sections[(size_t) secIdx_], chart_);
+    return beatsPerBarFor (chart_.time);
+}
+std::string LiveSession::barsCountdown() const {
+    const int n = barsInSection(); if (n <= 0) return {};
+    const int cur = std::clamp (barInSection(), 1, n);
+    return std::to_string (cur) + "/" + std::to_string (n);
+}
 void LiveSession::rebuildChart() {
     const Song* s = song(); if (! s) { chart_ = Chart(); return; } const auto& e = set_.entries[(size_t) songIdx_];
     Chart written = s->chart;
     if (following_ && followColors_) { auto it = followSongColors_.find (s->id); clearSectionColorOverrides (written);
         if (it != followSongColors_.end()) for (size_t i = 0; i < written.sections.size() && i < it->second.size(); ++i) written.sections[i].customColor = it->second[i]; }
     chart_ = arrangedChart (chartForPart (written, e.keyOverride, e.capoOverride), e.arrangement.empty() ? s->chart.arrangement : e.arrangement);
+    applyPassBars (chart_, e.arrangement.empty() ? s->chart.arrangementBars : e.arrangementBars);
     applySectionColors (chart_, sectionColorDefaults());
 }
 std::vector<std::string> LiveSession::arrangement() const {
     const Song* s = song(); if (! s) return {}; const auto& e = set_.entries[(size_t) songIdx_]; return e.arrangement.empty() ? s->chart.arrangement : e.arrangement;
 }
-void LiveSession::setArrangement (const std::vector<std::string>& a, bool forSetlist) {
+void LiveSession::setArrangement (const std::vector<std::string>& a, bool forSetlist, const std::vector<int>& passBars) {
     const Song* cs = song(); if (! cs) return;
-    if (forSetlist) { set_.entries[(size_t) songIdx_].arrangement = a;
-        if (auto* sl = lib_.setlist (set_.date)) if (songIdx_ < (int) sl->entries.size() && sl->entries[(size_t) songIdx_].songId == cs->id) sl->entries[(size_t) songIdx_].arrangement = a; }
-    else if (Song* s = lib_.song (cs->id)) s->chart.arrangement = a;
+    const std::vector<int> bars = a.empty() ? std::vector<int>() : passBars;
+    if (forSetlist) { set_.entries[(size_t) songIdx_].arrangement = a; set_.entries[(size_t) songIdx_].arrangementBars = bars;
+        if (auto* sl = lib_.setlist (set_.date)) if (songIdx_ < (int) sl->entries.size() && sl->entries[(size_t) songIdx_].songId == cs->id) { sl->entries[(size_t) songIdx_].arrangement = a; sl->entries[(size_t) songIdx_].arrangementBars = bars; } }
+    else if (Song* s = lib_.song (cs->id)) { s->chart.arrangement = a; s->chart.arrangementBars = bars; }
     rebuildChart(); pendingIdx_ = -1; secIdx_ = std::clamp (secIdx_, 0, std::max (0, (int) chart_.sections.size() - 1)); pass_ = 1; ++version_;
 }
 void LiveSession::practiceSection (int idx, double now) {
@@ -219,11 +232,12 @@ void LiveSession::handle (const Action& a, double now) {
 void LiveSession::tick (double now) {
     if (pendingIdx_ >= 0 && ! following_ && ! tracksDrive_ && sink_.cueDue (cueSeq_)) { int i = pendingIdx_, p = pendingPass_; pendingIdx_ = -1; enterSection (i, p, now); if (beatPos_ >= 0) beatPos_ = 0; } // the change lands on a bar line
     // beat-based auto-advance: only without MIDI clock (Cubase sends its own section cues), after Play
-    if (playing_ && ! following_ && ! tracksDrive_ && lastTick_ >= 0 && ! clockActive() && lib_.settings.autoAdvance && ! chart_.sections.empty()) {
+    const Song* advancing = song();
+    if (playing_ && ! following_ && ! tracksDrive_ && lastTick_ >= 0 && ! clockActive() && lib_.settings.autoAdvance && advancing && advancing->autoAdvance && ! chart_.sections.empty()) {
         beatPos_ += std::max (0.0, now - lastTick_) * bpm() / 60.0;
-        for (int guard = 0; guard < 4; ++guard) {
+        for (int guard = 0; guard < 8; ++guard) {
             const auto& sec = chart_.sections[(size_t) secIdx_]; if (sec.bars <= 0) break;
-            const double len = (double) sec.bars * beatsPerBar(); if (beatPos_ + 1e-9 < len) break;
+            const double len = (double) sec.bars * meterOf (sec, chart_); if (beatPos_ + 1e-9 < len) break;
             beatPos_ -= len; const int n = (int) chart_.sections.size();
             if (pass_ < sec.repeat) enterSection (secIdx_, pass_ + 1, now);
             else if (secIdx_ + 1 < n) enterSection (secIdx_ + 1, 1, now);
@@ -245,24 +259,24 @@ std::string LiveSession::performerCue (int i) const {
 }
 
 double LiveSession::absoluteBeats() const {
-    const int bpb = beatsPerBar(); double b = 0;
+    double b = 0;
     for (int i = 0; i < secIdx_ && i < (int) chart_.sections.size(); ++i) {
-        const int bars = chart_.sections[(size_t) i].bars; if (bars > 0) b += (double) bars * bpb * std::max (1, chart_.sections[(size_t) i].repeat);
+        const auto& sec = chart_.sections[(size_t) i]; if (sec.bars > 0) b += (double) sec.bars * meterOf (sec, chart_) * std::max (1, sec.repeat);
     }
     // within the current pass only (repeat passes restart the section's bars)
     if (secIdx_ >= 0 && secIdx_ < (int) chart_.sections.size()) {
-        const int bars = chart_.sections[(size_t) secIdx_].bars;
-        if (bars > 0 && pass_ > 1) b += (double) bars * bpb * (pass_ - 1);
+        const auto& cur = chart_.sections[(size_t) secIdx_];
+        if (cur.bars > 0 && pass_ > 1) b += (double) cur.bars * meterOf (cur, chart_) * (pass_ - 1);
     }
     return b + std::max (0.0, beatPos_);
 }
 void LiveSession::seekAbsoluteBeats (double beats, double now) {
-    beats = std::max (0.0, beats); const int bpb = std::max (1, beatsPerBar());
+    beats = std::max (0.0, beats);
     double rem = beats; int idx = 0, pass = 1;
     for (; idx < (int) chart_.sections.size(); ++idx) {
         const auto& sec = chart_.sections[(size_t) idx]; const int bars = sec.bars > 0 ? sec.bars : 0;
         if (bars <= 0) { if (idx + 1 >= (int) chart_.sections.size()) break; continue; }
-        const double secLen = (double) bars * bpb; const int reps = std::max (1, sec.repeat);
+        const double secLen = (double) bars * meterOf (sec, chart_); const int reps = std::max (1, sec.repeat);
         for (pass = 1; pass <= reps; ++pass) {
             if (rem < secLen - 1e-9) { enterSection (idx, pass, now); beatPos_ = rem; lastTick_ = now; sink_.restartBeat(); ++version_; return; }
             rem -= secLen;

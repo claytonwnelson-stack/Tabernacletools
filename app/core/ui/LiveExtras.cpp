@@ -39,6 +39,7 @@ void SongEditor::loadSel() {
 }
 void SongEditor::open (CoreEditor* ed, const std::string& songId, Chart chart, std::function<void (Chart)> onSave) {
     ed_ = ed; songId_ = songId; opened_ = chart; chart_ = std::move (chart); onSave_ = std::move (onSave);
+    autoOn_ = true; if (ed_) if (auto* s = ed_->core.store.lib.song (songId_)) autoOn_ = s->autoAdvance;
     origin_.assign (chart_.sections.size(), 0); for (int i = 0; i < (int) origin_.size(); ++i) origin_[(size_t) i] = i;
     undo_.clear(); undoOrigin_.clear(); pending_.clear(); sel_ = 0; splitAt_ = 1; dragFrom_ = -1; loadSel();
     setVisible (true); toFront (true); resized();
@@ -81,7 +82,7 @@ void SongEditor::save() {
     applySectionColors (chart_, defs ? *defs : SectionColorMap());
     if (ed_ && ! songId_.empty()) {
         if (auto* s = ed_->core.store.lib.song (songId_)) {
-            s->chart = chart_;
+            s->chart = chart_; s->autoAdvance = autoOn_;
             for (auto& set : ed_->core.store.lib.setlists) for (auto& e : set.entries) if (e.songId == songId_ && ! e.arrangement.empty()) remapTokens (e.arrangement);
             ed_->core.store.save();
             if (ed_->core.live().song() && ed_->core.live().song()->id == songId_) ed_->core.live().refreshChart();
@@ -110,17 +111,39 @@ void SongEditor::resized() {
 }
 void SongEditor::paint (juce::Graphics& g) {
     g.fillAll (bg);
-    g.setColour (text); g.setFont (font (22, true)); g.drawText (songId_.empty() ? "Edit sections" : "Edit chart", 20, 16, 420, 40, juce::Justification::centredLeft);
+    g.setColour (text); g.setFont (font (22, true)); g.drawText (songId_.empty() ? "Edit sections" : "Edit chart", 20, 16, 280, 40, juce::Justification::centredLeft);
+    autoR_ = juce::Rectangle<int> (300, 18, 210, 36);
+    pill (g, autoR_.toFloat(), autoOn_ ? accentFill : card, autoOn_ ? accentFill : cardBorder, 10);
+    g.setColour (autoOn_ ? onAccent : text); g.setFont (font (13, true)); g.drawText (autoOn_ ? "Auto-advance on" : "Auto-advance off", autoR_, juce::Justification::centred);
     auto drawBtn = [&] (juce::Rectangle<int> r, const juce::String& t, juce::Colour fill) { pill (g, r.toFloat(), fill, cardBorder, 10); g.setColour (text); g.setFont (font (15, true)); g.drawText (t, r, juce::Justification::centred); };
     drawBtn (undoR_, "Undo", undo_.empty() ? juce::Colour (0xff1a2744) : card); drawBtn (save_, "Save", accentFill); drawBtn (close_, "Close", card);
     const SectionColorMap* defs = ed_ ? &ed_->core.store.lib.settings.sectionColors : nullptr;
-    rows_.clear(); auto list = list_;
+    rows_.clear(); barBtns_.clear(); timeBtns_.clear(); passRows_.clear(); auto list = list_;
+    if (! chart_.arrangement.empty()) {
+        auto passes = list.removeFromBottom (78);
+        g.setColour (dim); g.setFont (font (11, true)); g.drawText ("ARRANGEMENT PASSES - tap to set bars (0 = section)", passes.removeFromTop (16), juce::Justification::centredLeft);
+        int px = passes.getX();
+        for (int i = 0; i < (int) chart_.arrangement.size(); ++i) {
+            int bars = i < (int) chart_.arrangementBars.size() ? chart_.arrangementBars[(size_t) i] : 0;
+            juce::String t = juce::String (chart_.arrangement[(size_t) i]) + (bars > 0 ? "  " + juce::String (bars) : juce::String ("  -"));
+            int w = (int) juce::GlyphArrangement::getStringWidth (font (12, true), t) + 16;
+            if (px + w > list_.getRight()) break;
+            juce::Rectangle<int> c (px, passes.getY(), w, 28); passRows_.push_back (c); px += w + 6;
+            pill (g, c.toFloat(), card, cardBorder, 8); g.setColour (text); g.setFont (font (12, true)); g.drawText (t, c, juce::Justification::centred);
+        }
+    }
     for (int i = 0; i < (int) chart_.sections.size(); ++i) {
         auto row = list.removeFromTop (58); if (row.getHeight() < 40) break; rows_.push_back (row.reduced (0, 4));
         auto& s = chart_.sections[(size_t) i]; auto col = accent (juce::String (effectiveSectionColor (s, defs ? *defs : SectionColorMap())));
         pill (g, rows_.back().toFloat(), i == sel_ ? accentFill.withAlpha (0.35f) : card, i == sel_ ? accentText : cardBorder, 10);
+        auto box = rows_.back();
+        auto plus = box.removeFromRight (26); auto num = box.removeFromRight (36); auto minus = box.removeFromRight (26); auto meter = box.removeFromRight (46);
+        barBtns_.push_back ({ minus.reduced (2), i * 2 }); barBtns_.push_back ({ plus.reduced (2), i * 2 + 1 }); timeBtns_.push_back ({ meter.reduced (2), i });
         g.setColour (col); g.fillRoundedRectangle ((float) rows_.back().getX() + 8, (float) rows_.back().getY() + 10, 6, (float) rows_.back().getHeight() - 20, 2);
-        g.setColour (text); g.setFont (font (16, true)); g.drawText (juce::String (s.name), rows_.back().reduced (22, 6), juce::Justification::centredLeft, true);
+        g.setColour (text); g.setFont (font (15, true)); g.drawText (juce::String (s.name), box.reduced (22, 6), juce::Justification::centredLeft, true);
+        g.setColour (dim); g.setFont (font (12, true)); g.drawText ("-", minus, juce::Justification::centred); g.drawText ("+", plus, juce::Justification::centred);
+        g.setColour (text); g.drawText (s.bars > 0 ? juce::String (s.bars) : juce::String ("cue"), num, juce::Justification::centred);
+        g.setColour (s.time.empty() ? dim : accentText); g.drawText (s.time.empty() ? juce::String ("song") : juce::String (s.time), meter, juce::Justification::centred);
         if (dragged_ && dragTo_ == i) { g.setColour (accentText); g.fillRect (rows_.back().getX(), rows_.back().getY() - 3, rows_.back().getWidth(), 3); }
     }
     const char* names[] = { "Add section", "Duplicate", "Up", "Down", "Merge next", "Delete" };
@@ -163,6 +186,23 @@ void SongEditor::mouseUp (const juce::MouseEvent& e) {
     if (dragged_ && dragFrom_ >= 0 && dragTo_ >= 0 && dragFrom_ != dragTo_) { storeBody(); pushUndo(); int from = dragFrom_; int to = dragTo_; run (moveSection (chart_, from, to)); sel_ = to; loadSel(); dragFrom_ = -1; dragged_ = false; repaint(); return; }
     dragFrom_ = -1; dragged_ = false;
     auto p = e.getPosition();
+    if (autoR_.contains (p)) { autoOn_ = ! autoOn_; repaint(); return; }
+    for (auto& b : barBtns_) if (b.first.contains (p)) {
+        int i = b.second / 2; if (i < 0 || i >= (int) chart_.sections.size()) return;
+        pushUndo(); int& bars = chart_.sections[(size_t) i].bars; bars = b.second % 2 ? std::min (64, bars + 1) : std::max (0, bars - 1); sel_ = i; repaint(); return;
+    }
+    for (auto& b : timeBtns_) if (b.first.contains (p)) {
+        int i = b.second; if (i < 0 || i >= (int) chart_.sections.size()) return;
+        pushUndo(); auto& tm = chart_.sections[(size_t) i].time;
+        tm = tm.empty() ? "4/4" : tm == "4/4" ? "3/4" : tm == "3/4" ? "6/8" : tm == "6/8" ? "2/4" : std::string();
+        sel_ = i; repaint(); return;
+    }
+    for (int i = 0; i < (int) passRows_.size() && i < (int) chart_.arrangement.size(); ++i) if (passRows_[(size_t) i].contains (p)) {
+        pushUndo(); if ((int) chart_.arrangementBars.size() < (int) chart_.arrangement.size()) chart_.arrangementBars.resize (chart_.arrangement.size());
+        int& bars = chart_.arrangementBars[(size_t) i]; const int steps[] = { 0, 2, 4, 8, 12, 16 };
+        int at = 0; for (int s = 0; s < 6; ++s) if (steps[s] == bars) at = s;
+        bars = steps[(at + 1) % 6]; repaint(); return;
+    }
     if (close_.contains (p)) { setVisible (false); return; }
     if (undoR_.contains (p)) { undo(); return; }
     if (save_.contains (p)) { save(); return; }
@@ -198,11 +238,11 @@ void SongEditor::mouseUp (const juce::MouseEvent& e) {
 }
 
 // ================================================================== arrangement editor
-void ArrangementEditor::open (const Chart& written, std::vector<std::string> tokens, bool setlistScope, Done done, std::string songId) {
+void ArrangementEditor::open (const Chart& written, std::vector<std::string> tokens, bool setlistScope, Done done, std::string songId, std::vector<int> passBars) {
     written_ = written; written_.arrangement.clear(); setlistScope_ = setlistScope; done_ = std::move (done); songId_ = std::move (songId); coloursDirty_ = false; recolour();
     asWritten_ = tokens.empty();
-    if (asWritten_) for (int i = 0; i < (int) written_.sections.size(); ++i) tokens.push_back (tokenFor (i));
-    tok_ = std::move (tokens); dragFrom_ = -1; setVisible (true); toFront (true); repaint();
+    if (asWritten_) { for (int i = 0; i < (int) written_.sections.size(); ++i) tokens.push_back (tokenFor (i)); passBars.clear(); }
+    tok_ = std::move (tokens); passBars_ = std::move (passBars); passBars_.resize (tok_.size()); dragFrom_ = -1; setVisible (true); toFront (true); repaint();
 }
 std::string ArrangementEditor::tokenFor (int i) const {   // label if unique, else the full name
     const auto& s = written_.sections[(size_t) i]; int same = 0; for (auto& o : written_.sections) if (o.label == s.label) ++same;
@@ -219,7 +259,9 @@ void ArrangementEditor::paint (juce::Graphics& g) {
     r.removeFromTop (8);
     chips_.clear(); int x = r.getX(), y = r.getY(); const int h = 36;
     for (int i = 0; i < (int) tok_.size(); ++i) {
-        const int idx = resolveArrangementToken (written_, tok_[(size_t) i]); juce::String t (tok_[(size_t) i]);
+        const int idx = resolveArrangementToken (written_, tok_[(size_t) i]);
+        const int bars = i < (int) passBars_.size() ? passBars_[(size_t) i] : 0;
+        juce::String t (tok_[(size_t) i]); if (bars > 0) t << "  " << bars;
         int w = (int) juce::GlyphArrangement::getStringWidth (font (14, true), t) + 30; if (x + w > r.getRight()) { x = r.getX(); y += h + 8; }
         juce::Rectangle<int> c (x, y, w, h); chips_.push_back (c); x += w + 8;
         const bool bad = idx < 0, drag = i == dragFrom_ && dragged_;
@@ -270,16 +312,18 @@ void ArrangementEditor::mouseDrag (const juce::MouseEvent& e) {
 }
 void ArrangementEditor::mouseUp (const juce::MouseEvent& e) {
     auto p = e.getPosition();
-    if (dragged_ && dragFrom_ >= 0) { int to = std::clamp (dragTo_, 0, (int) tok_.size()); auto t = tok_[(size_t) dragFrom_]; tok_.erase (tok_.begin() + dragFrom_); if (to > dragFrom_) --to;
-        tok_.insert (tok_.begin() + to, t); asWritten_ = false; dragFrom_ = -1; dragged_ = false; repaint(); return; }
+    if (dragged_ && dragFrom_ >= 0) { int to = std::clamp (dragTo_, 0, (int) tok_.size()); auto t = tok_[(size_t) dragFrom_]; int bars = dragFrom_ < (int) passBars_.size() ? passBars_[(size_t) dragFrom_] : 0;
+        tok_.erase (tok_.begin() + dragFrom_); if (dragFrom_ < (int) passBars_.size()) passBars_.erase (passBars_.begin() + dragFrom_); if (to > dragFrom_) --to;
+        tok_.insert (tok_.begin() + to, t); passBars_.insert (passBars_.begin() + std::min (to, (int) passBars_.size()), bars); asWritten_ = false; dragFrom_ = -1; dragged_ = false; repaint(); return; }
     dragFrom_ = -1;
     if (! box_.contains (p)) return;
     for (auto& b : buttons_) if (b.first.contains (p)) {
         if (b.second == 0) { setVisible (false); return; }
-        if (b.second == 1) { tok_.clear(); for (int i = 0; i < (int) written_.sections.size(); ++i) tok_.push_back (tokenFor (i)); asWritten_ = true; repaint(); return; }
-        std::vector<std::string> out; if (! asWritten_) for (auto& t : tok_) if (resolveArrangementToken (written_, t) >= 0) out.push_back (t);
+        if (b.second == 1) { tok_.clear(); passBars_.clear(); for (int i = 0; i < (int) written_.sections.size(); ++i) { tok_.push_back (tokenFor (i)); passBars_.push_back (0); } asWritten_ = true; repaint(); return; }
+        std::vector<std::string> out; std::vector<int> bars;
+        if (! asWritten_) for (size_t i = 0; i < tok_.size(); ++i) if (resolveArrangementToken (written_, tok_[i]) >= 0) { out.push_back (tok_[i]); bars.push_back (i < passBars_.size() ? passBars_[i] : 0); }
         if (coloursDirty_ && onColours && ! songId_.empty()) { std::vector<std::string> cc; for (auto& sec : written_.sections) cc.push_back (sec.customColor); onColours (songId_, cc); }
-        setVisible (false); if (done_) done_ (out, b.second == 3 ? 1 : 0); return;
+        setVisible (false); if (done_) done_ (out, b.second == 3 ? 1 : 0, asWritten_ ? std::vector<int>() : bars); return;
     }
     if (! resetColours_.isEmpty() && resetColours_.contains (p)) { clearSectionColorOverrides (written_); recolour(); coloursDirty_ = true; repaint(); return; }
     for (auto& sw : swatches_) if (sw.first.contains (p)) {
@@ -290,13 +334,18 @@ void ArrangementEditor::mouseUp (const juce::MouseEvent& e) {
             "Use " + juce::String (kindDisplayName (sec.kind)) + " default (" + wr::ui::colourName (def) + ")", [self, i] (std::string c) {
                 if (! self) return; setSectionColorOverride (self->written_, i, c); self->recolour(); self->coloursDirty_ = true; self->repaint(); });
         return; }
-    for (auto& pc : palette_) if (pc.first.contains (p)) { tok_.push_back (tokenFor (pc.second)); asWritten_ = false; repaint(); return; }
+    for (auto& pc : palette_) if (pc.first.contains (p)) { tok_.push_back (tokenFor (pc.second)); passBars_.push_back (0); asWritten_ = false; repaint(); return; }
     const int c = chipAt (p); if (c < 0) return;
     juce::PopupMenu m;
-    m.addItem ("Duplicate (play it again right after)", [this, c] { tok_.insert (tok_.begin() + c + 1, tok_[(size_t) c]); asWritten_ = false; repaint(); });
-    m.addItem ("Move earlier", c > 0, false, [this, c] { std::swap (tok_[(size_t) c], tok_[(size_t) c - 1]); asWritten_ = false; repaint(); });
-    m.addItem ("Move later", c + 1 < (int) tok_.size(), false, [this, c] { std::swap (tok_[(size_t) c], tok_[(size_t) c + 1]); asWritten_ = false; repaint(); });
-    m.addItem ("Remove", [this, c] { tok_.erase (tok_.begin() + c); asWritten_ = false; repaint(); });
+    m.addItem ("Duplicate (play it again right after)", [this, c] { int bars = c < (int) passBars_.size() ? passBars_[(size_t) c] : 0; tok_.insert (tok_.begin() + c + 1, tok_[(size_t) c]); passBars_.insert (passBars_.begin() + std::min (c + 1, (int) passBars_.size()), bars); asWritten_ = false; repaint(); });
+    m.addItem ("Move earlier", c > 0, false, [this, c] { std::swap (tok_[(size_t) c], tok_[(size_t) c - 1]); if (c < (int) passBars_.size() && c - 1 < (int) passBars_.size()) std::swap (passBars_[(size_t) c], passBars_[(size_t) c - 1]); asWritten_ = false; repaint(); });
+    m.addItem ("Move later", c + 1 < (int) tok_.size(), false, [this, c] { std::swap (tok_[(size_t) c], tok_[(size_t) c + 1]); if (c + 1 < (int) passBars_.size()) std::swap (passBars_[(size_t) c], passBars_[(size_t) c + 1]); asWritten_ = false; repaint(); });
+    m.addItem ("Remove", [this, c] { tok_.erase (tok_.begin() + c); if (c < (int) passBars_.size()) passBars_.erase (passBars_.begin() + c); asWritten_ = false; repaint(); });
+    m.addSeparator();
+    auto setBars = [this, c] (int bars) { if ((int) passBars_.size() < (int) tok_.size()) passBars_.resize (tok_.size()); passBars_[(size_t) c] = bars; asWritten_ = false; repaint(); };
+    const int cur = c < (int) passBars_.size() ? passBars_[(size_t) c] : 0;
+    m.addItem ("Bars: use the section's count", true, cur == 0, [setBars] { setBars (0); });
+    for (int bars : { 2, 4, 8, 12, 16 }) m.addItem (juce::String (bars) + " bars this pass", true, cur == bars, [setBars, bars] { setBars (bars); });
     m.showMenuAsync (juce::PopupMenu::Options().withTargetScreenArea (localAreaToGlobal (chips_[(size_t) c])));
 }
 

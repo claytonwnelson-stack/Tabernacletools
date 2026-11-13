@@ -35,6 +35,7 @@ Json toJson (const Chart& c) {
     Json secs = Json::array();
     for (auto& s : c.sections) {
         Json js = Json::object(); js.set ("name", s.name).set ("label", s.label).set ("kind", s.kind).set ("color", s.color).set ("repeat", s.repeat).set ("bars", s.bars);
+        if (! s.time.empty()) js.set ("time", s.time);
         if (! s.customColor.empty()) js.set ("customColor", s.customColor);
         Json items = Json::array();
         for (auto& it : s.items) {
@@ -50,12 +51,13 @@ Json toJson (const Chart& c) {
     }
     j.set ("sections", secs);
     if (! c.arrangement.empty()) { Json a = Json::array(); for (auto& t : c.arrangement) a.push (t); j.set ("arrangement", a); }
+    if (! c.arrangementBars.empty()) { Json a = Json::array(); for (int b : c.arrangementBars) a.push (b); j.set ("passBars", a); }
     return j;
 }
 Chart chartFromJson (const Json& j) {
     Chart c; c.title = j["title"].str(); c.artist = j["artist"].str(); c.key = j["key"].str(); c.bpm = j["bpm"].num(); c.time = j["time"].str(); c.capo = j["capo"].integer (0);
     for (auto& js : j["sections"].items()) {
-        Section s; s.name = js["name"].str(); s.label = js["label"].str(); s.kind = js["kind"].str(); s.color = js["color"].str(); s.repeat = js["repeat"].integer (1); s.bars = js["bars"].integer (0); s.customColor = normalizeColor (js["customColor"].str()); if (! s.customColor.empty()) s.color = s.customColor;
+        Section s; s.name = js["name"].str(); s.label = js["label"].str(); s.kind = js["kind"].str(); s.color = js["color"].str(); s.repeat = js["repeat"].integer (1); s.bars = js["bars"].integer (0); s.time = js["time"].str(); s.customColor = normalizeColor (js["customColor"].str()); if (! s.customColor.empty()) s.color = s.customColor;
         for (auto& ji : js["items"].items()) {
             ChartItem it;
             if (ji.has ("tab")) { it.kind = ChartItem::Tab; auto& t = ji["tab"]; it.tab.title = t["title"].str(); it.tab.color = t["color"].str(); it.tab.note = t["note"].str(); for (auto& l : t["strings"].items()) it.tab.strings.push_back (l.str()); }
@@ -66,6 +68,7 @@ Chart chartFromJson (const Json& j) {
         c.sections.push_back (s);
     }
     for (auto& t : j["arrangement"].items()) c.arrangement.push_back (t.str());
+    for (auto& b : j["passBars"].items()) c.arrangementBars.push_back (b.integer());
     return c;
 }
 Json toJson (const Song& s) {
@@ -77,10 +80,12 @@ Json toJson (const Song& s) {
     Json cu = Json::object(); for (auto& kv : s.cues) cu.set (kv.first, kv.second); j.set ("cues", cu);
     auto sw = [] (const SwitchAssign& a) { Json o = Json::object(); o.set ("label", a.label).set ("pedal", a.pedalUid); return o; };
     j.set ("switchC", sw (s.switchC)).set ("switchD", sw (s.switchD)).set ("click", s.clickDefault).set ("countIn", s.countIn);
+    if (! s.autoAdvance) j.set ("autoAdvance", false);
     if (! s.ccli.number.empty() || ! s.ccli.title.empty() || ! s.ccli.authors.empty() || s.ccli.publicDomain)
         j.set ("ccli", Json::object().set ("number", s.ccli.number).set ("title", s.ccli.title).set ("authors", s.ccli.authors).set ("pd", s.ccli.publicDomain));
     if (! s.multitrack.empty() || ! s.multitrack.sectionBeats.empty()) j.set ("multitrack", mt::toJson (s.multitrack));
-    if (! s.practice.empty()) { Json m = Json::array(); for (double x : s.practice.marks) m.push (x); j.set ("practice", Json::object().set ("file", s.practice.file).set ("marks", m)); }
+    if (! s.practice.empty() || ! s.practice.sharedSession.empty()) { Json m = Json::array(); for (double x : s.practice.marks) m.push (x); j.set ("practice", Json::object().set ("file", s.practice.file).set ("marks", m).set ("shared", s.practice.sharedSession)); }
+    if (! s.leaderAudioNote.empty()) j.set ("leaderAudio", s.leaderAudioNote);
     return j;
 }
 Song songFromJson (const Json& j) {
@@ -89,9 +94,11 @@ Song songFromJson (const Json& j) {
     for (auto& kv : j["sectionScene"].members()) s.sectionScene[kv.first] = kv.second.str();
     for (auto& kv : j["cues"].members()) s.cues[kv.first] = kv.second.str();
     s.switchC = { j["switchC"]["label"].str(), j["switchC"]["pedal"].str() }; s.switchD = { j["switchD"]["label"].str(), j["switchD"]["pedal"].str() }; s.clickDefault = j["click"].boolean (false); s.countIn = j["countIn"].integer (-1);
+    s.autoAdvance = j.has ("autoAdvance") ? j["autoAdvance"].boolean (true) : true;
     if (j.has ("ccli")) { const Json& c = j["ccli"]; s.ccli.number = c["number"].str(); s.ccli.title = c["title"].str(); s.ccli.authors = c["authors"].str(); s.ccli.publicDomain = c["pd"].boolean(); }
     if (j.has ("multitrack")) s.multitrack = mt::multitrackFromJson (j["multitrack"]);
-    s.practice.file = j["practice"]["file"].str(); for (auto& x : j["practice"]["marks"].items()) s.practice.marks.push_back (x.num (-1));
+    s.practice.file = j["practice"]["file"].str(); s.practice.sharedSession = j["practice"]["shared"].str(); for (auto& x : j["practice"]["marks"].items()) s.practice.marks.push_back (x.num (-1));
+    s.leaderAudioNote = j["leaderAudio"].str();
     return s;
 }
 Json toJson (const RigPreset& r) {
@@ -119,6 +126,7 @@ Json toJson (const Setlist& s) {
     Json j = Json::object(); j.set ("name", s.name).set ("date", s.date); Json a = Json::array();
     for (auto& e : s.entries) { Json o = Json::object(); o.set ("song", e.songId).set ("key", e.keyOverride).set ("bpm", e.bpmOverride).set ("role", e.role).set ("capo", e.capoOverride);
         if (! e.arrangement.empty()) { Json ar = Json::array(); for (auto& t : e.arrangement) ar.push (t); o.set ("arrangement", ar); }
+        if (! e.arrangementBars.empty()) { Json pb = Json::array(); for (int b : e.arrangementBars) pb.push (b); o.set ("passBars", pb); }
         if (! e.notes.empty()) { Json ns = Json::array(); for (auto& n : e.notes) ns.push (Json::object().set ("text", n.text).set ("at", n.at)); o.set ("notes", ns); }
         a.push (o); }
     j.set ("entries", a);
@@ -131,6 +139,7 @@ Setlist setlistFromJson (const Json& j) {
     Setlist s; s.name = j["name"].str(); s.date = j["date"].str();
     for (auto& o : j["entries"].items()) { SetlistEntry e; e.songId = o["song"].str(); e.keyOverride = o["key"].str(); e.bpmOverride = o["bpm"].num(); e.role = o["role"].str ("lead"); e.capoOverride = o["capo"].integer (-1);
         for (auto& t : o["arrangement"].items()) e.arrangement.push_back (t.str());
+        for (auto& b : o["passBars"].items()) e.arrangementBars.push_back (b.integer());
         for (auto& n : o["notes"].items()) e.notes.push_back ({ n["text"].str(), n["at"].str ("start") });
         s.entries.push_back (e); }
     for (auto& o : j["players"].items()) { Player p; p.name = o["name"].str(); p.instrument = o["instrument"].str(); p.capo = o["capo"].integer (0);
