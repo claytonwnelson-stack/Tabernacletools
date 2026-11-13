@@ -72,7 +72,52 @@ void BandSync::poll (double now) {
         follower_.tick (live_, clock(), now);
         if (follower_.wasKicked() && client_.attempts() >= 0) client_.disconnect();   // removed by the leader: stay off until the user rejoins
         if (! linkActive_.load() && std::abs (localClock_.tempo() - live_.bpm()) > 0.05) localClock_.setTempo (live_.bpm(), now);
+        if (! chartPromptOpen_) showChartPrompt();
     }
+}
+void BandSync::showChartPrompt() {
+    if (! follower_.chartPromptWaiting()) return;
+    auto p = follower_.chartPrompt();
+    chartPromptOpen_ = true;
+    auto* w = new juce::AlertWindow ("Chart from the leader",
+        "\"" + juce::String (p.title) + "\" is already in your library, and the leader's chords, lyrics or tabs are different."
+        + (p.remaining > 0 ? "\n\n" + juce::String (p.remaining) + " other song" + (p.remaining == 1 ? "" : "s") + " in this set also differ." : juce::String())
+        + "\n\nYour rig stays on this iPad. Nothing is taken from the leader's rig.",
+        juce::MessageBoxIconType::QuestionIcon);
+    const bool more = p.remaining > 0;
+    w->addButton ("Import and replace my version", 1);
+    if (more) w->addButton ("Replace all differing songs", 2);
+    w->addButton ("Import and save as new version", more ? 3 : 2);
+    if (more) w->addButton ("Save all as new versions", 4);
+    w->addButton ("Use my version", more ? 5 : 3);
+    if (more) w->addButton ("Use my version for all", 6);
+    w->enterModalState (true, juce::ModalCallbackFunction::create ([this, more] (int r) {
+        using C = wr::sync::ChartImportChoice;
+        C choice = C::KeepMine; bool all = false;
+        if (! more) { choice = r == 1 ? C::Replace : r == 2 ? C::SaveAsNew : C::KeepMine; }
+        else if (r == 1) choice = C::Replace;
+        else if (r == 2) { choice = C::Replace; all = true; }
+        else if (r == 3) choice = C::SaveAsNew;
+        else if (r == 4) { choice = C::SaveAsNew; all = true; }
+        else if (r == 6) { choice = C::KeepMine; all = true; }
+        if (choice == C::KeepMine) {
+            follower_.answerChartPrompt (choice, all, wr::sync::RigImportChoice::CopyMine, live_, lib_, juce::Time::getMillisecondCounterHiRes() * 0.001);
+            chartPromptOpen_ = false;
+        } else showRigPrompt (choice, all);
+    }), true);
+}
+void BandSync::showRigPrompt (wr::sync::ChartImportChoice choice, bool applyAll) {
+    auto* w = new juce::AlertWindow ("Rig for this song",
+        juce::String (applyAll ? "These songs keep a rig from this iPad. The leader's rig is not copied.\n\n" : "This song keeps a rig from this iPad. The leader's rig is not copied.\n\n")
+        + "Copy rig settings from my existing version uses your pedal chain and section patches (matched by section name, then by position). Set up new rig settings starts from the usual empty rig.",
+        juce::MessageBoxIconType::QuestionIcon);
+    w->addButton ("Copy rig settings from my existing version", 1);
+    w->addButton ("Set up new rig settings", 2);
+    w->enterModalState (true, juce::ModalCallbackFunction::create ([this, choice, applyAll] (int r) {
+        auto rig = r == 2 ? wr::sync::RigImportChoice::Fresh : wr::sync::RigImportChoice::CopyMine;
+        follower_.answerChartPrompt (choice, applyAll, rig, live_, lib_, juce::Time::getMillisecondCounterHiRes() * 0.001);
+        saveLib_ = true; chartPromptOpen_ = false;
+    }), true);
 }
 bool BandSync::interceptAction (const Action& a, double now) {
     if (mode_ == Mode::Leading && a.type == Action::Play) { requestPlay (! (live_.playing() || (leader_ && leader_->playScheduled())), now); return true; }

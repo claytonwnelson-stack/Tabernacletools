@@ -640,6 +640,27 @@ bool replaceSectionTab (Section& s, int tabIndex, TabBlock tab) {
     s.items[(size_t) i].tab = std::move (tab); return true;
 }
 
+static void appendContent (std::string& o, const Chart& c) {
+    o += c.title; o += '\n';
+    for (auto& s : c.sections) {
+        o += s.name; o += '|'; o += s.kind; o += '|'; o += s.label; o += '|';
+        o += std::to_string (s.repeat); o += '|'; o += std::to_string (s.bars); o += '\n';
+        for (auto& it : s.items) {
+            if (it.kind == ChartItem::Line) {
+                o += 'L'; o += it.line.lyric;
+                for (auto& ch : it.line.chords) { o += '@'; o += std::to_string (ch.pos); o += ch.chord; }
+                o += '\n';
+            } else if (it.kind == ChartItem::Tab) {
+                o += 'T'; o += it.tab.title;
+                for (auto& ln : it.tab.strings) { o += '\n'; o += ln; }
+                o += '\n';
+            } else { o += 'C'; o += it.text; o += '\n'; }
+        }
+    }
+}
+bool chartContentEquals (const Chart& a, const Chart& b) { return chartContentKey (a) == chartContentKey (b); }
+std::string chartContentKey (const Chart& c) { std::string o; appendContent (o, c); return o; }
+
 std::vector<double> estimatePracticeMarks (const Chart& c, double bpm, double t0) {
     std::vector<double> m (c.sections.size(), -1.0); if (bpm <= 0) return m;
     int bpb = std::atoi (c.time.c_str()); if (bpb < 1 || bpb > 16) bpb = 4; double t = t0;

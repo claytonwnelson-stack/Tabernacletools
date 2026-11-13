@@ -56,6 +56,13 @@ std::string healthWarning (const DeviceHealth&);
 inline int healthSeverity (const DeviceHealth& h) { return h.thermal >= 3 ? 2 : (h.thermal == 2 || (h.batteryPct >= 0 && h.batteryPct < kLowBatteryPct && ! h.charging)) ? 1 : 0; }
 std::string healthText (const DeviceHealth&);   // "87% charging - fair"
 
+// Follower chart import. Rig settings stay on the follower's iPad; the leader's rig is never copied.
+enum class ChartImportChoice { Replace = 1, SaveAsNew = 2, KeepMine = 3 };
+enum class RigImportChoice { CopyMine = 1, Fresh = 2 };
+std::string sharedChartTitle (const Library&, const std::string& title);   // "Title (shared)", then "Title (shared 2)"
+// Leader section index -> a section on the follower's chart. Match name (nth time), then clamp.
+int mapLeaderSection (const Chart& local, const std::vector<std::string>& leaderNames, int leaderIndex);
+
 // ---------------------------------------------------------------- shared state (snapshot)
 struct SongRef { Song song; std::string key; double bpm = 0;       // leader's song (chart + leader's sounding key + tempo)
                  std::vector<std::string> arrangement;              // v0.7 effective play order (so section indices match)
@@ -143,14 +150,29 @@ public:
     // v0.14 key changes: true = follow the leader's key even for songs this player transposed locally (chart transposes;
     // the leader's stems are NOT pitch-shifted - change the key on the tracks before the service)
     bool followLeaderKey = false;
+    // A song the follower already has, whose chords/lyrics/tabs differ from the leader's. One prompt at a time.
+    struct ChartPrompt { std::string songId, title; int remaining = 0; };
+    bool chartPromptWaiting() const { return ! chartQueue_.empty(); }
+    ChartPrompt chartPrompt() const;
+    // choice applies to the first queued song, or to every queued song when applyAll is set.
+    // rig is ignored for KeepMine. CopyMine is the default the UI offers.
+    void answerChartPrompt (ChartImportChoice choice, bool applyAll, RigImportChoice rig, LiveSession& live, Library& lib, double now);
 private:
     void applySnapshot (const State& st, LiveSession& live, Library& lib, const BeatClock& clock, double now);
     void applyCue (int idx, int pass, double cueBeat, double dueBeat, LiveSession& live, const BeatClock& clock, double now);
     std::function<void (const std::string&)> send_; std::string name_, session_;
     double lastHb_ = -1, lastClk_ = -1; int clkId_ = 0; bool kicked_ = false; ClockLock lock_;
     bool connected_ = false, haveSnap_ = false, wantSnap_ = false; long long last_ = -1; int resyncs_ = 0; double discAt_ = -1;
+    int mapSection (const LiveSession& live, int leaderIdx) const;
     struct Pending { bool active = false; int idx = 0, pass = 1; double dueBeat = 0; } cue_;
     struct PlayAt { bool active = false, on = false; double atBeat = 0; int countIn = 0; } play_;
+    struct QueuedChart { Song leader; std::string contentKey; };
+    struct ChartDecision { int choice = 0; int rig = 0; std::string contentKey, adoptedId; };
+    std::vector<QueuedChart> chartQueue_;
+    std::map<std::string, ChartDecision> chartDecisions_;   // session + song id -> last answer for that chart content
+    std::vector<std::vector<std::string>> leaderNames_;
+    std::vector<char> leaderMatch_;
+    int leaderSection_ = 0, leaderPass_ = 1;
 };
 
 // fixed-tempo shared timeline for tests (and for "no Link" fallback: beats from local time at the leader's tempo)

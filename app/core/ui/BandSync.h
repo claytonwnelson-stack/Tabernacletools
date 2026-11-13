@@ -40,6 +40,7 @@ public:
     std::string banner (double nowSec) const;                        // follower: "LEADER LOST..." / "Joining..."
     std::string statusLine() const;
     std::string clockStatus() const;
+    bool takeLibrarySave() { bool d = saveLib_; saveLib_ = false; return d; }
     bool useLink = true;
     // v0.14 backing tracks: leader publishes its transport; followers read the leader's
     void setTracksTransport (const wr::mt::Transport& t) { if (leader_) leader_->setTransport (t); }
@@ -54,5 +55,8 @@ private:
     std::unique_ptr<wr::sync::Leader> leader_; wr::sync::Follower follower_;
     wr::sync::FakeClock localClock_;                                  // no Link: beats from local time at the song tempo
     std::unique_ptr<wr::sync::LinkClock> link_; std::atomic<wr::sync::LinkClock*> linkRt_ { nullptr }; std::atomic<bool> linkActive_ { false };
+    void showChartPrompt();
+    void showRigPrompt (wr::sync::ChartImportChoice choice, bool applyAll);
     std::string host_; int port_ = 0; wr::sync::Roster roster_;
+    bool chartPromptOpen_ = false, saveLib_ = false;
 };

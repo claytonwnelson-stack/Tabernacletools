@@ -39,6 +39,9 @@ std::string formatArrangement (const std::vector<std::string>&);
 int resolveArrangementToken (const Chart&, const std::string& token);       // written section index or -1
 Chart arrangedChart (const Chart&, const std::vector<std::string>& arrangement, std::vector<std::string>* unresolved = nullptr); // empty = as written
 std::string firstChord (const Chart&);
+// Section names, chords, lyrics and tabs. Ignores colours, highlights and transpose notes.
+bool chartContentEquals (const Chart&, const Chart&);
+std::string chartContentKey (const Chart&);
 
 // Song editor. oldToNew[i] is the section's index after the edit, or -1 if that section was removed.
 // These never change the global section-colour defaults. Renaming clears a per-section colour override

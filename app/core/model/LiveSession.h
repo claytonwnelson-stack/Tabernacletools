@@ -121,6 +121,7 @@ public:
     void seekAbsoluteBeats (double beats, double nowSec); // MIDI SPP receive
     const Library& library() const { return lib_; }
     void loadSetlist (const Setlist& set, int songIndex, double nowSec);   // leader's setlist (keeps the current rig if unchanged)
+    void replaceFollowSet (const Setlist& set);                            // swap song ids / charts without stopping playback
     void followSong (int idx, double nowSec) { if (idx != songIdx_ || chart_.sections.empty()) loadSong (idx, nowSec); }
     void followSection (int idx, int pass, double nowSec);                 // land now (clears any queued cue)
     void followCue (int idx, int pass, bool speak);                        // queued one-bar cue (speak = announce on the local click)

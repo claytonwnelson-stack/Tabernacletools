@@ -49,6 +49,13 @@ std::string LiveSession::cueName (int idx, int pass) const {
     return (pass > 1 && sec.repeat > 1) || (pass == 1 && sec.occurrence > 1) ? sec.name + " again" : sec.name;
 }
 void LiveSession::loadSetlist (const Setlist& set, int songIndex, double now) { set_ = set; loadSong (songIndex, now); }
+void LiveSession::replaceFollowSet (const Setlist& set) {
+    if (set.entries.empty()) return;
+    songIdx_ = std::clamp (songIdx_, 0, (int) set.entries.size() - 1);
+    set_ = set; rebuildChart();
+    secIdx_ = chart_.sections.empty() ? 0 : std::clamp (secIdx_, 0, (int) chart_.sections.size() - 1);
+    ++version_;
+}
 void LiveSession::followSection (int idx, int pass, double now) {
     if (chart_.sections.empty()) return; pendingIdx_ = -1; view_ = View::Section; lastSectionCmd_ = now;
     enterSection (idx, pass, now); if (beatPos_ >= 0) beatPos_ = 0;

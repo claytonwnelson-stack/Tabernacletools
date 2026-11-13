@@ -1,5 +1,6 @@
 #include "Sync.h"
 #include "Roster.h"
+#include "model/Chart.h"
 #include <cmath>
 
 namespace wr::sync {
@@ -76,8 +77,11 @@ static bool sameSetlist (const State& a, const State& b) {
     for (size_t i = 0; i < a.songs.size(); ++i) if (a.songs[i].song.id != b.songs[i].song.id || a.songs[i].key != b.songs[i].key
         || a.songs[i].arrangement != b.songs[i].arrangement || ! (a.songs[i].notes == b.songs[i].notes)) return false;
     if (a.sectionColors != b.sectionColors) return false;   // v0.8: colour edits on the leader re-send the snapshot
-    for (size_t i = 0; i < a.songs.size(); ++i) { const auto& x = a.songs[i].song.chart.sections; const auto& y = b.songs[i].song.chart.sections;
-        if (x.size() != y.size()) return false; for (size_t k = 0; k < x.size(); ++k) if (x[k].customColor != y[k].customColor) return false; }
+    for (size_t i = 0; i < a.songs.size(); ++i) {
+        if (! chartContentEquals (a.songs[i].song.chart, b.songs[i].song.chart)) return false;   // chords, lyrics, tabs, section names
+        const auto& x = a.songs[i].song.chart.sections; const auto& y = b.songs[i].song.chart.sections;
+        if (x.size() != y.size()) return false; for (size_t k = 0; k < x.size(); ++k) if (x[k].customColor != y[k].customColor) return false;
+    }
     return true;
 }
 std::vector<std::string> Leader::update (const LiveSession& live, BeatClock& clock, double now) {
@@ -137,17 +141,139 @@ std::string Follower::banner (double) const {
     if (! haveSnap_) return "Joining leader...";
     return {};
 }
+namespace {
+void clearFollowerRig (Song& s) {
+    s.rigPreset = "Worship Ambient"; s.scenes.clear(); s.sectionScene.clear(); s.defaultScene.clear(); s.switchC = {}; s.switchD = {};
+}
+std::string sceneAssigned (const Song& mine, const Section& sec) {
+    auto it = mine.sectionScene.find (sec.name);
+    if (it == mine.sectionScene.end()) it = mine.sectionScene.find (sec.label);
+    if (it == mine.sectionScene.end()) it = mine.sectionScene.find (sec.kind);
+    return it == mine.sectionScene.end() ? std::string() : it->second;
+}
+int sectionByName (const Chart& chart, const std::string& name, int nth) {
+    if (name.empty() || nth < 1) return -1;
+    int seen = 0;
+    for (int i = 0; i < (int) chart.sections.size(); ++i) if (chart.sections[(size_t) i].name == name && ++seen == nth) return i;
+    return -1;
+}
+int matchOldSection (const Chart& mine, const Chart& neu, int neuIndex) {
+    if (neuIndex < 0 || neuIndex >= (int) neu.sections.size()) return -1;
+    const auto& name = neu.sections[(size_t) neuIndex].name;
+    int nth = 0; for (int i = 0; i <= neuIndex; ++i) if (neu.sections[(size_t) i].name == name) ++nth;
+    int byName = sectionByName (mine, name, nth);
+    if (byName >= 0) return byName;
+    return neuIndex < (int) mine.sections.size() ? neuIndex : -1;
+}
+void copyFollowerRig (Song& dest, const Song& mine, const Chart& neu) {
+    dest.rigPreset = mine.rigPreset; dest.scenes = mine.scenes; dest.defaultScene = mine.defaultScene;
+    dest.switchC = mine.switchC; dest.switchD = mine.switchD; dest.sectionScene.clear();
+    for (int i = 0; i < (int) neu.sections.size(); ++i) {
+        int src = matchOldSection (mine.chart, neu, i); if (src < 0) continue;
+        auto scene = sceneAssigned (mine, mine.chart.sections[(size_t) src]);
+        if (! scene.empty()) dest.sectionScene[neu.sections[(size_t) i].name] = scene;
+    }
+}
+std::string freshSharedId (Library& lib, const std::string& base) {
+    auto id = base + "-shared"; if (! lib.song (id)) return id;
+    for (int n = 2; n < 1000; ++n) { id = base + "-shared-" + std::to_string (n); if (! lib.song (id)) return id; }
+    return base + "-shared-x";
+}
+Song withoutLeaderRig (Song s) { clearFollowerRig (s); s.multitrack = {}; s.practice = {}; return s; }
+}
+std::string sharedChartTitle (const Library& lib, const std::string& title) {
+    auto taken = [&] (const std::string& t) { for (auto& s : lib.songs) if (s.chart.title == t) return true; return false; };
+    const std::string base = title + " (shared)"; if (! taken (base)) return base;
+    for (int n = 2; n < 1000; ++n) { auto t = title + " (shared " + std::to_string (n) + ")"; if (! taken (t)) return t; }
+    return base;
+}
+int mapLeaderSection (const Chart& local, const std::vector<std::string>& leaderNames, int leaderIndex) {
+    if (local.sections.empty()) return 0;
+    if (leaderIndex < 0) return 0;
+    if (leaderIndex < (int) leaderNames.size()) {
+        const auto& name = leaderNames[(size_t) leaderIndex];
+        int nth = 0; for (int i = 0; i <= leaderIndex; ++i) if (leaderNames[(size_t) i] == name) ++nth;
+        int byName = sectionByName (local, name, nth);
+        if (byName >= 0) return byName;
+    }
+    return std::clamp (leaderIndex, 0, (int) local.sections.size() - 1);
+}
+int Follower::mapSection (const LiveSession& live, int leaderIdx) const {
+    const Chart& c = live.chart(); if (c.sections.empty()) return 0;
+    const int song = live.songIndex();
+    const bool matched = song >= 0 && song < (int) leaderMatch_.size() && leaderMatch_[(size_t) song];
+    if (matched || song < 0 || song >= (int) leaderNames_.size()) return std::clamp (leaderIdx, 0, (int) c.sections.size() - 1);
+    return mapLeaderSection (c, leaderNames_[(size_t) song], leaderIdx);
+}
 void Follower::applyCue (int idx, int pass, double cueBeat, double dueBeat, LiveSession& live, const BeatClock& clock, double now) {
+    idx = mapSection (live, idx);
     const double b = clock.beatAt (now);
     if (b >= dueBeat - 1e-6) { cue_.active = false; live.followSection (idx, pass, now); return; } // already landed at the leader
     live.followCue (idx, pass, b < cueBeat - 1e-6);   // in time: the local (Link-locked) click speaks it in the same cue bar
     cue_ = { true, idx, pass, dueBeat };
 }
+Follower::ChartPrompt Follower::chartPrompt() const {
+    ChartPrompt p; if (chartQueue_.empty()) return p;
+    p.songId = chartQueue_.front().leader.id; p.title = chartQueue_.front().leader.chart.title; p.remaining = (int) chartQueue_.size() - 1; return p;
+}
+void Follower::answerChartPrompt (ChartImportChoice choice, bool applyAll, RigImportChoice rig, LiveSession& live, Library& lib, double now) {
+    if (chartQueue_.empty()) return;
+    std::vector<QueuedChart> batch; batch.push_back (std::move (chartQueue_.front())); chartQueue_.erase (chartQueue_.begin());
+    if (applyAll) { batch.insert (batch.end(), std::make_move_iterator (chartQueue_.begin()), std::make_move_iterator (chartQueue_.end())); chartQueue_.clear(); }
+    Setlist set = live.setlist();
+    for (auto& p : batch) {
+        const std::string key = session_ + "\n" + p.leader.id;
+        ChartDecision d; d.choice = (int) choice; d.rig = (int) rig; d.contentKey = p.contentKey; d.adoptedId = p.leader.id;
+        if (choice == ChartImportChoice::Replace) {
+            if (auto* s = lib.song (p.leader.id)) {
+                Song mine = *s; s->chart = p.leader.chart;
+                if (rig == RigImportChoice::CopyMine) copyFollowerRig (*s, mine, s->chart); else clearFollowerRig (*s);
+            }
+        } else         if (choice == ChartImportChoice::SaveAsNew) {
+            Song n = withoutLeaderRig (p.leader);
+            n.id = freshSharedId (lib, p.leader.id); n.chart.title = sharedChartTitle (lib, p.leader.chart.title);
+            if (rig == RigImportChoice::CopyMine) if (auto* mine = lib.song (p.leader.id)) copyFollowerRig (n, *mine, n.chart);
+            d.adoptedId = n.id; lib.songs.push_back (std::move (n));
+            for (auto& e : set.entries) if (e.songId == p.leader.id) e.songId = d.adoptedId;
+        }
+        chartDecisions_[key] = d;
+    }
+    bool idsChanged = false;
+    const auto& cur = live.setlist().entries;
+    if (cur.size() == set.entries.size()) { for (size_t i = 0; i < cur.size(); ++i) if (cur[i].songId != set.entries[i].songId) idsChanged = true; }
+    else idsChanged = true;
+    if (idsChanged) live.replaceFollowSet (set);
+    else live.refreshChart();
+    if (live.song()) live.followSection (mapSection (live, leaderSection_), leaderPass_, now);
+}
 void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, const BeatClock& clock, double now) {
+    leaderSection_ = st.sectionIndex; leaderPass_ = st.pass;
+    leaderNames_.clear(); leaderMatch_.clear();
     Setlist set; set.name = st.setlistName; set.date = st.setlistDate;
     for (auto& r : st.songs) {
-        if (! lib.song (r.song.id) && ! r.song.id.empty()) lib.songs.push_back (r.song);   // a song this device doesn't have yet
-        SetlistEntry e; e.songId = r.song.id; e.bpmOverride = r.bpm; e.arrangement = r.arrangement; e.notes = r.notes;
+        std::vector<std::string> names; for (auto& sec : r.song.chart.sections) names.push_back (sec.name);
+        std::string useId = r.song.id;
+        bool matched = true;
+        if (! r.song.id.empty()) {
+            auto* local = lib.song (r.song.id);
+            if (! local) lib.songs.push_back (withoutLeaderRig (r.song));
+            else if (! chartContentEquals (local->chart, r.song.chart)) {
+                const std::string key = chartContentKey (r.song.chart);
+                const std::string decKey = session_ + "\n" + r.song.id;
+                auto dec = chartDecisions_.find (decKey);
+                if (dec != chartDecisions_.end() && dec->second.contentKey == key) {
+                    if (dec->second.choice == (int) ChartImportChoice::Replace) local->chart = r.song.chart;
+                    else if (dec->second.choice == (int) ChartImportChoice::SaveAsNew && lib.song (dec->second.adoptedId)) useId = dec->second.adoptedId;
+                    else matched = false;
+                } else {
+                    matched = false;
+                    bool queued = false; for (auto& q : chartQueue_) if (q.leader.id == r.song.id) { q.leader = r.song; q.contentKey = key; queued = true; break; }
+                    if (! queued) chartQueue_.push_back ({ r.song, key });
+                }
+            }
+        }
+        leaderNames_.push_back (std::move (names)); leaderMatch_.push_back (matched ? 1 : 0);
+        SetlistEntry e; e.songId = useId; e.bpmOverride = r.bpm; e.arrangement = r.arrangement; e.notes = r.notes;
         auto lk = localKey.find (r.song.id);
         if (lk != localKey.end() && ! followLeaderKey) { e.keyOverride = lk->second.first; e.capoOverride = lk->second.second; } else e.keyOverride = r.key;
         set.entries.push_back (e);
@@ -161,7 +287,8 @@ void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, 
     if (! same) live.loadSetlist (set, st.songIndex, now); else live.followSong (st.songIndex, now);
     if (std::abs (live.bpm() - st.bpm) >= 0.05) live.setBpm (st.bpm);
     cue_.active = false;
-    if (live.sectionIndex() != st.sectionIndex || live.pass() != st.pass || live.sectionPending()) live.followSection (st.sectionIndex, st.pass, now);
+    { const int mapped = mapSection (live, st.sectionIndex);
+      if (live.sectionIndex() != mapped || live.pass() != st.pass || live.sectionPending()) live.followSection (mapped, st.pass, now); }
     if (st.pendingIdx >= 0) applyCue (st.pendingIdx, st.pendingPass, st.cueBeat, st.dueBeat, live, clock, now);
     play_.active = false;
     if (st.playing) {
@@ -185,7 +312,7 @@ void Follower::onLine (const std::string& line, LiveSession& live, Library& lib,
     if (m.seq != last_ + 1) { if (! wantSnap_) { wantSnap_ = true; ++resyncs_; send_ (encode ("resync", -1, Json::object())); } return; }
     last_ = m.seq;
     if (m.type == "song") { cue_.active = false; play_.active = false; live.followSong (j["song"].integer(), now); }
-    else if (m.type == "section") { cue_.active = false; int i = j["idx"].integer(), p = j["pass"].integer (1);
+    else if (m.type == "section") { cue_.active = false; int i = mapSection (live, j["idx"].integer()), p = j["pass"].integer (1);
         if (live.sectionIndex() != i || live.pass() != p || live.sectionPending()) live.followSection (i, p, now); }
     else if (m.type == "cue") applyCue (j["idx"].integer(), j["pass"].integer (1), j["cueBeat"].num(), j["dueBeat"].num(), live, clock, now);
     else if (m.type == "mt") transport = mt::transportFromJson (j);

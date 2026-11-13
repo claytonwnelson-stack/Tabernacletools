@@ -389,6 +389,88 @@ static void testClockLock() {
     CHECK (tempo.label().find ("Clock") == 0);
 }
 
+static void testChartConflict() {
+    CHECK_EQ (sharedChartTitle (seedLibrary(), "Morning Song"), std::string ("Morning Song (shared)"));
+    Library named = seedLibrary(); Song extra; extra.id = "already"; extra.chart.title = "Morning Song (shared)"; named.songs.push_back (extra);
+    CHECK_EQ (sharedChartTitle (named, "Morning Song"), std::string ("Morning Song (shared 2)"));
+    Chart same = parseChart ("[Verse 1]\nG\nhello\n[Chorus]\nD\nsing\n");
+    Chart coloured = same; coloured.sections[0].customColor = "red"; coloured.sections[1].color = "orange";
+    CHECK (chartContentEquals (same, coloured));
+    coloured.sections[1].items[0].line.lyric = "other";
+    CHECK (! chartContentEquals (same, coloured));
+    std::vector<std::string> names { "Verse 1", "Chorus", "Bridge" };
+    Chart chorusFirst = parseChart ("[Chorus]\nD\nsing\n[Verse 1]\nG\nhello\n");
+    CHECK_EQ (mapLeaderSection (chorusFirst, names, 1), 0);
+    Chart one = parseChart ("[Verse]\nG\nhi\n");
+    CHECK_EQ (mapLeaderSection (one, names, 5), 0);
+
+    Band b;
+    Song mine; mine.id = "morning-song"; mine.chart = parseChart ("[Chorus]\nD\nmine\n[Verse 1]\nG\nhello\n");
+    mine.rigPreset = "My Rig"; Scene big; big.name = "Big"; mine.scenes.push_back (big); mine.sectionScene["Chorus"] = "Big"; mine.defaultScene = "Big";
+    b.FL.songs.push_back (mine);
+    b.LL.song ("morning-song")->rigPreset = "Leader Rig";
+    b.lead.start (b.LL.setlists[0], 1, 0); b.join (0.0); b.step (0.1);
+    CHECK (b.follower.chartPromptWaiting());
+    CHECK_EQ (b.follower.chartPrompt().title, std::string ("Morning Song"));
+    CHECK (b.FL.song ("morning-song")->chart.sections[0].items[0].line.lyric == "mine");
+    CHECK_EQ (b.fol.chart().sections[(size_t) b.fol.sectionIndex()].name, std::string ("Verse 1"));
+    b.lead.handle ({ Action::GotoSection, 1 }, 0.2); b.step (0.2);
+    CHECK_EQ (b.fol.chart().sections[(size_t) b.fol.sectionIndex()].name, std::string ("Chorus"));
+    b.follower.answerChartPrompt (ChartImportChoice::KeepMine, false, RigImportChoice::CopyMine, b.fol, b.FL, 0.3);
+    CHECK (! b.follower.chartPromptWaiting());
+    CHECK (b.FL.song ("morning-song")->chart.sections[0].items[0].line.lyric == "mine");
+    CHECK_EQ (b.FL.song ("morning-song")->rigPreset, std::string ("My Rig"));
+    b.step (0.4); CHECK (! b.follower.chartPromptWaiting());
+
+    Band rep;
+    Song mine2 = mine; rep.FL.songs.push_back (mine2); rep.lead.start (rep.LL.setlists[0], 1, 0); rep.join (0); rep.step (0.1);
+    CHECK (rep.follower.chartPromptWaiting());
+    rep.follower.answerChartPrompt (ChartImportChoice::Replace, false, RigImportChoice::CopyMine, rep.fol, rep.FL, 0.2);
+    CHECK (! rep.follower.chartPromptWaiting());
+    CHECK (rep.FL.song ("morning-song")->chart.sections[0].name == "Verse 1");
+    CHECK (rep.FL.song ("morning-song")->chart.sections[0].items[0].line.lyric != "mine");
+    CHECK_EQ (rep.FL.song ("morning-song")->rigPreset, std::string ("My Rig"));
+    CHECK_EQ (rep.FL.song ("morning-song")->sectionScene["Chorus"], std::string ("Big"));
+    CHECK (rep.FL.song ("morning-song")->rigPreset != "Leader Rig");
+    rep.step (0.3); CHECK (! rep.follower.chartPromptWaiting());
+    rep.LL.song ("morning-song")->chart.sections[0].items[0].line.lyric = "leader edited";
+    rep.step (0.4); CHECK (rep.follower.chartPromptWaiting());
+
+    Band fresh;
+    fresh.FL.songs.push_back (mine); fresh.lead.start (fresh.LL.setlists[0], 1, 0); fresh.join (0); fresh.step (0.1);
+    fresh.follower.answerChartPrompt (ChartImportChoice::Replace, false, RigImportChoice::Fresh, fresh.fol, fresh.FL, 0.2);
+    CHECK_EQ (fresh.FL.song ("morning-song")->rigPreset, std::string ("Worship Ambient"));
+    CHECK (fresh.FL.song ("morning-song")->scenes.empty());
+    CHECK (fresh.FL.song ("morning-song")->sectionScene.empty());
+
+    Band neu;
+    Song titled = mine; neu.FL.songs.push_back (titled);
+    Song blocker; blocker.id = "block"; blocker.chart.title = "Morning Song (shared)"; neu.FL.songs.push_back (blocker);
+    neu.lead.start (neu.LL.setlists[0], 1, 0); neu.join (0); neu.step (0.1);
+    const int before = (int) neu.FL.songs.size();
+    neu.follower.answerChartPrompt (ChartImportChoice::SaveAsNew, false, RigImportChoice::CopyMine, neu.fol, neu.FL, 0.2);
+    CHECK_EQ ((int) neu.FL.songs.size(), before + 1);
+    const Song* shared = nullptr; for (auto& s : neu.FL.songs) if (s.chart.title == "Morning Song (shared 2)") shared = &s;
+    CHECK (shared != nullptr);
+    CHECK (shared && shared->id != "morning-song");
+    CHECK (neu.FL.song ("morning-song")->chart.sections[0].items[0].line.lyric == "mine");
+    CHECK_EQ (neu.fol.song()->id, shared->id);
+    CHECK_EQ (shared->rigPreset, std::string ("My Rig"));
+    CHECK_EQ (shared->sectionScene.count ("Chorus"), (size_t) 1);
+    CHECK (shared->rigPreset != "Leader Rig");
+    neu.step (0.4); CHECK (! neu.follower.chartPromptWaiting());
+
+    Band blank;
+    Song onlyLeader; onlyLeader.id = "brand-new"; onlyLeader.chart = parseChart ("[Verse]\nA\nnew song\n"); onlyLeader.rigPreset = "Leader Rig";
+    blank.LL.songs.push_back (onlyLeader);
+    blank.LL.setlists[0].entries.push_back ({ "brand-new", "", 0, "lead" });
+    blank.lead.start (blank.LL.setlists[0], (int) blank.LL.setlists[0].entries.size() - 1, 0);
+    blank.join (0); blank.step (0.1);
+    CHECK (! blank.follower.chartPromptWaiting());
+    CHECK (blank.FL.song ("brand-new") != nullptr);
+    CHECK_EQ (blank.FL.song ("brand-new")->rigPreset, std::string ("Worship Ambient"));
+}
+
 int main() { setvbuf (stdout, nullptr, _IONBF, 0);
-    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp(); testClockLock();
+    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp(); testClockLock(); testChartConflict();
     std::printf ("%d checks, %d failures\n", checks, fails); return fails ? 1 : 0; }

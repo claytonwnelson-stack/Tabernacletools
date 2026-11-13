@@ -250,6 +250,7 @@ void CoreProcessor::timerCallback() {
     }
     live_->tick (now);
     sync_->poll (now);
+    if (sync_->takeLibrarySave()) store.saveSoon();
     // v0.8 song stats: a song counts as played when PLAY runs on it (leader, follower or alone), once per day
     { const bool pl = live_->playing(); auto* s = live_->song();
       if (pl && s) { auto key = s->id + "@" + today(); if (key != loggedKey_ && wr::logPlay (store.lib, s->id, today())) store.saveSoon(); loggedKey_ = key; }
