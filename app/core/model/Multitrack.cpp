@@ -58,7 +58,7 @@ Json toJson (const MultitrackSet& m) {
     Json st = Json::array(), tp = Json::array(), sb = Json::array();
     for (auto& s : m.stems) { Json o = Json::object().set ("id", s.id).set ("name", s.name).set ("file", s.file).set ("color", s.color)
         .set ("vol", s.volumeDb).set ("pan", s.pan).set ("mute", s.mute).set ("solo", s.solo).set ("bus", s.bus == Bus::Cue ? "cue" : "main");
-        if (! s.sharedSession.empty()) o.set ("shared", s.sharedSession); st.push (std::move (o)); }
+        if (! s.sharedSession.empty()) o.set ("shared", s.sharedSession); if (! s.sharedOwner.empty()) o.set ("owner", s.sharedOwner); st.push (std::move (o)); }
     for (auto& p : m.tempo.pts) tp.push (Json::object().set ("beat", p.beat).set ("bpm", p.bpm));
     for (double b : m.sectionBeats) sb.push (b);
     return Json::object().set ("stems", st).set ("offset", m.tempo.offsetSec).set ("tempo", tp).set ("bpb", m.beatsPerBar)
@@ -68,7 +68,7 @@ MultitrackSet multitrackFromJson (const Json& j) {
     MultitrackSet m;
     for (auto& o : j["stems"].items()) { if ((int) m.stems.size() >= kMaxStems) break; Stem s; s.id = o["id"].str(); s.name = o["name"].str(); s.file = o["file"].str();
         s.color = o["color"].str(); s.volumeDb = (float) std::clamp (o["vol"].num(), -60.0, 12.0); s.pan = (float) std::clamp (o["pan"].num(), -1.0, 1.0);
-        s.mute = o["mute"].boolean(); s.solo = o["solo"].boolean(); s.bus = o["bus"].str() == "cue" ? Bus::Cue : Bus::Main; s.sharedSession = o["shared"].str(); m.stems.push_back (s); }
+        s.mute = o["mute"].boolean(); s.solo = o["solo"].boolean(); s.bus = o["bus"].str() == "cue" ? Bus::Cue : Bus::Main; s.sharedSession = o["shared"].str(); s.sharedOwner = o["owner"].str(); m.stems.push_back (s); }
     m.tempo.offsetSec = j["offset"].num(); for (auto& p : j["tempo"].items()) m.tempo.pts.push_back ({ p["beat"].num(), std::clamp (p["bpm"].num (120), 20.0, 400.0) });
     std::sort (m.tempo.pts.begin(), m.tempo.pts.end(), [] (auto& a, auto& b) { return a.beat < b.beat; });
     m.beatsPerBar = std::clamp (j["bpb"].integer (4), 1, 16);

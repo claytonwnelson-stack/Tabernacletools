@@ -27,6 +27,7 @@ public:
     void connected (int id, double now);
     void disconnected (int id, double now);
     void kicked (int id, double now);
+    void setRole (int id, const std::string& role);
     void pingSent (long long pingId, double now) { pings_[pingId] = now; if (pings_.size() > 64) pings_.erase (pings_.begin()); }
     // a follower line (hb / pong / hello). leaderHash/leaderSeq/leaderBeat: leader state right now.
     void line (int id, const Msg& m, const std::string& leaderHash, long long leaderSeq, double leaderBeat, double bpm, double now);

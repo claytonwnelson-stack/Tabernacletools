@@ -560,6 +560,57 @@ static void testVersionSetlistPlaybackStems() {
     CHECK (drive.fol.following());
 }
 
+static void testCoLeader() {
+    CHECK (decideTakeLead (false, true, false) == TakeLead::Ignore);
+    CHECK (decideTakeLead (true, true, true) == TakeLead::WaitUntilStopped);
+    CHECK (decideTakeLead (true, true, false) == TakeLead::Ask);
+    CHECK (decideTakeLead (true, false, true) == TakeLead::TakeNow);
+    FakeClock phase; phase.bpm = 100; phase.t0 = 0; phase.b0 = 0;
+    phase.adoptTimeline (40, 80, 10);
+    CHECK (std::abs (phase.beatAt (10) - 40.0) < 1e-6);
+    CHECK (std::abs (phase.tempo() - 80.0) < 1e-6);
+    CHECK (std::abs (phase.beatAt (10.5) - (40.0 + 0.5 * 80.0 / 60.0)) < 1e-4);
+
+    Library lib = leaderLib(); Sink sink; LiveSession live (lib, sink); live.start (lib.setlists[0], 0, 0); FakeClock clock;
+    Leader lead ("sess"); lead.setDeviceName ("Guitar"); lead.markCoLeader ("Keys", true);
+    CHECK (lead.handoffTo ("Bass", "10.0.0.3", 9, 1, 120).empty());
+    auto denied = lead.onFollowerLine (encode ("takelead", -1, Json::object().set ("name", "Bass").set ("beat", 1.0).set ("bpm", 120.0)), live, clock, 0);
+    Msg msg; CHECK (decode (denied, msg)); CHECK_EQ (msg.type, std::string ("leaddenied"));
+
+    live.setPlaying (true, 1);
+    CHECK (lead.onFollowerLine (encode ("takelead", -1, Json::object().set ("name", "Keys").set ("beat", 12.0).set ("bpm", 100.0)), live, clock, 1).empty());
+    CHECK (lead.takeLeadDeferred()); CHECK (! lead.takeLeadWaiting());
+    live.setPlaying (false, 2); lead.update (live, clock, 2);
+    CHECK (lead.takeLeadWaiting()); CHECK_EQ (lead.takeLeadAsk().name, std::string ("Keys"));
+    auto ok = lead.approveTakeLead(); CHECK (decode (ok, msg)); CHECK_EQ (msg.type, std::string ("leadok"));
+    auto done = lead.completeHandoff ("Keys", "10.0.0.8", 52741, 12.0, 100.0);
+    CHECK (decode (done, msg)); CHECK_EQ (msg.type, std::string ("handoff")); CHECK_EQ (msg.body["leader"].str(), std::string ("Keys")); CHECK_EQ (msg.body["previous"].str(), std::string ("Guitar"));
+
+    Follower keys ([] (const std::string&) {}, "Keys"); Follower bass ([] (const std::string&) {}, "Bass"); Follower old ([] (const std::string&) {}, "Guitar");
+    keys.onLine (done, live, lib, clock, 3); Handoff claim; CHECK (keys.takeClaim (claim)); CHECK_EQ (claim.host, std::string ("10.0.0.8")); CHECK_EQ (claim.port, 52741);
+    CHECK (std::abs (clock.beatAt (3) - 12.0) < 1e-6); CHECK (std::abs (clock.tempo() - 100.0) < 1e-6);
+    bool kept = false; for (auto& n : claim.coLeaders) if (n == "Guitar") kept = true; CHECK (kept);
+    bass.onLine (done, live, lib, phase, 3); Handoff hop; CHECK (bass.takeRedirect (hop)); CHECK_EQ (hop.host, std::string ("10.0.0.8")); CHECK_EQ (bass.leaderName(), std::string ("Keys"));
+    old.onLine (done, live, lib, phase, 3); CHECK (old.coLeader()); CHECK (old.takeRedirect (hop)); CHECK (! old.takeClaim (claim));
+
+    CHECK_EQ (leaderForSong ("Guitar", live.setlist(), 0), std::string ("Guitar"));
+    lib.setlists[0].entries[1].bandLeader = "Keys";
+    Setlist assigned = setlistFromJson (toJson (lib.setlists[0]));
+    CHECK_EQ (assigned.entries[1].bandLeader, std::string ("Keys"));
+    CHECK (! songHandoffDue (true, "Guitar", leaderForSong ("Guitar", assigned, 1)));
+    CHECK (songHandoffDue (false, "Guitar", leaderForSong ("Guitar", assigned, 1)));
+    CHECK (! songHandoffDue (false, "Keys", leaderForSong ("Keys", assigned, 1)));
+    CHECK_EQ (leaderForSong ("Keys", assigned, 0), std::string ("Keys"));
+
+    CHECK (sharedStemPlayable ("sess", "Guitar", true, "sess", "Guitar"));
+    CHECK (! sharedStemPlayable ("sess", "Guitar", true, "sess", "Keys"));
+    CHECK (sharedStemPlayable ("", "", false, "", "Keys"));
+    CHECK (sharedStemPlayable ("sess", "", true, "sess", "Keys"));
+    std::vector<Peer> peers { { "Guitar", "10.0.0.1", "sess", 1 }, { "Keys", "10.0.0.8", "sess", 52741 } };
+    CHECK_EQ (matchSessionPeer (peers, "sess", "Guitar"), 1);
+    CHECK_EQ (matchSessionPeer (peers, "other", "Guitar"), -1);
+}
+
 int main() { setvbuf (stdout, nullptr, _IONBF, 0);
-    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp(); testClockLock(); testChartConflict(); testVersionSetlistPlaybackStems();
+    testProtocol(); testLeaderFollower(); testTcp(); testLinkLock(); testProjector(); testRoster(); testRosterTcp(); testClockLock(); testChartConflict(); testVersionSetlistPlaybackStems(); testCoLeader();
     std::printf ("%d checks, %d failures\n", checks, fails); return fails ? 1 : 0; }

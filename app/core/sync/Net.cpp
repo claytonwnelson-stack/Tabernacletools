@@ -54,7 +54,12 @@ void Server::flush (Conn& c) { writeSome (c.fd, c.out); }
 void Server::drop (size_t i, const Events& ev) { int id = conns_[i].id; ::close (conns_[i].fd); conns_.erase (conns_.begin() + (long) i); if (ev.disconnected) ev.disconnected (id); }
 void Server::poll (double now, const Events& ev) {
     if (fd_ < 0) return;
-    for (;;) { int c = ::accept (fd_, nullptr, nullptr); if (c < 0) break; nonBlocking (c); Conn k; k.fd = c; k.id = nextId_++; k.lastRx = now; conns_.push_back (std::move (k)); if (ev.connected) ev.connected (conns_.back().id); }
+    for (;;) {
+        sockaddr_in peer {}; socklen_t pl = sizeof peer; int c = ::accept (fd_, (sockaddr*) &peer, &pl); if (c < 0) break; nonBlocking (c);
+        Conn k; k.fd = c; k.id = nextId_++; k.lastRx = now;
+        char buf[INET_ADDRSTRLEN] {}; if (peer.sin_family == AF_INET) inet_ntop (AF_INET, &peer.sin_addr, buf, sizeof buf); k.host = buf;
+        conns_.push_back (std::move (k)); if (ev.connected) ev.connected (conns_.back().id);
+    }
     if (now - lastPing_ >= 1.0) { lastPing_ = now; broadcast (encode ("ping", -1, Json::object().set ("id", (double) ++pingId_))); if (ev.pinged) ev.pinged (pingId_); }
     for (size_t i = 0; i < conns_.size();) {
         auto& c = conns_[i]; const int id = c.id; bool got = false;
@@ -72,6 +77,9 @@ void Server::send (int id, const std::string& line) { for (auto& c : conns_) if 
 void Server::kick (int id) { for (auto& c : conns_) if (c.id == id) { c.out += encode ("kick", -1, Json::object()); flush (c); c.closing = true; } }
 void Server::broadcast (const std::string& line) { for (auto& c : conns_) { c.out += line; flush (c); } }
 std::vector<std::string> Server::clientNames() const { std::vector<std::string> n; for (auto& c : conns_) n.push_back (c.name); return n; }
+std::string Server::clientName (int id) const { for (auto& c : conns_) if (c.id == id) return c.name; return {}; }
+std::string Server::clientHost (int id) const { for (auto& c : conns_) if (c.id == id) return c.host; return {}; }
+int Server::clientId (const std::string& name) const { for (auto& c : conns_) if (c.name == name) return c.id; return 0; }
 
 // ---------------------------------------------------------------- client
 void Client::connectTo (const std::string& host, int port) { disconnect(); host_ = host; port_ = port; state_ = Waiting; retryAt_ = 0; attempts_ = 0; }

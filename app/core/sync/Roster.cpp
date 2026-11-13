@@ -18,6 +18,7 @@ void Roster::disconnected (int id, double now) {
     if (! m.kicked) toasts_.push_back ({ m.name + " dropped", 1 });
 }
 void Roster::kicked (int id, double now) { auto it = m_.find (id); if (it == m_.end()) return; it->second.kicked = true; toasts_.push_back ({ it->second.name + " removed", 0 }); disconnected (id, now); }
+void Roster::setRole (int id, const std::string& role) { auto it = m_.find (id); if (it == m_.end()) return; it->second.role = role; }
 
 void Roster::line (int id, const Msg& msg, const std::string& lh, long long lseq, double lbeat, double bpm, double now) {
     auto it = m_.find (id); if (it == m_.end() || ! it->second.connected) return; auto& m = it->second; const Json& j = msg.body;

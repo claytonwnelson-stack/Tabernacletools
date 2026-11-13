@@ -28,14 +28,15 @@ int BandSync::linkPeers() const {
 }
 
 void BandSync::lead (const std::string& name) {
-    stop(); roster_ = Roster(); std::random_device rd; leader_ = std::make_unique<Leader> (name + "-" + std::to_string (rd() % 100000));
+    stop(); roster_ = Roster(); deviceName_ = name; std::random_device rd; leader_ = std::make_unique<Leader> (name + "-" + std::to_string (rd() % 100000));
+    leader_->setDeviceName (name); pendingSong_ = -1;
     if (! server_.listen (kDefaultPort)) server_.listen (0);
-    disco_.advertise (name, server_.port()); mode_ = Mode::Leading; live_.setFollowing (false);
+    disco_.setSession (leader_->sessionId()); disco_.advertise (name, server_.port()); mode_ = Mode::Leading; live_.setFollowing (false);
     clock(); linkActive_.store (useLink && linkRt_.load() != nullptr);
 }
 void BandSync::join (const std::string& host, int port, const std::string& name) {
-    stop(); { auto role = follower_.role; follower_ = Follower ([this] (const std::string& l) { client_.send (l); }, name); follower_.role = role; }
-    host_ = host; port_ = port; client_.connectTo (host, port); mode_ = Mode::Following; live_.setFollowing (true);
+    stop(); deviceName_ = name; { auto role = follower_.role; follower_ = Follower ([this] (const std::string& l) { client_.send (l); }, name); follower_.role = role; }
+    host_ = host; port_ = port; client_.connectTo (host, port); disco_.browse(); mode_ = Mode::Following; live_.setFollowing (true);
     clock(); linkActive_.store (useLink && linkRt_.load() != nullptr);
     lib_.settings.lastLeaderHost = host; lib_.settings.lastLeaderPort = port;
 }
@@ -57,13 +58,25 @@ void BandSync::poll (double now) {
         ev.connected = [&] (int id) { roster_.connected (id, now); };
         ev.disconnected = [&] (int id) { roster_.disconnected (id, now); };
         ev.pinged = [&] (long long pid) { roster_.pingSent (pid, now); };
+        std::string hopHost; int hopPort = 0; double hopBeat = 0, hopBpm = 0; bool hop = false;
         ev.line = [&] (int id, const std::string& l) {
             Msg m; if (decode (l, m)) roster_.line (id, m, h, leader_->seq(), clock().beatAt (now), live_.bpm(), now);
             wr::sync::Msg got; if (wr::sync::decode (l, got) && got.type == "getaudio" && ! live_.playing()) sendLeaderAudio (id, got.body["song"].str());
-            auto r = leader_->onFollowerLine (l, live_, clock(), now); if (! r.empty()) server_.send (id, r); };
-        server_.poll (now, ev); leader_->tick (live_, clock(), now);
+            if (wr::sync::decode (l, got) && got.type == "leadready" && leader_) {
+                const std::string host = server_.clientHost (id); const int p = got.body["port"].integer();
+                hopBeat = clock().beatAt (now); hopBpm = clock().tempo();
+                auto line = leader_->completeHandoff (got.body["name"].str(), host, p, hopBeat, hopBpm);
+                if (! line.empty()) { server_.broadcast (line); hopHost = host; hopPort = p; hop = true; }
+                return;
+            }
+            auto r = leader_->onFollowerLine (l, live_, clock(), now); if (! r.empty() && leader_) server_.send (id, r); };
+        server_.poll (now, ev); if (hop) { followHandoff (hopHost, hopPort, hopBeat, hopBpm, now); return; } if (! leader_) return;
+        leader_->tick (live_, clock(), now);
         for (auto& l : leader_->update (live_, clock(), now)) server_.broadcast (l);
         roster_.tick (stateHash (live_), leader_->seq(), now);
+        if (! live_.playing() && leader_->takeLeadDeferred()) leader_->promoteDeferred();
+        if (! live_.playing() && ! takePromptOpen_ && leader_->takeLeadWaiting()) showTakeLeadPrompt();
+        if (! live_.playing() && ! takePromptOpen_) maybeSongHandoff (now);
         if (! linkActive_.load()) localClock_.setTempo (live_.bpm(), now);
     } else if (mode_ == Mode::Following) {
         Client::Events ev; ev.connected = [this] { follower_.onConnected(); }; ev.disconnected = [this, now] { follower_.onDisconnected (now); };
@@ -77,6 +90,13 @@ void BandSync::poll (double now) {
         if (! versionShown_ && ! follower_.versionWarning().empty()) { versionShown_ = true; auto text = follower_.versionWarning(); follower_.clearVersionWarning(); juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "Band sync", text); }
         if (! live_.playing() && ! setlistPromptOpen_ && follower_.setlistSaveWaiting()) showSetlistPrompt();
         if (! live_.playing() && ! chartPromptOpen_ && ! follower_.setlistSaveWaiting()) showChartPrompt();
+        wr::sync::Handoff hop;
+        if (follower_.takeClaim (hop)) assumeFrom (hop, now);
+        else if (follower_.takeRedirect (hop)) { clock().adoptTimeline (hop.beat, hop.bpm, now); rejoin (hop.host, hop.port); }
+        else if (! client_.connected() && follower_.leaderLost()) {
+            auto peers = disco_.peers(); int i = wr::sync::matchSessionPeer (peers, follower_.sessionId(), deviceName_);
+            if (i >= 0) rejoin (peers[(size_t) i].host, peers[(size_t) i].port);
+        }
     }
 }
 void BandSync::showSetlistPrompt() {
@@ -103,7 +123,7 @@ void BandSync::sendLeaderAudio (int followerId, const std::string& songId) {
         if (! file.existsAsFile()) return;
         juce::MemoryBlock mb; if (! file.loadFileAsData (mb) || mb.getSize() == 0) return;
         auto chunks = wr::sync::splitAudio (id, name, leader_->sessionId(), kind, std::string ((const char*) mb.getData(), mb.getSize()), 24 * 1024);
-        for (auto& c : chunks) server_.send (followerId, wr::sync::encode ("audio", -1, Json::object().set ("song", c.songId).set ("name", c.name).set ("session", c.session).set ("kind", c.kind).set ("i", c.index).set ("n", c.count).set ("data", hexOf (c.data))));
+        for (auto& c : chunks) server_.send (followerId, wr::sync::encode ("audio", -1, Json::object().set ("song", c.songId).set ("name", c.name).set ("session", c.session).set ("owner", deviceName_).set ("kind", c.kind).set ("i", c.index).set ("n", c.count).set ("data", hexOf (c.data))));
     };
     auto one = [&] (const Song& s) {
         for (auto& st : s.multitrack.stems) sendFile (s.id, st.name.empty() ? st.id : st.name, "stem", juce::File (st.file));
@@ -120,12 +140,78 @@ void BandSync::installSharedAudio() {
         dir.createDirectory();
         auto file = dir.getChildFile (juce::File::createLegalFileName (done.name.empty() ? done.kind : done.name) + ".wav");
         file.replaceWithData (done.data.data(), done.data.size());
-        if (done.kind == "practice") { s->practice.file = file.getFullPathName().toStdString(); s->practice.sharedSession = done.session; }
-        else { mt::Stem st; st.id = done.name; st.name = done.name; st.file = file.getFullPathName().toStdString(); st.sharedSession = done.session; s->multitrack.stems.push_back (st); }
+        if (done.kind == "practice") { s->practice.file = file.getFullPathName().toStdString(); s->practice.sharedSession = done.session; s->practice.sharedOwner = done.owner; }
+        else { mt::Stem st; st.id = done.name; st.name = done.name; st.file = file.getFullPathName().toStdString(); st.sharedSession = done.session; st.sharedOwner = done.owner; s->multitrack.stems.push_back (st); }
         s->leaderAudioNote.clear(); saveLib_ = true;
     }
 }
 std::string BandSync::sessionId() const { if (mode_ == Mode::Leading && leader_) return leader_->sessionId(); if (mode_ == Mode::Following) return follower_.sessionId(); return {}; }
+std::string BandSync::activeLeaderName() const { if (mode_ == Mode::Leading) return deviceName_; if (mode_ == Mode::Following) return follower_.leaderName(); return {}; }
+bool BandSync::canTakeLead() const { return mode_ == Mode::Following && follower_.coLeader() && ! follower_.wasKicked(); }
+void BandSync::takeLead (double now) {
+    if (! canTakeLead()) return;
+    if (! follower_.connected()) {
+        wr::sync::Handoff h; h.session = follower_.sessionId(); h.leaderName = deviceName_; h.previous = follower_.leaderName(); h.beat = clock().beatAt (now); h.bpm = clock().tempo();
+        assumeFrom (h, now); return;
+    }
+    follower_.requestTakeLead (clock(), now);
+}
+void BandSync::markCoLeader (int id) {
+    if (mode_ != Mode::Leading || ! leader_) return;
+    const std::string name = server_.clientName (id); if (name.empty()) return;
+    bool on = true; for (auto& m : roster_.members()) if (m.id == id) on = m.role != "coleader";
+    const std::string role = on ? "coleader" : "player";
+    server_.send (id, encode ("role", -1, Json::object().set ("role", role)));
+    roster_.setRole (id, role); leader_->markCoLeader (name, on);
+}
+void BandSync::showTakeLeadPrompt() {
+    if (live_.playing() || ! leader_ || ! leader_->takeLeadWaiting()) return;
+    takePromptOpen_ = true; const auto ask = leader_->takeLeadAsk();
+    auto* w = new juce::AlertWindow ("Give " + juce::String (ask.name) + " the lead?", "They become the only leader. This iPad keeps following as co-leader. The beat does not restart.", juce::AlertWindow::QuestionIcon);
+    w->addButton ("Give lead", 1); w->addButton ("Not now", 2);
+    w->enterModalState (true, juce::ModalCallbackFunction::create ([this, ask] (int result) {
+        takePromptOpen_ = false; if (! leader_) return;
+        if (result != 1) { leader_->denyTakeLead(); return; }
+        auto line = leader_->approveTakeLead(); const int id = server_.clientId (ask.name);
+        if (id > 0 && ! line.empty()) server_.send (id, line); else leader_->denyTakeLead();
+    }), true);
+}
+void BandSync::assumeFrom (const wr::sync::Handoff& h, double now) {
+    clock().adoptTimeline (h.beat, h.bpm > 0 ? h.bpm : clock().tempo(), now);
+    const bool tell = client_.connected();
+    if (! server_.listen (0)) return;
+    if (tell) client_.send (encode ("leadready", -1, Json::object().set ("name", deviceName_).set ("port", server_.port())));
+    client_.disconnect();
+    leader_ = std::make_unique<Leader> (h.session.empty() ? deviceName_ : h.session);
+    leader_->setDeviceName (deviceName_);
+    for (auto& n : h.coLeaders) leader_->markCoLeader (n, true);
+    if (! h.previous.empty()) leader_->markCoLeader (h.previous, true);
+    disco_.setSession (leader_->sessionId()); disco_.advertise (deviceName_, server_.port());
+    mode_ = Mode::Leading; live_.setFollowing (false); follower_.role = "player"; pendingSong_ = -1; roster_ = Roster();
+}
+void BandSync::followHandoff (const std::string& host, int port, double beat, double bpm, double now) {
+    clock().adoptTimeline (beat, bpm > 0 ? bpm : clock().tempo(), now);
+    server_.close(); disco_.stopAdvertising(); leader_.reset(); roster_ = Roster();
+    follower_ = Follower ([this] (const std::string& l) { client_.send (l); }, deviceName_); follower_.role = "coleader";
+    host_ = host; port_ = port; client_.connectTo (host, port); disco_.browse();
+    mode_ = Mode::Following; live_.setFollowing (true); pendingSong_ = -1;
+}
+void BandSync::rejoin (const std::string& host, int port) {
+    if (host.empty() || port <= 0 || (host == host_ && port == port_)) return;
+    client_.disconnect(); host_ = host; port_ = port; client_.connectTo (host, port);
+    lib_.settings.lastLeaderHost = host; lib_.settings.lastLeaderPort = port; saveLib_ = true;
+}
+void BandSync::maybeSongHandoff (double now) {
+    if (mode_ != Mode::Leading || ! leader_ || live_.playing()) return;
+    const std::string who = leaderForSong (deviceName_, live_.setlist(), live_.songIndex());
+    if (leader_->takeLeadWaiting() || leader_->takeLeadDeferred()) return;
+    if (! songHandoffDue (false, deviceName_, who) || ! leader_->isCoLeader (who)) return;
+    if (pendingSong_ == live_.songIndex()) return;
+    const int id = server_.clientId (who); if (id <= 0) return;
+    leader_->queueHandoff (who, clock().beatAt (now), clock().tempo());
+    auto line = leader_->approveTakeLead();
+    if (! line.empty()) { server_.send (id, line); pendingSong_ = live_.songIndex(); }
+}
 void BandSync::showChartPrompt() {
     if (! follower_.chartPromptWaiting()) return;
     auto p = follower_.chartPrompt();

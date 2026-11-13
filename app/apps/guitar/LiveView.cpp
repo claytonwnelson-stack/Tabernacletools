@@ -49,6 +49,9 @@ void RigPanel::paint (juce::Graphics& g) {
       if (P.rig.click.countingIn.load()) { g.setColour (accentText); g.drawText ("COUNT-IN", c3, juce::Justification::centred); } else
       g.setColour (pl ? accentText : text), g.drawText (L.clockActive() ? juce::String ("MIDI CLOCK") : pl ? (bars > 0 ? "BAR " + juce::String (std::min (bars, L.barInSection())) + "/" + juce::String (bars) : juce::String ("PLAYING")) : juce::String ("PLAY"), c3, juce::Justification::centred);
       ctl_ = { { c0, 0 }, { c1, 1 }, { c2, 2 }, { c3, 3 } };
+      takeLead_ = {};
+      if (P.sync().canTakeLead()) { takeLead_ = juce::Rectangle<float> (strip.getRight() - 120, strip.getBottom() + 6, 120, 28);
+          pill (g, takeLead_, accentFill, accentFill, 8); g.setColour (onAccent); g.setFont (font (13, true)); g.drawText ("TAKE LEAD", takeLead_, juce::Justification::centred); r.removeFromTop (36); }
       { auto b = P.sync().banner (P.nowSec()); if (! b.empty()) { g.setColour (juce::Colours::red.withAlpha (0.85f)); auto br = strip.translated (0, 38).withHeight (14); g.fillRect (br); g.setColour (juce::Colours::white); g.setFont (font (11, true)); g.drawText (juce::String (b), br, juce::Justification::centred); r.removeFromTop (8); } }
       if (P.rig.clickConflict.load()) { g.setColour (warn); g.setFont (font (10, true)); g.drawText ("click/cues share rig outputs (4-cable: use Out 2) - AUDIO/MIDI > Click track", strip.translated (0, 38).withHeight (12), juce::Justification::centredLeft); r.removeFromTop (6); }
     }
@@ -146,6 +149,7 @@ void RigPanel::mouseUp (const juce::MouseEvent& e) {
     stopTimer();
     auto& P = ed.proc; auto p = e.position;
     for (auto& t : tiles_) if (t.first.contains (p)) { P.setPedal (t.second, ! P.pedalOn (t.second)); held_ = -1; repaint(); return; } // tap tile = toggle
+    if (takeLead_.contains (p)) { P.sync().takeLead (P.nowSec()); held_ = -1; repaint(); return; }
     for (auto& c : ctl_) if (c.first.contains (p)) { auto& L = P.live();
         if (c.second == 0) L.setClickOn (! L.clickOn()); else if (c.second == 1) L.toggleClickMute(); else if (c.second == 2) L.setTunerOpen (true); else P.sync().requestPlay (! L.playing(), P.nowSec());
         held_ = -1; repaint(); return; }

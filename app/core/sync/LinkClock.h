@@ -21,6 +21,7 @@ public:
     double beatAt (double) const override { auto st = link_.captureAppSessionState(); return st.beatAtTime (link_.clock().micros(), quantum()); }
     double tempo() const override { return link_.captureAppSessionState().tempo(); }
     void setTempo (double bpm, double) override { auto st = link_.captureAppSessionState(); st.setTempo (bpm, link_.clock().micros()); link_.commitAppSessionState (st); }
+    void adoptTimeline (double beat, double bpm, double) override { auto st = link_.captureAppSessionState(); auto t = link_.clock().micros(); st.setTempo (bpm, t); st.requestBeatAtTime (beat, t, quantum()); link_.commitAppSessionState (st); }
     int peers() const override { return (int) link_.numPeers(); }
     // audio thread: Link beat at a host time (micros of the first output sample of the block, incl. output latency)
     double audioBeat (std::chrono::microseconds hostTime) const { auto st = link_.captureAudioSessionState(); return st.beatAtTime (hostTime, quantum()); }

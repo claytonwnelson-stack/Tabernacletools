@@ -21,6 +21,7 @@ enum class Bus : uint8_t { Main = 0, Cue = 1 };   // Main = outs 1/2 (front of h
 struct Stem {
     std::string id, name, file, color;          // file: copy inside the app container (<data>/Multitracks/<song>/...)
     std::string sharedSession;                  // non-empty: leader audio, playable only while connected to that session
+    std::string sharedOwner;                    // device that owns the file; playback does not move to a new leader
     float volumeDb = 0, pan = 0;                // pan -1..1
     bool mute = false, solo = false;
     Bus bus = Bus::Main;

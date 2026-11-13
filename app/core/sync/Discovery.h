@@ -9,13 +9,19 @@
 
 namespace wr::sync {
 
-struct Peer { std::string name, host; int port = 0; };   // host: IPv4 dotted address once resolved
+struct Peer { std::string name, host, session; int port = 0; };   // host: IPv4 dotted address once resolved; session lets a group find its leader after a handoff
+inline int matchSessionPeer (const std::vector<Peer>& peers, const std::string& session, const std::string& skipName) {
+    if (session.empty()) return -1;
+    for (int i = 0; i < (int) peers.size(); ++i) if (peers[(size_t) i].session == session && peers[(size_t) i].name != skipName && ! peers[(size_t) i].host.empty()) return i;
+    return -1;
+}
 
 class Discovery {
 public:
     Discovery(); ~Discovery();
     static bool available();
     bool advertise (const std::string& name, int port);  // leader
+    void setSession (const std::string& id);             // advertised with the service so followers can rejoin after a handoff
     void stopAdvertising();
     bool browse();                                        // follower: fills peers() as leaders appear / vanish
     void stopBrowsing();

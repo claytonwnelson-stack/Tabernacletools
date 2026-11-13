@@ -21,8 +21,11 @@ public:
     int clients() const { return (int) conns_.size(); }
     void kick (int client);                         // sends {"t":"kick"} and closes after it is flushed
     std::vector<std::string> clientNames() const;   // from hello
+    std::string clientName (int id) const;
+    std::string clientHost (int id) const;
+    int clientId (const std::string& name) const;   // 0 if that device is not connected
 private:
-    struct Conn { int fd = -1, id = 0; LineBuffer in; std::string out, name; double lastRx = 0; bool closing = false; };
+    struct Conn { int fd = -1, id = 0; LineBuffer in; std::string out, name, host; double lastRx = 0; bool closing = false; };
     void flush (Conn&); void drop (size_t i, const Events& ev);
     int fd_ = -1, port_ = 0, nextId_ = 1; long long pingId_ = 0; double lastPing_ = 0; std::vector<Conn> conns_;
 };

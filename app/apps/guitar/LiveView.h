@@ -17,6 +17,7 @@ private:
     std::vector<std::pair<juce::Rectangle<float>, std::string>> tiles_;
     std::vector<std::pair<juce::Rectangle<float>, wr::Action::Type>> switches_;
     std::vector<std::pair<juce::Rectangle<float>, int>> ctl_; // 0 click on/off, 1 click mute, 2 tuner, 3 play/stop
+    juce::Rectangle<float> takeLead_;
 };
 
 class LiveView : public juce::Component {

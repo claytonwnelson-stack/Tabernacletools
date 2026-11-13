@@ -1,6 +1,7 @@
 #include "Sync.h"
 #include "Roster.h"
 #include "model/Chart.h"
+#include <algorithm>
 #include <cmath>
 
 namespace wr::sync {
@@ -13,7 +14,7 @@ Json toJson (const State& s) {
         Json audio = Json::array(); for (auto& n : r.leaderStemNames) audio.push (n);
         Json pb = Json::array(); for (int b : r.passBars) pb.push (b);
         songs.push (Json::object().set ("song", wr::toJson (r.song)).set ("key", r.key).set ("bpm", r.bpm).set ("arr", ar).set ("notes", ns)
-            .set ("passBars", pb).set ("audioStems", audio).set ("audioPractice", r.leaderPractice)); }
+            .set ("passBars", pb).set ("bandLeader", r.bandLeader).set ("audioStems", audio).set ("audioPractice", r.leaderPractice)); }
     return Json::object().set ("v", kProtocolVersion).set ("setlist", s.setlistName).set ("date", s.setlistDate).set ("songs", songs)
         .set ("song", s.songIndex).set ("section", s.sectionIndex).set ("pass", s.pass)
         .set ("pending", s.pendingIdx).set ("pendingPass", s.pendingPass).set ("cueBeat", s.cueBeat).set ("dueBeat", s.dueBeat)
@@ -25,6 +26,7 @@ State stateFromJson (const Json& j) {
     for (auto& o : j["songs"].items()) { SongRef r; r.song = songFromJson (o["song"]); r.key = o["key"].str(); r.bpm = o["bpm"].num();
         for (auto& t : o["arr"].items()) r.arrangement.push_back (t.str());
         for (auto& b : o["passBars"].items()) r.passBars.push_back (b.integer());
+        r.bandLeader = o["bandLeader"].str();
         for (auto& n : o["notes"].items()) r.notes.push_back ({ n["text"].str(), n["at"].str ("start") });
         for (auto& n : o["audioStems"].items()) r.leaderStemNames.push_back (n.str());
         r.leaderPractice = o["audioPractice"].boolean();
@@ -72,7 +74,7 @@ State Leader::capture (const LiveSession& live, const BeatClock&, double) const 
         } else r.song.id = e.songId;
         r.key = e.keyOverride.empty() ? r.song.chart.key : e.keyOverride; r.bpm = e.bpmOverride > 0 ? e.bpmOverride : r.song.chart.bpm;
         r.arrangement = e.arrangement.empty() ? r.song.chart.arrangement : e.arrangement;
-        r.passBars = e.arrangement.empty() ? r.song.chart.arrangementBars : e.arrangementBars; r.notes = e.notes;
+        r.passBars = e.arrangement.empty() ? r.song.chart.arrangementBars : e.arrangementBars; r.bandLeader = e.bandLeader; r.notes = e.notes;
         r.song.practice = PracticeTrack();   // the audio file stays on the leader's device
         r.song.multitrack = mt::MultitrackSet(); // names travel in leaderStemNames; the bytes are a separate transfer
         s.songs.push_back (std::move (r));
@@ -86,7 +88,7 @@ State Leader::capture (const LiveSession& live, const BeatClock&, double) const 
 static bool sameSetlist (const State& a, const State& b) {
     if (a.setlistDate != b.setlistDate || a.setlistName != b.setlistName || a.songs.size() != b.songs.size()) return false;
     for (size_t i = 0; i < a.songs.size(); ++i) if (a.songs[i].song.id != b.songs[i].song.id || a.songs[i].key != b.songs[i].key
-        || a.songs[i].arrangement != b.songs[i].arrangement || a.songs[i].passBars != b.songs[i].passBars || ! (a.songs[i].notes == b.songs[i].notes)) return false;
+        || a.songs[i].arrangement != b.songs[i].arrangement || a.songs[i].passBars != b.songs[i].passBars || a.songs[i].bandLeader != b.songs[i].bandLeader || ! (a.songs[i].notes == b.songs[i].notes)) return false;
     if (a.sectionColors != b.sectionColors) return false;   // v0.8: colour edits on the leader re-send the snapshot
     for (size_t i = 0; i < a.songs.size(); ++i) {
         if (! chartContentEquals (a.songs[i].song.chart, b.songs[i].song.chart)) return false;   // chords, lyrics, tabs, section names
@@ -95,7 +97,41 @@ static bool sameSetlist (const State& a, const State& b) {
     }
     return true;
 }
+void Leader::markCoLeader (const std::string& name, bool on) {
+    if (name.empty()) return;
+    auto it = std::find (coleaders_.begin(), coleaders_.end(), name);
+    if (on) { if (it == coleaders_.end()) coleaders_.push_back (name); }
+    else if (it != coleaders_.end()) coleaders_.erase (it);
+}
+bool Leader::isCoLeader (const std::string& name) const { return std::find (coleaders_.begin(), coleaders_.end(), name) != coleaders_.end(); }
+void Leader::promoteDeferred() { if (deferred_) { ask_.waiting = true; deferred_ = false; } }
+Json Leader::snapBody (const State& s) const {
+    return Json::object().set ("session", session_).set ("leader", device_).set ("state", toJson (s)).set ("mt", mt::toJson (mt_)).set ("proto", kProtocolVersion).set ("app", kAppVersion);
+}
+std::string Leader::handoffLine (const std::string& name, const std::string& host, int port, double beat, double bpm) {
+    Json co = Json::array(); std::vector<std::string> names = coleaders_;
+    if (! device_.empty() && std::find (names.begin(), names.end(), device_) == names.end()) names.push_back (device_);
+    for (auto& n : names) if (n != name) co.push (n);
+    return encode ("handoff", -1, Json::object().set ("session", session_).set ("leader", name).set ("host", host).set ("port", port)
+        .set ("beat", beat).set ("bpm", bpm).set ("previous", device_).set ("coleaders", co));
+}
+std::string Leader::approveTakeLead() {
+    if (! ask_.waiting || ask_.name.empty()) return {};
+    grant_ = ask_; ask_ = {}; deferred_ = false;
+    Json co = Json::array(); for (auto& n : coleaders_) if (n != grant_.name) co.push (n); if (! device_.empty()) co.push (device_);
+    return encode ("leadok", -1, Json::object().set ("session", session_).set ("leader", grant_.name).set ("previous", device_)
+        .set ("beat", grant_.beat).set ("bpm", grant_.bpm).set ("coleaders", co));
+}
+std::string Leader::completeHandoff (const std::string& name, const std::string& host, int port, double beat, double bpm) {
+    if (grant_.name.empty() || grant_.name != name || host.empty() || port <= 0) return {};
+    auto line = handoffLine (name, host, port, beat, bpm); grant_ = {}; return line;
+}
+std::string Leader::handoffTo (const std::string& name, const std::string& host, int port, double beat, double bpm) {
+    if (! isCoLeader (name)) return {};
+    return handoffLine (name, host, port, beat, bpm);
+}
 std::vector<std::string> Leader::update (const LiveSession& live, BeatClock& clock, double now) {
+    if (deferred_ && ! live.playing()) promoteDeferred();
     std::vector<std::string> out;
     if (std::abs (clock.tempo() - live.bpm()) >= 0.05) clock.setTempo (live.bpm(), now);   // Link carries tempo + phase to everyone
     // a new queued cue: its cue bar is the next bar line on the shared timeline (the local click is phase-locked to it)
@@ -104,7 +140,7 @@ std::vector<std::string> Leader::update (const LiveSession& live, BeatClock& clo
     }
     State s = capture (live, clock, now);
     if (! have_) { last_ = s; have_ = true; return out; }
-    if (! sameSetlist (s, last_)) { out.push_back (encode ("snap", ++seq_, Json::object().set ("session", session_).set ("state", toJson (s)).set ("mt", mt::toJson (mt_)).set ("proto", kProtocolVersion).set ("app", kAppVersion))); last_ = s; lastMt_ = mt_; announcedPlay_ = s.playing; return out; }
+    if (! sameSetlist (s, last_)) { out.push_back (encode ("snap", ++seq_, snapBody (s))); last_ = s; lastMt_ = mt_; announcedPlay_ = s.playing; return out; }
     if (s.songIndex != last_.songIndex) out.push_back (ev ("song", Json::object().set ("song", s.songIndex)));
     if (std::abs (s.bpm - last_.bpm) >= 0.05) out.push_back (ev ("tempo", Json::object().set ("bpm", s.bpm)));
     if (s.pendingIdx >= 0 && (s.pendingIdx != last_.pendingIdx || s.pendingPass != last_.pendingPass || s.cueBeat != last_.cueBeat))
@@ -130,7 +166,7 @@ void Leader::tick (LiveSession& live, const BeatClock& clock, double now) {
 }
 std::string Leader::snapshotLine (const LiveSession& live, const BeatClock& clock, double now) {
     State s = capture (live, clock, now); s.playing = live.playing() || playPending_;
-    return encode ("snap", seq_, Json::object().set ("session", session_).set ("state", toJson (s)).set ("mt", mt::toJson (mt_)).set ("proto", kProtocolVersion).set ("app", kAppVersion));
+    return encode ("snap", seq_, snapBody (s));
 }
 std::string Leader::onFollowerLine (const std::string& line, const LiveSession& live, const BeatClock& clock, double now) {
     Msg m; if (! decode (line, m)) return {};
@@ -138,6 +174,14 @@ std::string Leader::onFollowerLine (const std::string& line, const LiveSession& 
         const int remote = m.body.has ("proto") ? m.body["proto"].integer() : kProtocolVersion;
         if (! protocolCompatible (kProtocolVersion, remote)) return encode ("ver", -1, Json::object().set ("ok", false).set ("proto", kProtocolVersion).set ("app", kAppVersion));
         return snapshotLine (live, clock, now);
+    }
+    if (m.type == "takelead") {
+        const std::string who = m.body["name"].str();
+        const auto decision = decideTakeLead (isCoLeader (who), true, live.playing());
+        if (decision == TakeLead::Ignore) return encode ("leaddenied", -1, Json::object().set ("name", who));
+        ask_.name = who; ask_.beat = m.body["beat"].num(); ask_.bpm = m.body["bpm"].num (live.bpm()); ask_.waiting = decision == TakeLead::Ask; deferred_ = decision == TakeLead::WaitUntilStopped;
+        if (deferred_) ask_.waiting = false;
+        return {};
     }
     if (m.type == "clk") return encode ("clk", -1, Json::object().set ("id", m.body["id"].num()).set ("t1", m.body["t1"].num()).set ("t2", now).set ("t3", now).set ("beat", clock.beatAt (now)).set ("bpm", clock.tempo()));
     return {};
@@ -200,7 +244,7 @@ static bool setlistBodyEquals (const Setlist& a, const Setlist& b) {
     if (a.name != b.name || a.date != b.date || a.entries.size() != b.entries.size()) return false;
     for (size_t i = 0; i < a.entries.size(); ++i) {
         const auto& x = a.entries[i]; const auto& y = b.entries[i];
-        if (x.songId != y.songId || x.keyOverride != y.keyOverride || x.bpmOverride != y.bpmOverride || x.role != y.role || x.capoOverride != y.capoOverride || x.arrangement != y.arrangement || x.arrangementBars != y.arrangementBars || ! (x.notes == y.notes)) return false;
+        if (x.songId != y.songId || x.keyOverride != y.keyOverride || x.bpmOverride != y.bpmOverride || x.role != y.role || x.capoOverride != y.capoOverride || x.arrangement != y.arrangement || x.arrangementBars != y.arrangementBars || x.bandLeader != y.bandLeader || ! (x.notes == y.notes)) return false;
     }
     return true;
 }
@@ -226,7 +270,8 @@ std::vector<AudioChunk> splitAudio (const std::string& songId, const std::string
     return out;
 }
 void AudioAssembler::add (const AudioChunk& c) {
-    if (count_ == 0) { songId_ = c.songId; name_ = c.name; session_ = c.session; kind_ = c.kind; count_ = std::max (1, c.count); have_.assign ((size_t) count_, 0); parts_.assign ((size_t) count_, {}); }
+    if (count_ == 0) { songId_ = c.songId; name_ = c.name; session_ = c.session; owner_ = c.owner; kind_ = c.kind; count_ = std::max (1, c.count); have_.assign ((size_t) count_, 0); parts_.assign ((size_t) count_, {}); }
+    if (owner_.empty() && ! c.owner.empty()) owner_ = c.owner;
     if (c.index < 0 || c.index >= count_ || have_[(size_t) c.index]) return;
     have_[(size_t) c.index] = 1; parts_[(size_t) c.index] = c.data; ++got_;
     if (complete()) { data_.clear(); for (auto& p : parts_) data_ += p; }
@@ -340,7 +385,7 @@ void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, 
         leaderNames_.push_back (std::move (names)); leaderMatch_.push_back (matched ? 1 : 0);
         if (auto* noted = lib.song (useId)) if ((! r.leaderStemNames.empty() || r.leaderPractice) && noted->multitrack.empty() && noted->practice.file.empty())
             noted->leaderAudioNote = "Audio is on the leader's iPad";
-        SetlistEntry e; e.songId = useId; e.bpmOverride = r.bpm; e.arrangement = r.arrangement; e.arrangementBars = r.passBars; e.notes = r.notes;
+        SetlistEntry e; e.songId = useId; e.bpmOverride = r.bpm; e.arrangement = r.arrangement; e.arrangementBars = r.passBars; e.bandLeader = r.bandLeader; e.notes = r.notes;
         auto lk = localKey.find (r.song.id);
         if (lk != localKey.end() && ! followLeaderKey) { e.keyOverride = lk->second.first; e.capoOverride = lk->second.second; } else e.keyOverride = r.key;
         set.entries.push_back (e);
@@ -350,7 +395,7 @@ void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, 
         live.setFollowColors (st.sectionColors, per); }
     const auto& cur = live.setlist(); bool same = cur.date == set.date && cur.name == set.name && cur.entries.size() == set.entries.size();
     for (size_t i = 0; same && i < set.entries.size(); ++i) same = cur.entries[i].songId == set.entries[i].songId && cur.entries[i].keyOverride == set.entries[i].keyOverride
-        && cur.entries[i].arrangement == set.entries[i].arrangement && cur.entries[i].arrangementBars == set.entries[i].arrangementBars && cur.entries[i].notes == set.entries[i].notes;
+        && cur.entries[i].arrangement == set.entries[i].arrangement && cur.entries[i].arrangementBars == set.entries[i].arrangementBars && cur.entries[i].bandLeader == set.entries[i].bandLeader && cur.entries[i].notes == set.entries[i].notes;
     if (! same) live.loadSetlist (set, st.songIndex, now); else live.followSong (st.songIndex, now);
     lastApplied_ = live.setlist(); haveApplied_ = true;
     if (std::abs (live.bpm() - st.bpm) >= 0.05) live.setBpm (st.bpm);
@@ -365,10 +410,29 @@ void Follower::applySnapshot (const State& st, LiveSession& live, Library& lib, 
         else if (! live.playing()) live.followPlay (true, std::max (0, st.countIn - (int) std::floor (b - st.playBeat)), now);
     } else if (live.playing()) live.followPlay (false, 0, now);
 }
-void Follower::onLine (const std::string& line, LiveSession& live, Library& lib, const BeatClock& clock, double now) {
+void Follower::requestTakeLead (const BeatClock& clock, double now) {
+    if (role != "coleader" || ! connected_) return;
+    send_ (encode ("takelead", -1, Json::object().set ("name", name_).set ("beat", clock.beatAt (now)).set ("bpm", clock.tempo())));
+}
+bool Follower::takeClaim (Handoff& out) { if (! haveClaim_) return false; out = claim_; haveClaim_ = false; return true; }
+bool Follower::takeRedirect (Handoff& out) { if (! haveRedirect_) return false; out = redirect_; haveRedirect_ = false; return true; }
+void Follower::onLine (const std::string& line, LiveSession& live, Library& lib, BeatClock& clock, double now) {
     Msg m; if (! decode (line, m)) return; const Json& j = m.body;
     libHold_ = &lib;
     if (m.type == "kick") { kicked_ = true; return; }
+    if (m.type == "role") { auto r = j["role"].str(); if (r == "coleader" || r == "player" || r == "projector") role = r; return; }
+    if (m.type == "leadok" || m.type == "handoff") {
+        Handoff h; h.session = j["session"].str(); h.leaderName = j["leader"].str(); h.host = j["host"].str(); h.port = j["port"].integer();
+        h.previous = j["previous"].str(); h.beat = j["beat"].num(); h.bpm = j["bpm"].num();
+        for (auto& n : j["coleaders"].items()) h.coLeaders.push_back (n.str());
+        if (! h.session.empty()) session_ = h.session;
+        if (! h.leaderName.empty()) leaderName_ = h.leaderName;
+        clock.adoptTimeline (h.beat, h.bpm > 0 ? h.bpm : clock.tempo(), now);
+        if (name_ == h.previous) role = "coleader";
+        if (m.type == "leadok" || name_ == h.leaderName) { claim_ = h; haveClaim_ = true; }
+        else { redirect_ = h; haveRedirect_ = true; }
+        return;
+    }
     if (m.type == "ver" && ! m.body["ok"].boolean (true)) { versionWarn_ = versionWarningText(); return; }
     if (m.type == "audio") {
         auto unhex = [] (const std::string& in) {
@@ -379,8 +443,8 @@ void Follower::onLine (const std::string& line, LiveSession& live, Library& lib,
             return o;
         };
         AudioChunk c; c.songId = j["song"].str(); c.name = j["name"].str(); c.session = j["session"].str(); c.kind = j["kind"].str();
-        c.index = j["i"].integer(); c.count = j["n"].integer (1); c.data = unhex (j["data"].str());
-        audio_.add (c); if (audio_.complete()) { finishedAudio_.push_back (AudioChunk { audio_.songId(), audio_.name(), audio_.session(), audio_.kind(), 0, 1, audio_.bytes() }); audio_ = {}; }
+        c.index = j["i"].integer(); c.count = j["n"].integer (1); c.owner = j["owner"].str(); c.data = unhex (j["data"].str());
+        audio_.add (c); if (audio_.complete()) { finishedAudio_.push_back (AudioChunk { audio_.songId(), audio_.name(), audio_.session(), audio_.owner(), audio_.kind(), 0, 1, audio_.bytes() }); audio_ = {}; }
         return;
     }
     if (m.type == "ping") { send_ (encode ("pong", -1, Json::object().set ("id", j["id"].num()))); return; }
@@ -388,7 +452,7 @@ void Follower::onLine (const std::string& line, LiveSession& live, Library& lib,
     if (m.type == "snap") {
         const int remote = j.has ("proto") ? j["proto"].integer() : kProtocolVersion;
         if (! protocolCompatible (kProtocolVersion, remote)) { versionWarn_ = versionWarningText(); return; }
-        session_ = j["session"].str(); last_ = m.seq; haveSnap_ = true; wantSnap_ = false;
+        session_ = j["session"].str(); if (j.has ("leader")) leaderName_ = j["leader"].str(); last_ = m.seq; haveSnap_ = true; wantSnap_ = false;
         transport = mt::transportFromJson (j["mt"]);
         live.setFollowing (true); applySnapshot (stateFromJson (j["state"]), live, lib, clock, now); return;
     }

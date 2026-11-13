@@ -352,6 +352,7 @@ CoreEditor::SettingsPanel::Level CoreEditor::SettingsPanel::make (Kind k) {
         bs.addItem (juce::String (S.statusLine()), false, false, [] {});
         if (S.mode() == BandSync::Mode::Leading) for (auto& n : S.followerNames()) bs.addItem ("   " + juce::String (n.empty() ? "follower" : n), false, false, [] {});
         bs.addItem ("Lead this session", proc.fullAccess(), S.mode() == BandSync::Mode::Leading, [this] { ed.core.sync().lead (ed.core.store.lib.settings.deviceName); });
+        if (S.canTakeLead()) bs.addItem ("Take lead", true, false, [this] { ed.core.sync().takeLead (ed.core.nowSec()); });
         for (auto& p : S.leaders()) { auto peer = p; bs.addItem ("Join " + juce::String (peer.name), proc.fullAccess(), false, [this, peer] { ed.core.sync().join (peer.host, peer.port, ed.core.store.lib.settings.deviceName); ed.core.store.save(); }); }
         if (S.leaders().empty()) bs.addItem ("No other leader on this Wi-Fi yet", false, false, [] {});
         if (! s.lastLeaderHost.empty()) bs.addItem ("Rejoin " + juce::String (s.lastLeaderHost), [this] { auto& st = ed.core.store.lib.settings; ed.core.sync().join (st.lastLeaderHost, st.lastLeaderPort > 0 ? st.lastLeaderPort : wr::sync::kDefaultPort, st.deviceName); });

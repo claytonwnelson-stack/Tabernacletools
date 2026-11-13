@@ -66,7 +66,7 @@ void CoreProcessor::reloadTracks() {
     tracksGate_ = inSession ? "on:" + sync_->sessionId() : "off";
     if (! s) { tracksLive_.unload(); return; }
     Song playable = *s; playable.multitrack.stems.clear();
-    for (auto& st : s->multitrack.stems) if (wr::sync::sharedAudioPlayable (st.sharedSession, inSession, sync_->sessionId())) playable.multitrack.stems.push_back (st);
+    for (auto& st : s->multitrack.stems) if (wr::sync::sharedStemPlayable (st.sharedSession, st.sharedOwner, inSession, sync_->sessionId(), sync_->activeLeaderName())) playable.multitrack.stems.push_back (st);
     auto r = tracksLive_.loadSong (playable.multitrack.empty() ? nullptr : &playable, *live_, [] (const std::string& p) -> std::unique_ptr<mt::StemSource> { return mt::WavFileSource::open (p); }, allows (Feature::AudioEngine));
     if (! r.empty()) status = juce::String (r);
 }
@@ -123,9 +123,9 @@ void TracksBar::paint (juce::Graphics& g) {
         if (! L.playing() && song && ! song->leaderAudioNote.empty()) button ("GET AUDIO", 21, false, 96);
         g.setColour (dim); g.setFont (font (12)); g.drawText (note, x, r.getY(), r.getRight() - x, r.getHeight(), juce::Justification::centredLeft, true); return; }
     if (auto* song = L.song()) {
-        bool locked = false; for (auto& st : song->multitrack.stems) if (! wr::sync::sharedAudioPlayable (st.sharedSession, false, {})) locked = true;
-        if (song->practice.sharedSession.size() && ! wr::sync::sharedAudioPlayable (song->practice.sharedSession, false, {})) locked = true;
-        if (locked) { g.setColour (dim); g.setFont (font (11)); g.drawText ("Shared audio plays only while connected to the leader", r.getRight() - 360, r.getY(), 350, r.getHeight(), juce::Justification::centredRight, true); }
+        bool locked = false; for (auto& st : song->multitrack.stems) if (! wr::sync::sharedStemPlayable (st.sharedSession, st.sharedOwner, false, {}, {})) locked = true;
+        if (! song->practice.sharedSession.empty() && ! wr::sync::sharedStemPlayable (song->practice.sharedSession, song->practice.sharedOwner, false, {}, {})) locked = true;
+        if (locked) { g.setColour (dim); g.setFont (font (11)); g.drawText ("Shared audio stays on the original leader's iPad", r.getRight() - 360, r.getY(), 350, r.getHeight(), juce::Justification::centredRight, true); }
     }
     if (! t.loaded()) { button ("IMPORT STEMS (files or folder)...", 20); g.setColour (dim); g.setFont (font (12));
         g.drawText ("Up to 16 stems per song. Main outs or in-ears (Out 2).", x + 6, r.getY(), r.getRight() - x - 10, r.getHeight(), juce::Justification::centredLeft, true); return; }
@@ -187,14 +187,14 @@ public:
             v->setValue (s->multitrack.stems[(size_t) i].volumeDb, juce::dontSendNotification); v->onValueChange = [this, i, v] { edit (i, [v] (mt::Stem& st) { st.volumeDb = (float) v->getValue(); }); }; addAndMakeVisible (v);
             auto* p = pan_.add (new juce::Slider (juce::Slider::LinearHorizontal, juce::Slider::NoTextBox)); p->setRange (-1, 1, 0.01); p->setDoubleClickReturnValue (true, 0);
             p->setValue (s->multitrack.stems[(size_t) i].pan, juce::dontSendNotification); p->onValueChange = [this, i, p] { edit (i, [p] (mt::Stem& st) { st.pan = (float) p->getValue(); }); }; addAndMakeVisible (p);
-            if (! wr::sync::sharedAudioPlayable (s->multitrack.stems[(size_t) i].sharedSession, ed.core.sync().mode() == BandSync::Mode::Following, ed.core.sync().sessionId())) { v->setEnabled (false); p->setEnabled (false); } }
+            if (! wr::sync::sharedStemPlayable (s->multitrack.stems[(size_t) i].sharedSession, s->multitrack.stems[(size_t) i].sharedOwner, ed.core.sync().mode() == BandSync::Mode::Following, ed.core.sync().sessionId(), ed.core.sync().activeLeaderName())) { v->setEnabled (false); p->setEnabled (false); } }
         setSize (620, 44 * std::max (1, n_) + 40); }
     void paint (juce::Graphics& g) override {
         g.fillAll (panel); auto* s = ed.core.tracksSong(); if (! s) return; btn_.clear();
         g.setColour (dim); g.setFont (font (11)); g.drawText ("Mutes are remembered for this song. IN-EARS = Out 2 click/cue bus only.", 10, getHeight() - 30, getWidth() - 20, 24, juce::Justification::centredLeft);
         for (int i = 0; i < n_; ++i) { const auto& st = s->multitrack.stems[(size_t) i]; auto row = juce::Rectangle<int> (0, i * 44, getWidth(), 44).reduced (8, 6);
             g.setColour (accent (juce::String (st.color))); g.fillRoundedRectangle (row.removeFromLeft (6).toFloat(), 3); row.removeFromLeft (6);
-            const bool locked = ! wr::sync::sharedAudioPlayable (st.sharedSession, ed.core.sync().mode() == BandSync::Mode::Following, ed.core.sync().sessionId());
+            const bool locked = ! wr::sync::sharedStemPlayable (st.sharedSession, st.sharedOwner, ed.core.sync().mode() == BandSync::Mode::Following, ed.core.sync().sessionId(), ed.core.sync().activeLeaderName());
             g.setColour (locked ? dim : text); g.setFont (font (13, true));
             g.drawText (locked ? juce::String (st.name) + "  (leader only)" : juce::String (st.name), row.removeFromLeft (160), juce::Justification::centredLeft, true);
             if (locked) continue;

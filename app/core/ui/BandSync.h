@@ -42,6 +42,10 @@ public:
     std::string clockStatus() const;
     bool takeLibrarySave() { bool d = saveLib_; saveLib_ = false; return d; }
     std::string sessionId() const;
+    std::string activeLeaderName() const;
+    bool canTakeLead() const;
+    void takeLead (double nowSec);                               // co-leader: one tap. Asks while the leader is up; takes over if they have dropped
+    void markCoLeader (int followerId);                          // leader: toggle that connected member
     void requestLeaderAudio();
     float leaderAudioProgress() const { return follower_.audioProgress(); }
     bool useLink = true;
@@ -61,8 +65,13 @@ private:
     void showChartPrompt();
     void showRigPrompt (wr::sync::ChartImportChoice choice, bool applyAll);
     void showSetlistPrompt();
+    void showTakeLeadPrompt();
     void sendLeaderAudio (int followerId, const std::string& songId);
     void installSharedAudio();
-    std::string host_; int port_ = 0; wr::sync::Roster roster_;
-    bool chartPromptOpen_ = false, setlistPromptOpen_ = false, versionShown_ = false, saveLib_ = false;
+    void assumeFrom (const wr::sync::Handoff& h, double now);
+    void followHandoff (const std::string& host, int port, double beat, double bpm, double now);
+    void rejoin (const std::string& host, int port);
+    void maybeSongHandoff (double now);
+    std::string host_, deviceName_; int port_ = 0, pendingSong_ = -1; wr::sync::Roster roster_;
+    bool chartPromptOpen_ = false, setlistPromptOpen_ = false, takePromptOpen_ = false, versionShown_ = false, saveLib_ = false;
 };

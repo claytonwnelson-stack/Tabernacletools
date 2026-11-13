@@ -42,6 +42,7 @@ struct BeatClock {
     virtual double beatAt (double nowSec) const = 0;      // Link timeline beat at this time
     virtual double tempo() const = 0;
     virtual void setTempo (double bpm, double nowSec) = 0; // leader only (Link propagates to peers)
+    virtual void adoptTimeline (double beat, double bpm, double nowSec) { setTempo (bpm, nowSec); } // handoff: this device becomes the clock at `beat`
     virtual int peers() const { return 0; }
 };
 // next bar line on the shared timeline (quantum = beats per bar)
@@ -71,7 +72,33 @@ bool setlistNeedsSave (const Library& lib, const Setlist& current);   // false w
 inline bool sharedAudioPlayable (const std::string& sharedSession, bool connected, const std::string& currentSession) {
     return sharedSession.empty() || (connected && ! currentSession.empty() && sharedSession == currentSession);
 }
-struct AudioChunk { std::string songId, name, session, kind; int index = 0, count = 0; std::string data; };
+// A shared stem belongs to the iPad that sent it. An empty owner keeps the older session-only rule.
+// After a handoff the new leader does not inherit playback of the previous leader's stems.
+inline bool sharedStemPlayable (const std::string& sharedSession, const std::string& owner, bool connected, const std::string& currentSession, const std::string& activeLeader) {
+    if (! sharedAudioPlayable (sharedSession, connected, currentSession)) return false;
+    return owner.empty() || (! activeLeader.empty() && owner == activeLeader);
+}
+enum class TakeLead { Ignore, WaitUntilStopped, Ask, TakeNow };
+inline TakeLead decideTakeLead (bool coLeader, bool leaderReachable, bool playing) {
+    if (! coLeader) return TakeLead::Ignore;
+    if (! leaderReachable) return TakeLead::TakeNow;   // the leader's iPad is gone: no approval
+    if (playing) return TakeLead::WaitUntilStopped;   // ask only once the song has stopped
+    return TakeLead::Ask;
+}
+struct Handoff {
+    std::string session, leaderName, host, previous;
+    int port = 0; double beat = 0, bpm = 120;
+    std::vector<std::string> coLeaders;
+};
+inline std::string leaderForSong (const std::string& current, const Setlist& set, int index) {
+    if (index < 0 || index >= (int) set.entries.size()) return current;
+    const auto& assigned = set.entries[(size_t) index].bandLeader;
+    return assigned.empty() ? current : assigned;
+}
+inline bool songHandoffDue (bool playing, const std::string& current, const std::string& assigned) {
+    return ! playing && ! assigned.empty() && assigned != current;
+}
+struct AudioChunk { std::string songId, name, session, owner, kind; int index = 0, count = 0; std::string data; };
 std::vector<AudioChunk> splitAudio (const std::string& songId, const std::string& name, const std::string& session, const std::string& kind, const std::string& bytes, size_t chunkBytes);
 struct AudioAssembler {
     void add (const AudioChunk&);
@@ -82,14 +109,16 @@ struct AudioAssembler {
     const std::string& name() const { return name_; }
     const std::string& songId() const { return songId_; }
     const std::string& kind() const { return kind_; }
+    const std::string& owner() const { return owner_; }
 private:
-    std::string songId_, name_, session_, kind_, data_; int count_ = 0, got_ = 0; std::vector<char> have_; std::vector<std::string> parts_;
+    std::string songId_, name_, session_, owner_, kind_, data_; int count_ = 0, got_ = 0; std::vector<char> have_; std::vector<std::string> parts_;
 };
 
 // ---------------------------------------------------------------- shared state (snapshot)
 struct SongRef { Song song; std::string key; double bpm = 0;       // leader's song (chart + leader's sounding key + tempo)
                  std::vector<std::string> arrangement;              // v0.7 effective play order (so section indices match)
                  std::vector<int> passBars;                         // bars for each arrangement pass (0 = the section's own count)
+                 std::string bandLeader;                            // device that should lead this song; empty = whoever is leading
                  std::vector<ServiceNote> notes;                    // v0.7 service notes for this setlist item
                  std::vector<std::string> leaderStemNames; bool leaderPractice = false; };
 struct State {
@@ -139,12 +168,30 @@ public:
     // sections themselves still travel as "section"/"cue", so followers' charts, highlights and patches follow as before)
     void setTransport (const mt::Transport& t) { mt_ = t; }
     const mt::Transport& transport() const { return mt_; }
+    void setDeviceName (const std::string& n) { device_ = n; }
+    const std::string& deviceName() const { return device_; }
+    void markCoLeader (const std::string& name, bool on);
+    bool isCoLeader (const std::string& name) const;
+    struct TakeAsk { bool waiting = false; std::string name; double beat = 0, bpm = 0; };
+    bool takeLeadWaiting() const { return ask_.waiting; }
+    bool takeLeadDeferred() const { return deferred_; }
+    TakeAsk takeLeadAsk() const { return ask_; }
+    void promoteDeferred();
+    std::string approveTakeLead();                                 // leadok to the co-leader only
+    void denyTakeLead() { ask_ = {}; }
+    void queueHandoff (const std::string& name, double beat, double bpm) { ask_ = { true, name, beat, bpm }; }
+    std::string completeHandoff (const std::string& name, const std::string& host, int port, double beat, double bpm);
+    std::string handoffTo (const std::string& name, const std::string& host, int port, double beat, double bpm);
 private:
     mt::Transport mt_, lastMt_;
     std::string session_; long long seq_ = 0; bool have_ = false; State last_;
     int lastCueSeq_ = -1; double cueBeat_ = 0, dueBeat_ = 0;
     bool playPending_ = false, announcedPlay_ = false; double playAt_ = 0; int playCountIn_ = 0; double playBeat_ = 0;
+    std::string device_; std::vector<std::string> coleaders_;
+    TakeAsk ask_, grant_; bool deferred_ = false;
     std::string ev (const char* t, Json body) { return encode (t, ++seq_, std::move (body)); }
+    Json snapBody (const State& s) const;
+    std::string handoffLine (const std::string& name, const std::string& host, int port, double beat, double bpm);
 };
 
 // ---------------------------------------------------------------- follower
@@ -154,7 +201,7 @@ public:
     explicit Follower (std::function<void (const std::string&)> send, std::string name = "Follower") : send_ (std::move (send)), name_ (std::move (name)) {}
     void onConnected();                                    // sends hello (with last seq + session for a fast resume)
     void onDisconnected (double nowSec);                   // hold the current section; banner until reconnected
-    void onLine (const std::string& line, LiveSession& live, Library& lib, const BeatClock& clock, double nowSec);
+    void onLine (const std::string& line, LiveSession& live, Library& lib, BeatClock& clock, double nowSec);
     void tick (LiveSession& live, const BeatClock& clock, double nowSec); // lands queued cues / starts play on the Link beat
     bool connected() const { return connected_; }
     bool synced() const { return connected_ && haveSnap_; }
@@ -187,6 +234,12 @@ public:
     const std::string& versionWarning() const { return versionWarn_; }
     void clearVersionWarning() { versionWarn_.clear(); }
     const std::string& sessionId() const { return session_; }
+    const std::string& leaderName() const { return leaderName_; }
+    bool coLeader() const { return role == "coleader"; }
+    void requestTakeLead (const BeatClock& clock, double now);
+    bool takeClaim (Handoff& out);
+    bool takeRedirect (Handoff& out);
+    bool leaderLost() const { return ! connected_ && ! kicked_ && discAt_ >= 0; }
     // Leader audio offer. Empty until a transfer finishes. progress is 0..1 while chunks arrive.
     float audioProgress() const { return audio_.progress(); }
     bool takeFinishedAudio (AudioChunk& out);   // one completed file (stem or practice)
@@ -210,7 +263,9 @@ private:
     Setlist lastApplied_;
     State deferred_, saveWait_;
     Library* libHold_ = nullptr;
-    std::string versionWarn_;
+    std::string versionWarn_, leaderName_;
+    bool haveClaim_ = false, haveRedirect_ = false;
+    Handoff claim_, redirect_;
     AudioAssembler audio_;
     std::vector<AudioChunk> finishedAudio_;
 };
@@ -221,6 +276,7 @@ struct FakeClock : BeatClock {
     double beatAt (double now) const override { return b0 + (now - t0) * bpm / 60.0; }
     double tempo() const override { return bpm; }
     void setTempo (double b, double now) override { b0 = beatAt (now); t0 = now; bpm = b; }
+    void adoptTimeline (double beat, double bpmIn, double now) override { b0 = beat; t0 = now; bpm = bpmIn; }
     int peers() const override { return nPeers; }
 };
 

@@ -147,6 +147,16 @@ void SetlistView::entryMenu (int idx) {
     m.addSubMenu ("Key for this set", keys);
     m.addItem ("Lead / tabs", true, e.role != "sing", [this, idx] { working_.entries[(size_t) idx].role = "lead"; repaint(); });
     m.addItem ("Sing + play", true, e.role == "sing", [this, idx] { working_.entries[(size_t) idx].role = "sing"; repaint(); });
+    juce::PopupMenu leads; const std::string currentLead = e.bandLeader;
+    leads.addItem ("Whoever is leading", true, currentLead.empty(), [this, idx] { working_.entries[(size_t) idx].bandLeader.clear(); repaint(); });
+    if (! ed.core.store.lib.settings.deviceName.empty()) { auto me = ed.core.store.lib.settings.deviceName; leads.addItem (juce::String (me) + " (this iPad)", true, currentLead == me, [this, idx, me] { working_.entries[(size_t) idx].bandLeader = me; repaint(); }); }
+    for (auto& mem : ed.core.sync().roster().members()) if (mem.connected && ! mem.name.empty() && mem.name != "?") { auto n = mem.name; leads.addItem (juce::String (n), true, currentLead == n, [this, idx, n] { working_.entries[(size_t) idx].bandLeader = n; repaint(); }); }
+    leads.addItem ("Type a name...", [this, idx] {
+        auto* w = new juce::AlertWindow ("Song leader", "The co-leader who leads this song. Leave blank to keep whoever is already leading.", juce::MessageBoxIconType::NoIcon);
+        w->addTextEditor ("name", juce::String (idx < (int) working_.entries.size() ? working_.entries[(size_t) idx].bandLeader : std::string()), "Device name");
+        w->addButton ("Set", 1); w->addButton ("Cancel", 0);
+        w->enterModalState (true, juce::ModalCallbackFunction::create ([this, w, idx] (int r) { if (r != 1 || idx >= (int) working_.entries.size()) return; working_.entries[(size_t) idx].bandLeader = w->getTextEditorContents ("name").trim().toStdString(); repaint(); }), true); });
+    m.addSubMenu ("Song leader" + juce::String (currentLead.empty() ? "" : " (" + juce::String (currentLead) + ")"), leads);
     // v0.7 arrangement (this set or the song) + service notes
     if (s) { auto arr = e.arrangement.empty() ? s->chart.arrangement : e.arrangement; std::string sid = s->id;
         auto barsNow = e.arrangement.empty() ? s->chart.arrangementBars : e.arrangementBars;

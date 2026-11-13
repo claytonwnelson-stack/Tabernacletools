@@ -15,5 +15,5 @@ public:
     void refresh() { repaint(); }
     static juce::Colour statusColour (wr::sync::Member::Status);
 private:
-    CoreProcessor& proc; juce::Rectangle<int> box_, close_; std::vector<std::pair<juce::Rectangle<int>, int>> kick_;
+    CoreProcessor& proc; juce::Rectangle<int> box_, close_; std::vector<std::pair<juce::Rectangle<int>, int>> kick_, co_;
 };

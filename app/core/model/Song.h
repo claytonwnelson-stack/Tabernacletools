@@ -42,7 +42,7 @@ struct Chart { std::string title, artist, key; double bpm = 0; std::string time;
                std::vector<int> arrangementBars; /* parallel to arrangement: bars for that pass, 0 = the written section's bars */ };
 
 // v0.7 practice track: an audio file per song + where each arranged section starts in it (seconds, -1 = not marked)
-struct PracticeTrack { std::string file; std::vector<double> marks; std::string sharedSession; bool empty() const { return file.empty(); } };
+struct PracticeTrack { std::string file; std::vector<double> marks; std::string sharedSession, sharedOwner; bool empty() const { return file.empty(); } };
 
 // ---------------------------------------------------------------- rig + scenes
 struct PedalDef { std::string uid, type; bool enabled = false; std::map<std::string, float> params; std::string file; }; // file: v0.10 user IR path (amp/cab)
@@ -77,6 +77,7 @@ struct ServiceNote { std::string text, at = "start"; bool operator== (const Serv
 struct SetlistEntry { std::string songId; std::string keyOverride; double bpmOverride = 0; std::string role = "lead"; int capoOverride = -1; // role: lead / sing / both
                       std::vector<std::string> arrangement;   // v0.7: per-setlist arrangement override (empty = song's)
                       std::vector<int> arrangementBars;       // parallel to arrangement; 0 = the written section's bars
+                      std::string bandLeader;                 // device name that leads this song; empty = keep the current leader
                       std::vector<ServiceNote> notes; };      // v0.7
 // a musician on the team: their own key (e.g. a capo player or a different sounding key) per song, used for exports
 struct PlayerPart { std::string key; int capo = -1; };                         // key "" = setlist key; capo -1 = player default
