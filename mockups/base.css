@@ -1,0 +1,20 @@
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1366px;height:1024px;background:#0d0f14;color:#e8eaf0;font-family:"Inter","Helvetica Neue",Arial,sans-serif;overflow:hidden}
+.status{height:24px;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font-size:12px;font-weight:700;color:#aab2c6;background:#0b0d12}
+.status span{margin-left:12px}
+.top{height:70px;display:flex;align-items:center;gap:12px;padding:0 18px;background:#151922;border-bottom:1px solid #262c3a}
+.nav{display:flex;background:#0d0f14;border:1px solid #2a3142;border-radius:10px;padding:3px;gap:2px}
+.nav a{font-size:12px;font-weight:800;padding:7px 12px;border-radius:7px;color:#8a93a8;letter-spacing:.5px}
+.nav a.on{background:#f5a524;color:#111}
+.badge{background:#222838;border:1px solid #333b50;border-radius:8px;padding:6px 10px;font-size:14px;font-weight:700;white-space:nowrap}
+.badge small{color:#8a93a8;font-weight:500;margin-right:4px}
+.lbl{font-size:11px;letter-spacing:1.5px;color:#6b7489;font-weight:800;display:flex;justify-content:space-between;margin-bottom:8px}
+.panel{background:#141821;border:1px solid #222838;border-radius:12px;padding:12px}
+.led{width:9px;height:9px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;display:inline-block;margin-right:6px}
+.k{text-align:center;font-size:11px;color:#8a93a8;font-weight:700}
+.k i{display:block;width:46px;height:46px;border-radius:50%;margin:0 auto 5px;background:radial-gradient(circle at 40% 35%,#4a5470,#1d2230);border:3px solid #0b0d12;position:relative;box-shadow:0 0 0 2px var(--c,#333b50)}
+.k i:after{content:"";position:absolute;left:19px;top:3px;width:3px;height:15px;background:#fff;border-radius:2px;transform-origin:1.5px 17px;transform:rotate(var(--r))}
+.k b{display:block;color:#fff;font-size:12px}
+.sw{border-radius:12px;background:#171b25;border:2px solid #2a3142;padding:8px 6px;text-align:center;flex:1}
+.sw .num{font-size:11px;color:#6b7489;font-weight:800}.sw .name{font-size:15px;font-weight:800;margin:3px 0}.sw .fx{font-size:9px;color:#8a93a8;font-weight:800;letter-spacing:.5px}
+.tag{font-size:10px;font-weight:800;padding:3px 8px;border-radius:9px;color:#111}

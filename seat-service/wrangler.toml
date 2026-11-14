@@ -1,0 +1,17 @@
+name = "tabernacle-tools-seats"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+BUNDLE_ID = "com.tabernacletools.guitar"
+SIWA_AUDIENCES = "com.tabernacletools.guitar,com.tabernacletools.keys,com.tabernacletools.bass,com.tabernacletools.charts"
+APPSTORE_ENV = "Production"   # "Sandbox" for a staging worker
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tabernacle-tools-seats"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+migrations_dir = "migrations"
+
+# Secrets (wrangler secret put NAME): SESSION_SECRET, SUB_PEPPER, ENTITLEMENT_SIGNING_KEY, ASC_ISSUER_ID, ASC_KEY_ID, ASC_PRIVATE_KEY

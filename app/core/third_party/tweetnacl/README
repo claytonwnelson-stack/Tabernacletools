@@ -1,0 +1,1 @@
+TweetNaCl 20140427 (https://tweetnacl.cr.yp.to), public domain. Used only for crypto_sign_open (Ed25519 verify) of seat entitlement tokens.

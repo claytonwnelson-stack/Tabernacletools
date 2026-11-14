@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><style>
+.main{display:flex;height:930px;gap:12px;padding:14px}
+.col{display:flex;flex-direction:column;gap:12px}
+.cat div{padding:9px 10px;border-radius:8px;font-weight:700;font-size:14px;color:#aab2c6;display:flex;justify-content:space-between}
+.cat div.on{background:#2a2310;color:#fff;border:1px solid #f5a524}.cat span{color:#6b7489;font-size:12px}
+.item{padding:8px 10px;border-radius:8px;background:#0f1218;border:1px solid #262c3a;margin-bottom:6px;font-size:13px;font-weight:700;display:flex;justify-content:space-between}
+.item small{color:#6b7489}
+.ly{display:flex;align-items:center;gap:12px;background:#0f1218;border:1px solid #262c3a;border-radius:12px;padding:12px;margin-bottom:8px}
+.ly .c{width:14px;align-self:stretch;border-radius:4px}
+.fx{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.blk{border-radius:10px;padding:10px 12px;background:#171b25;border:2px solid #2a3142;font-weight:800;font-size:13px;text-align:center;min-width:104px}
+.blk small{display:block;color:#8a93a8;font-size:10px;margin-top:3px}
+.arr{color:#6b7489}
+svg text{fill:#8a93a8;font-size:10px;font-family:Arial}
+</style></head><body>
+<div class="status"><div>8:12 PM &nbsp; Tue Nov 3</div><div><span>🌡 Normal · 29°C</span><span>Wi-Fi</span><span>🔋 92%</span></div></div>
+<div class="top"><div class="nav"><a>LIVE</a><a>SETLIST</a><a class="on">WORKSHOP</a><a>CHARTS</a><a>⚙</a></div>
+<div style="font-size:13px;color:#8a93a8;margin-left:6px">Editing patch<b style="display:block;font-size:19px;color:#fff">Soft Verse</b></div>
+<div class="badge"><small>USED IN</small>3 songs</div>
+<div style="margin-left:auto;display:flex;gap:8px"><div class="badge">Revert</div><div class="badge" style="background:#f5a524;color:#111;border-color:#f5a524">Save Patch</div></div></div>
+<div class="main">
+<div class="col" style="width:290px">
+ <div class="panel cat"><div class="lbl">PATCH LIBRARY</div>
+  <div class="on">Acoustic Pianos<span>24</span></div><div>Electric Pianos<span>31</span></div><div>Organs<span>22</span></div><div>Pads & Swells<span>48</span></div><div>Strings<span>19</span></div><div>Synth Leads<span>27</span></div><div>Bells & Mallets<span>14</span></div><div>Choir & Voices<span>11</span></div><div>Ambient Textures<span>26</span></div><div>My Patches<span>9</span></div></div>
+ <div class="panel" style="flex:1"><div class="lbl">ACOUSTIC PIANOS</div>
+  <div class="item">Grand Piano<small>Concert</small></div><div class="item">Bright Grand<small>Rock</small></div><div class="item">Felt Piano<small>Intimate</small></div><div class="item">Upright Piano<small>Warm</small></div><div class="item">Ballad Grand<small>Soft</small></div><div class="item">Honky-Tonk<small>Detuned</small></div></div>
+</div>
+<div class="col" style="flex:1">
+ <div class="panel"><div class="lbl"><span>LAYER STACK</span><span>+ ADD LAYER (MAX 4)</span></div>
+  <div class="ly" style="border-color:#f5a524"><div class="c" style="background:#f5a524"></div><div style="width:170px"><b style="font-size:16px">Grand Piano</b><div style="font-size:11px;color:#8a93a8">C3–C7 · vel 1–127</div></div><div class="badge"><small>VOL</small>-2 dB</div><div class="badge"><small>PAN</small>C</div><div class="badge"><small>OCT</small>0</div><div class="badge"><small>SUS</small>ON</div></div>
+  <div class="ly"><div class="c" style="background:#38bdf8"></div><div style="width:170px"><b style="font-size:16px">Warm Pad</b><div style="font-size:11px;color:#8a93a8">C1–B2 · attack 1.8 s</div></div><div class="badge"><small>VOL</small>-6 dB</div><div class="badge"><small>PAN</small>C</div><div class="badge"><small>OCT</small>+1</div><div class="badge"><small>EXP</small>SWELL</div></div>
+  <div class="ly"><div class="c" style="background:#a78bfa"></div><div style="width:170px"><b style="font-size:16px">Soft Strings</b><div style="font-size:11px;color:#8a93a8">Full range · vel 60–127</div></div><div class="badge"><small>VOL</small>-14</div><div class="badge"><small>PAN</small>R12</div><div class="badge"><small>OCT</small>0</div><div class="badge"><small>SUS</small>ON</div></div>
+ </div>
+ <div class="panel"><div class="lbl"><span>FX CHAIN · GRAND PIANO</span><span>TAP TO EDIT · DRAG TO REORDER</span></div>
+  <div class="fx"><div class="blk" style="border-color:#4ade80">Compressor<small>2:1 · gentle</small></div><span class="arr">→</span><div class="blk" style="border-color:#f5a524">EQ<small>4-band</small></div><span class="arr">→</span><div class="blk" style="border-color:#2dd4bf">Chorus<small>off</small></div><span class="arr">→</span><div class="blk" style="border-color:#818cf8">Stereo Delay<small>1/4 · 18%</small></div><span class="arr">→</span><div class="blk" style="border-color:#38bdf8">Hall Reverb<small>2.8 s · 38%</small></div></div></div>
+ <div class="panel" style="flex:1"><div class="lbl"><span>EQ · GRAND PIANO</span><span>LOW CUT 80 Hz</span></div>
+  <svg width="100%" height="230" viewBox="0 0 760 230">
+   <g stroke="#222838">${''}<line x1="0" y1="115" x2="760" y2="115"/><line x1="0" y1="55" x2="760" y2="55"/><line x1="0" y1="175" x2="760" y2="175"/>
+   <line x1="150" y1="0" x2="150" y2="210"/><line x1="340" y1="0" x2="340" y2="210"/><line x1="530" y1="0" x2="530" y2="210"/></g>
+   <path d="M0,210 C60,200 70,120 120,118 C200,114 230,140 300,140 C360,140 380,112 440,112 C520,112 560,85 640,80 C700,78 740,80 760,80" stroke="#f5a524" stroke-width="3" fill="none"/>
+   <path d="M0,210 C60,200 70,120 120,118 C200,114 230,140 300,140 C360,140 380,112 440,112 C520,112 560,85 640,80 C700,78 740,80 760,80 L760,230 L0,230Z" fill="rgba(245,165,36,.1)"/>
+   <circle cx="120" cy="118" r="9" fill="#f87171"/><circle cx="300" cy="140" r="9" fill="#facc15"/><circle cx="460" cy="112" r="9" fill="#4ade80"/><circle cx="640" cy="80" r="9" fill="#38bdf8"/>
+   <text x="140" y="225">100 Hz</text><text x="330" y="225">1 kHz</text><text x="520" y="225">5 kHz</text><text x="720" y="225">16k</text>
+   <text x="280" y="165">-2.5 dB mud cut</text><text x="610" y="70">+3 dB air</text></svg></div>
+</div></div></body></html>

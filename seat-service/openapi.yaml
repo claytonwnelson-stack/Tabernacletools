@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info: { title: Tabernacle Tools church seat service, version: 0.11.0, description: "Church plan (15 seats incl. leader). All bodies JSON. Errors: {error: code, detail?}." }
+servers: [{ url: "https://seats.example.workers.dev" }]
+components:
+  securitySchemes: { session: { type: http, scheme: bearer, description: "Session token from /v1/auth/apple (30 days)" } }
+  schemas:
+    Error: { type: object, required: [error], properties: { error: { type: string }, detail: { type: string } } }
+    Team: { type: object, properties: { id: {type: string}, churchName: {type: string}, status: { enum: [active, grace, billing_retry, expired, revoked] }, paidThrough: { type: integer, description: "unix s; 0 = no access" }, seatCap: { type: integer, const: 15 } } }
+    Member: { type: object, properties: { id: {type: string}, displayName: {type: string}, role: { enum: [leader, member] }, joinedAt: {type: integer}, you: {type: boolean} } }
+  responses:
+    Err: { description: error, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+security: [{ session: [] }]
+paths:
+  /healthz: { get: { security: [], responses: { "200": { description: ok } } } }
+  /v1/keys:
+    get: { security: [], summary: "Ed25519 public key(s) for entitlement tokens (also compiled into the app)", responses: { "200": { description: ok } } }
+  /v1/auth/apple:
+    post:
+      security: []
+      summary: Exchange a Sign in with Apple identity token for a session. Verified against Apple JWKS (RS256, iss, aud, exp). Rate limit 20/min/IP.
+      requestBody: { content: { application/json: { schema: { type: object, required: [identityToken], properties: { identityToken: { type: string } } } } } }
+      responses: { "200": { description: "{session, userId, expiresIn}" }, "401": { $ref: "#/components/responses/Err" }, "429": { $ref: "#/components/responses/Err" } }
+  /v1/teams:
+    post:
+      summary: Leader creates the team with their church subscription. signedTransaction = StoreKit 2 Transaction.jwsRepresentation; verified (x5c to Apple Root G3) then re-checked with the App Store Server API. If the transaction is a free-trial period (offerType 1) and this person already used a trial on a different subscription, 402 trial_already_used (paid periods are always accepted). Trial use is recorded in trial_history.
+      requestBody: { content: { application/json: { schema: { type: object, required: [churchName, signedTransaction], properties: { churchName: { type: string, maxLength: 80 }, displayName: { type: string, maxLength: 40 }, signedTransaction: { type: string } } } } } }
+      responses: { "201": { description: "{team}" }, "400": { $ref: "#/components/responses/Err" }, "402": { $ref: "#/components/responses/Err" }, "409": { $ref: "#/components/responses/Err" } }
+  /v1/teams/me:
+    get: { summary: "Your team, role, members; leaders also get openInvites", responses: { "200": { description: "{team, role, members: Member[], openInvites?}" }, "404": { $ref: "#/components/responses/Err" } } }
+  /v1/teams/me/invites:
+    post: { summary: "Leader: new single-use code (XXXXX-XXXXX, 7-day expiry). Fails when team is full or >20 open.", responses: { "201": { description: "{code, expiresAt}" }, "402": { $ref: "#/components/responses/Err" }, "403": { $ref: "#/components/responses/Err" }, "409": { $ref: "#/components/responses/Err" } } }
+  /v1/teams/me/invites/{code}:
+    delete: { summary: "Leader: revoke an unused code", parameters: [{ name: code, in: path, required: true, schema: { type: string } }], responses: { "200": { description: "{ok, revoked}" } } }
+  /v1/invites/redeem:
+    post:
+      summary: Join a team with a code. Case/dash-insensitive. 10 attempts/hour/user.
+      requestBody: { content: { application/json: { schema: { type: object, required: [code], properties: { code: { type: string }, displayName: { type: string, maxLength: 40 } } } } } }
+      responses: { "201": { description: "{team}" }, "402": { $ref: "#/components/responses/Err" }, "404": { $ref: "#/components/responses/Err" }, "409": { $ref: "#/components/responses/Err" }, "429": { $ref: "#/components/responses/Err" } }
+  /v1/teams/me/leave:
+    post: { summary: "Member leaves (leaders delete their account instead)", responses: { "200": { description: ok }, "409": { $ref: "#/components/responses/Err" } } }
+  /v1/teams/me/members/{id}:
+    delete: { summary: "Leader removes a member", parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok }, "403": { $ref: "#/components/responses/Err" }, "404": { $ref: "#/components/responses/Err" } } }
+  /v1/entitlement:
+    post:
+      summary: Signed device entitlement. Token "wr1.<b64url payload>.<b64url Ed25519 sig>"; payload {v, aud, team, mem, role, exp (paid-through incl. grace), iat, off (iat+30d)}. App honours it until min(exp, off). Re-checks Apple when within 24h of expiry. trialEligible = this person (hashed Sign in with Apple id) has never had a free trial recorded; also returned on 404 no_team and 402. A team whose current period is a second trial for its leader gets 402 trial_already_used until the first paid period.
+      responses: { "200": { description: "{token, paidThrough, offlineUntil, status, trial, trialEligible}" }, "402": { description: "{error: subscription_inactive|trial_already_used, status, trialEligible}" }, "404": { description: "{error: no_team, trialEligible}" } }
+  /v1/purchases:
+    post:
+      summary: "v0.18 cross-app. Post this app's signed StoreKit 2 transaction (purchase, Transaction.updates renewal, Restore Purchases). Verified to Apple Root G3; bundleId must be a Tabernacle Tools app and productId <bundleId>.individual|church.monthly. Recorded against the signed-in user; Server API re-checks status. A second free trial for the same person (any app) is recorded with trialOk=false and gives no access until paid. duplicate = another active subscription of the same plan in another app (tell the user to cancel one)."
+      requestBody: { content: { application/json: { schema: { type: object, required: [signedTransaction], properties: { signedTransaction: { type: string } } } } } }
+      responses: { "201": { description: "{ok, plan, trialOk, duplicate: {app, bundleId, plan} | null}" }, "200": { description: "same, already linked (idempotent)" }, "400": { description: "wrong_bundle | unknown_product" }, "409": { description: purchase_belongs_to_another_account } }
+  /v1/entitlement (GET):
+    get:
+      summary: "v0.18 cross-app entitlement for every Tabernacle Tools app: own purchases in any app + a church seat. Always 200. covered=false -> {covered, trialEligible, apps}. covered=true -> {covered, token (aud com.tabernacletools.guitar, role individual|church|leader|member), paidThrough, offlineUntil, plan, source purchase|team, coveredBy, trial, subscriptions[], trialEligible, apps}. Paywalls show 'You're covered' instead of selling."
+  /v1/account:
+    delete: { summary: "Delete your account and data. A leader's team is dissolved (cancel the Apple subscription in Settings separately). The hashed trial_history entry is kept so the free trial stays once per person.", responses: { "200": { description: "{ok, deleted, teamDissolved}" } } }
+  /v1/appstore/notifications:
+    post:
+      security: []
+      summary: App Store Server Notifications v2 endpoint. JWS verified to Apple Root G3; idempotent on notificationUUID.
+      requestBody: { content: { application/json: { schema: { type: object, required: [signedPayload], properties: { signedPayload: { type: string } } } } } }
+      responses: { "200": { description: "{ok, duplicate?}" }, "400": { $ref: "#/components/responses/Err" } }
