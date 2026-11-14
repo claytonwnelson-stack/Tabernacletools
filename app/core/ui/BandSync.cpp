@@ -106,7 +106,7 @@ void BandSync::showSetlistPrompt() {
     w->addButton ("Save", 1); w->addButton ("Don't save", 2);
     w->enterModalState (true, juce::ModalCallbackFunction::create ([this] (int result) {
         setlistPromptOpen_ = false;
-        follower_.answerSetlistSave (result == 1, live_, lib_, clock(), wr::sync::nowSec());
+        follower_.answerSetlistSave (result == 1, live_, lib_, clock(), juce::Time::getMillisecondCounterHiRes() * 0.001);
         saveLib_ = true;
     }), true);
 }

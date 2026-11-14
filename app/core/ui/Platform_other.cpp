@@ -31,7 +31,7 @@ void pickChartFile (juce::Component* anchor, std::function<void (const juce::Fil
 }
 void signInWithApple (std::function<void (juce::String, juce::String)> done) { juce::MessageManager::callAsync ([done] { done ({}, "Sign in with Apple needs the iPad build"); }); }
 void churchSubscriptionJws (std::function<void (juce::String)> done) { juce::MessageManager::callAsync ([done] { done ({}); }); }
-struct JuceMidiPort : MidiSourcePort, private juce::MidiInputCallback {
+struct JuceMidiPort : MidiSourcePort, public juce::MidiInputCallback {
     std::unique_ptr<juce::MidiInput> in; void (*fn) (void*, uint8_t, uint8_t, uint8_t, double) = nullptr; void* ctx = nullptr;
     void handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& msg) override {
         if (! fn) return; auto* d = msg.getRawData(); int sz = msg.getRawDataSize(); if (sz < 1) return;

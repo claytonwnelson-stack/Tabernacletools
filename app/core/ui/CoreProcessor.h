@@ -178,8 +178,10 @@ private:
     struct FootMsg { uint8_t st = 0, d1 = 0, d2 = 0; int unit = -1; double ms = 0; };
     struct FootTap { CoreProcessor* self = nullptr; int unit = 0; };
     struct FootPort { std::string id; int unit = 0; int index = -1; std::unique_ptr<FootTap> tap; std::unique_ptr<wr::platform::MidiSourcePort> input; };
+public:
     bool footProgramChangeMode() const { return router_.sawProgramChange(); }
     int footPedalsSeen() const { return footPedalCount_; }
+private:
     std::mutex footMu_; std::vector<FootMsg> footQ_, footDrain_; std::vector<FootPort> footPorts_; std::atomic<bool> footPortsOpen_ { false }; int footPedalCount_ = 0;
     std::atomic<int> physOuts_ { 4 };
     double sampleCount_ = 0;
