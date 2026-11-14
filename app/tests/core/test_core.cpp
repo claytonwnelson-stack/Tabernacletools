@@ -137,7 +137,39 @@ static void testMidi() {
       auto bare = controllerFromJson (Json::parse ("{\"role\":\"section\",\"switches\":[]}", &jok)); CHECK (jok); CHECK_EQ (bare.comboE, std::string ("prevSection")); CHECK_EQ (bare.comboF, std::string ("stop"));
       auto cleared = controllerFromJson (Json::parse ("{\"role\":\"guitar\",\"comboE\":\"\",\"comboF\":\"tap\",\"switches\":[]}", &jok)); CHECK (cleared.comboE.empty()); CHECK_EQ (cleared.comboF, std::string ("tap"));
       CHECK_EQ (defaultGuitarUnit().comboE, std::string ("tunerToggle")); CHECK_EQ (defaultSectionUnit().comboF, std::string ("stop"));
-      auto saved = libraryFromJson (toJson (seedLibrary())); CHECK (saved.settings.guitarPedalId.empty()); CHECK_EQ (saved.controllers[0].comboF, std::string ("clickMute")); }
+      auto saved = libraryFromJson (toJson (seedLibrary())); CHECK (saved.settings.guitarPedalId.empty()); CHECK (! saved.settings.onePedalSection); CHECK_EQ (saved.controllers[0].comboF, std::string ("clickMute"));
+      // factory program change has no release: a second tap within 0.4 s is the hold (tuner / stop). A switch with no hold still repeats.
+      f.handle (0xC0, 0, 0, 6000, 0); f.flushFactory (6060); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::Tap);
+      f.handle (0xC0, 0, 0, 6200, 0); f.flushFactory (6260); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::TunerToggle);
+      f.handle (0xC0, 0, 0, 7000, 1); f.flushFactory (7060); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::PlayStart);
+      f.handle (0xC0, 0, 0, 7200, 1); f.flushFactory (7260); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::TransportStop);
+      f.handle (0xC0, 1, 0, 8000, 1); f.flushFactory (8060); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::NextSection);
+      f.handle (0xC0, 1, 0, 8200, 1); f.flushFactory (8260); n = f.pop (fa, 8); CHECK (n == 1 && fa[0].type == Action::NextSection);
+      CHECK (f.sawProgramChange());
+      // one Chocolate, plus the iPad network session: the pedal is the guitar unit, not sections
+      std::vector<FootPortDesc> one { { "net", "Session 1", 0 }, { "7", "Chocolate Plus", 1 } };
+      auto solo = assignFootPedals (one, "", "", "", false);
+      CHECK_EQ (solo.detected, 1); CHECK (solo.guitar.connected); CHECK (! solo.section.connected); CHECK_EQ (solo.guitar.index, 1); CHECK_EQ (solo.guitar.id, std::string ("7"));
+      // a network port previously saved as "guitar" must not keep the real pedal stuck on sections
+      auto stolen = assignFootPedals (one, "net", "7", "", false);
+      CHECK (stolen.guitar.connected); CHECK_EQ (stolen.guitar.index, 1); CHECK (! stolen.section.connected);
+      auto asSection = assignFootPedals (one, "", "", "", true);
+      CHECK (! asSection.guitar.connected); CHECK (asSection.section.connected); CHECK_EQ (asSection.section.index, 1);
+      // two Chocolates, same name and the same CoreMIDI id: both stay open, first guitar, second sections
+      std::vector<FootPortDesc> pair { { "42", "Chocolate", 0 }, { "42", "Chocolate", 1 } };
+      auto both = assignFootPedals (pair, "", "", "", false);
+      CHECK_EQ (both.detected, 2); CHECK_EQ (both.guitar.index, 0); CHECK_EQ (both.section.index, 1);
+      CHECK (both.guitar.id != both.section.id); CHECK_EQ (both.guitar.id, std::string ("42#0")); CHECK_EQ (both.section.id, std::string ("42#1"));
+      auto again = assignFootPedals (pair, both.section.id, both.guitar.id, "", false); // swapped keys
+      CHECK_EQ (again.guitar.index, 1); CHECK_EQ (again.section.index, 0);
+      // an older save stored the raw id: that is still the first of the pair
+      auto legacy = assignFootPedals (pair, "42", "", "", false);
+      CHECK_EQ (legacy.guitar.index, 0); CHECK_EQ (legacy.section.index, 1);
+      // empty identifiers are not dropped
+      std::vector<FootPortDesc> blank { { "", "USB MIDI", 3 }, { "", "USB MIDI", 4 } };
+      auto blanks = assignFootPedals (blank, "", "", "", false);
+      CHECK_EQ (blanks.detected, 2); CHECK_EQ (blanks.guitar.index, 3); CHECK_EQ (blanks.section.index, 4);
+      CHECK (blanks.guitar.id != blanks.section.id); }
 }
 
 struct MockSink : RigSink {

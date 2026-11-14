@@ -72,4 +72,8 @@ void signInWithApple (std::function<void (juce::String identityToken, juce::Stri
 // Latest Church-plan transaction as StoreKit 2 Transaction.jwsRepresentation (empty if none), via the v0.12 Swift bridge
 // (core/ui/store/WRStoreKit.swift). Desktop / non-store builds: empty.
 void churchSubscriptionJws (std::function<void (juce::String jws)> done);
+// Open the MIDI source at `index` in MidiInput::getAvailableDevices() / MIDIGetSource order.
+// Two identical Chocolates can share one CoreMIDI unique id; opening by that id always gets the first.
+class MidiSourcePort { public: virtual ~MidiSourcePort() = default; virtual void start() = 0; };
+std::unique_ptr<MidiSourcePort> openMidiSourceIndex (int index, void (*fn) (void*, uint8_t, uint8_t, uint8_t, double), void* ctx);
 }

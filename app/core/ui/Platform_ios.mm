@@ -388,6 +388,37 @@ void signInWithApple (std::function<void (juce::String, juce::String)> done) {
         [del.controller performRequests];
     } else juce::MessageManager::callAsync ([done] { done ({}, "Needs iPadOS 13 or later"); });
 }
+struct IosMidiPort : MidiSourcePort {
+    MIDIClientRef client = 0; MIDIPortRef port = 0; MIDIEndpointRef source = 0;
+    void (*fn) (void*, uint8_t, uint8_t, uint8_t, double) = nullptr; void* ctx = nullptr;
+    ~IosMidiPort() override { if (port && source) MIDIPortDisconnectSource (port, source); if (port) MIDIPortDispose (port); if (client) MIDIClientDispose (client); }
+    void start() override {}
+    static void read (const MIDIPacketList* list, void* ref, void*) {
+        auto* self = (IosMidiPort*) ref; if (! self || ! self->fn || ! list) return;
+        const MIDIPacket* p = &list->packet[0];
+        for (UInt32 i = 0; i < list->numPackets; ++i) {
+            const UInt8* d = p->data; int n = (int) p->length, o = 0;
+            while (o < n) {
+                uint8_t st = d[o]; if (st < 0x80) { ++o; continue; }
+                int need = 3; if (st >= 0xF8) need = 1; else if (st == 0xF2) need = 3; else if ((st & 0xF0) == 0xC0 || (st & 0xF0) == 0xD0 || st == 0xF1 || st == 0xF3) need = 2;
+                if (o + need > n) break;
+                self->fn (self->ctx, st, need > 1 ? d[o + 1] : 0, need > 2 ? d[o + 2] : 0, juce::Time::getMillisecondCounterHiRes());
+                o += need;
+            }
+            p = MIDIPacketNext (p);
+        }
+    }
+};
+std::unique_ptr<MidiSourcePort> openMidiSourceIndex (int index, void (*fn) (void*, uint8_t, uint8_t, uint8_t, double), void* ctx) {
+    if (index < 0 || fn == nullptr) return {};
+    ItemCount n = MIDIGetNumberOfSources(); if ((ItemCount) index >= n) return {};
+    MIDIEndpointRef src = MIDIGetSource ((ItemCount) index); if (src == 0) return {};
+    auto port = std::make_unique<IosMidiPort>(); port->fn = fn; port->ctx = ctx; port->source = src;
+    if (MIDIClientCreate (CFSTR ("BearingLiveFoot"), nullptr, nullptr, &port->client) != noErr) return {};
+    if (MIDIInputPortCreate (port->client, CFSTR ("Foot"), IosMidiPort::read, port.get(), &port->port) != noErr) return {};
+    if (MIDIPortConnectSource (port->port, src, nullptr) != noErr) return {};
+    return port;
+}
 void churchSubscriptionJws (std::function<void (juce::String)> done) {
     // v0.12: StoreKit 2 Transaction.currentEntitlements via WRStoreKit.swift; the seat service verifies this JWS
     wr::store::entitlements ([done] (std::vector<wr::StoreEntitlement> e) {

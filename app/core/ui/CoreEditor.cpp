@@ -274,7 +274,26 @@ CoreEditor::SettingsPanel::Level CoreEditor::SettingsPanel::make (Kind k) {
         juce::PopupMenu extra; ed.addAudioSettings (extra); addMenu (L, extra); return L;
     }
     if (k == KMidi) {
-        L.title = "MIDI & Footswitches"; L.blurb = "Clock, the cue channel, which physical Chocolate is the guitar unit, and what each switch does.";
+        L.title = "MIDI & Footswitches"; L.blurb = "Clock, which Chocolate is the guitar unit, and what each switch does. A hold needs momentary CC; factory program-change mode has no release, so double-tap does the hold.";
+        { std::vector<wr::FootPortDesc> desc; auto devs = juce::MidiInput::getAvailableDevices();
+          for (int i = 0; i < devs.size(); ++i) desc.push_back ({ devs[i].identifier.toStdString(), devs[i].name.toStdString(), i });
+          auto asg = wr::assignFootPedals (desc, s.guitarPedalId, s.sectionPedalId, s.midiClockInId, s.onePedalSection);
+          juce::String detail = asg.detected == 0 ? "Plug a Chocolate into the iPad. Two can share a powered USB hub."
+              : asg.detected == 1 ? juce::String ("One pedal, used as the ") + (asg.section.connected ? "sections unit (Next / Play)." : "guitar unit (tap, boost, tuner).")
+              : juce::String (asg.detected) + " pedals, each opened on its own. Same name or same USB id does not merge them.";
+          L.rows.push_back ({ "Pedals detected: " + juce::String (asg.detected), detail, false, true, {} });
+          L.rows.push_back ({ "Guitar unit", asg.guitar.connected ? juce::String (asg.guitar.name) : juce::String ("Not connected"), false, true, {} });
+          L.rows.push_back ({ "Sections unit", asg.section.connected ? juce::String (asg.section.name) : juce::String ("Not connected"), false, true, {} });
+          L.rows.push_back ({ "Swap pedal roles", asg.detected <= 1 ? "Use this one pedal for the other job." : "Guitar and sections trade places.", false, asg.detected > 0, [this] {
+              auto& s2 = ed.core.store.lib.settings; std::vector<wr::FootPortDesc> d2; auto devs2 = juce::MidiInput::getAvailableDevices();
+              for (int i = 0; i < devs2.size(); ++i) d2.push_back ({ devs2[i].identifier.toStdString(), devs2[i].name.toStdString(), i });
+              auto now = wr::assignFootPedals (d2, s2.guitarPedalId, s2.sectionPedalId, s2.midiClockInId, s2.onePedalSection);
+              if (now.detected <= 1) s2.onePedalSection = ! s2.onePedalSection;
+              else { std::swap (s2.guitarPedalId, s2.sectionPedalId); std::swap (s2.guitarPedalName, s2.sectionPedalName); }
+              ed.core.refreshFootswitchPorts(); ed.core.store.save(); nav.back() = make (KMidi); scroll = 0; repaint(); } });
+          L.rows.push_back ({ "Holds (tuner, stop, mute)", "Factory mode has no release, so hold does nothing. Double-tap for that action. A+B = tuner, C+D = stop. Real hold: momentary CC 80-83 in the M-Vave app.", false, true, {} });
+          if (ed.core.footProgramChangeMode()) L.rows.push_back ({ "Program changes are coming in", "Holds will not work until the Chocolate is set to momentary CC. Double-tap still does the hold.", false, true, {} });
+        }
         { juce::PopupMenu ck; const int mode = s.midiClockMode;
           ck.addItem ("Off", true, mode == 0, [this] { ed.core.setMidiClockMode (wr::MidiClockMode::Off); });
           ck.addItem ("Send (24 ppqn + Start/Stop + position on section jumps)", true, mode == 1, [this] { ed.core.setMidiClockMode (wr::MidiClockMode::Send); });
@@ -308,7 +327,7 @@ CoreEditor::SettingsPanel::Level CoreEditor::SettingsPanel::make (Kind k) {
                                : (st.sectionPedalName.empty() ? juce::String ("second Chocolate plugged in") : juce::String (st.sectionPedalName));
         L.rows.push_back ({ mapGuitar ? "Guitar unit" : "Sections unit", shown + "  -  tap to switch unit", false, true, [this] { mapGuitar = ! mapGuitar; nav.back() = make (KMap); scroll = 0; repaint(); } });
         int u = unit (mapGuitar);
-        if (u < 0) { L.rows.push_back ({ "No saved pedal for this unit", "Plug both Chocolates in once so they can be told apart.", false, false, {} }); return L; }
+        if (u < 0) { L.rows.push_back ({ "No saved pedal for this unit", "The actions are still here. Plug in a Chocolate, or swap roles on the MIDI screen.", false, false, {} }); return L; }
         auto& c = proc.store.lib.controllers[(size_t) u];
         const char* letters = "ABCD";
         for (int i = 0; i < 4; ++i) {

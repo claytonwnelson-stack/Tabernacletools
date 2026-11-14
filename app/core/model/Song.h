@@ -155,6 +155,7 @@ struct AppSettings {
     int trackJumpAt = 0;                      // v0.14 backing tracks: section jumps land 0 = on the next bar line, 1 = at the end of the section             // v0.12 step it down automatically when the DSP gets close to the audio deadline
     // Two factory Chocolates send the same messages. These CoreMIDI identifiers say which USB port is which.
     std::string guitarPedalId, sectionPedalId, guitarPedalName, sectionPedalName;
+    bool onePedalSection = false;         // the only Chocolate should be Next/Play, not the guitar unit
     std::vector<std::string> favoritePedals, recentPedals; // Workshop library: long-press to favorite; recent is the last pedals added
 };
 // v0.15 CCLI song-usage log: one row per song per day per setlist (live sets only, never practice); flags are OR-ed

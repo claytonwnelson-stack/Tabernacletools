@@ -22,6 +22,7 @@
 #include "model/Packs.h"
 #include "model/CrossApp.h"
 class ProjectorOutput;
+namespace wr::platform { class MidiSourcePort; }
 
 class CoreProcessor : public juce::AudioProcessor, protected juce::Timer, public wr::RigSink {
 public:
@@ -71,6 +72,7 @@ public:
     void pushControllerProfiles();
     void refreshFootswitchPorts();                            // standalone: open each Chocolate by its USB port id
     void pushFootMidi (int unit, uint8_t st, uint8_t d1, uint8_t d2, double ms);
+    static void onFoot (void* ctx, uint8_t st, uint8_t d1, uint8_t d2, double ms);
     void beginMidiLearn (int unit, int sw, bool longPress);
     bool midiLearning() const { return learning_.load(); }
     // v0.17 MIDI Clock send/receive ports (USB / Bluetooth / network / virtual). Call from the message thread.
@@ -174,8 +176,11 @@ private:
     struct LearnReq { int unit = -1, sw = 0; bool longPress = false; } learnReq_; std::atomic<bool> learnPending_ { false }, learning_ { false };
     wr::SpscQueue<wr::Action, 256> actions_;
     struct FootMsg { uint8_t st = 0, d1 = 0, d2 = 0; int unit = -1; double ms = 0; };
-    struct FootPort { std::string id; int unit = 0; std::unique_ptr<juce::MidiInputCallback> cb; std::unique_ptr<juce::MidiInput> input; };
-    std::mutex footMu_; std::vector<FootMsg> footQ_, footDrain_; std::vector<FootPort> footPorts_; std::atomic<bool> footPortsOpen_ { false };
+    struct FootTap { CoreProcessor* self = nullptr; int unit = 0; };
+    struct FootPort { std::string id; int unit = 0; int index = -1; std::unique_ptr<FootTap> tap; std::unique_ptr<wr::platform::MidiSourcePort> input; };
+    bool footProgramChangeMode() const { return router_.sawProgramChange(); }
+    int footPedalsSeen() const { return footPedalCount_; }
+    std::mutex footMu_; std::vector<FootMsg> footQ_, footDrain_; std::vector<FootPort> footPorts_; std::atomic<bool> footPortsOpen_ { false }; int footPedalCount_ = 0;
     std::atomic<int> physOuts_ { 4 };
     double sampleCount_ = 0;
     bool practiceMode_ = false; std::string practiceSongId_; std::shared_ptr<const wr::PracticeAudio> practiceAudio_;

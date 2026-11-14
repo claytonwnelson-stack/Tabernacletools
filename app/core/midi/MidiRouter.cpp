@@ -1,4 +1,5 @@
 #include "MidiRouter.h"
+#include <cctype>
 #include <cmath>
 
 namespace wr {
@@ -42,7 +43,15 @@ void MidiRouter::noteFactory (int u, int pc, double t) {
 void MidiRouter::flushFactory (double t) {
     for (int u = 0; u < nUnits_; ++u) {
         auto& slot = pend_[(size_t) u];
-        if (slot.on && t - slot.t >= 50.0) { const int sw = ((slot.pc % 4) + 4) % 4; slot.on = false; fire (u, sw, false); }
+        if (! (slot.on && t - slot.t >= 50.0)) continue;
+        const int sw = ((slot.pc % 4) + 4) % 4; slot.on = false;
+        auto& last = lastFactory_[(size_t) u];
+        const std::string& lng = act (u, sw, true), & sh = act (u, sw, false);
+        // Program change has no release, so a hold can never be timed. A second tap of the same
+        // switch inside 0.4 s does the hold action instead (tuner, stop, click mute).
+        const bool again = last.sw == sw && last.t >= 0 && t - last.t < 400.0 && ! lng.empty() && lng != sh;
+        last.sw = sw; last.t = t;
+        fire (u, sw, again);
     }
 }
 
@@ -67,7 +76,7 @@ bool MidiRouter::unitMessage (int u, uint8_t st, uint8_t d1, uint8_t d2, double 
     }
     // Factory Chocolate program change (display 000-003 is PC 0-3; later groups wrap with % 4).
     // Only on a known USB port — a merged buffer cannot tell two identical pedals apart.
-    if (ignoreChannel && type == 0xC0) { noteFactory (u, d1, t); return true; }
+    if (ignoreChannel && type == 0xC0) { sawPc_ = true; noteFactory (u, d1, t); return true; }
     return false;
 }
 
@@ -115,6 +124,76 @@ void MidiRouter::handle (uint8_t st, uint8_t d1, uint8_t d2, double t, int fromU
         else if (noteOn && d1 >= noteBase_) { a.type = Action::GotoSection; a.value = d1 - noteBase_; emit (a); }
         else if (type == 0xB0 && d2 >= 64 && (d1 == 102 || d1 == 103)) { a.type = d1 == 102 ? Action::NextSection : Action::PrevSection; emit (a); }
     }
+}
+
+namespace {
+std::string lowerCopy (std::string s) { for (auto& c : s) c = (char) std::tolower ((unsigned char) c); return s; }
+bool looksLikePedal (const std::string& name) {
+    const auto n = lowerCopy (name);
+    return n.find ("chocolate") != std::string::npos || n.find ("m-vave") != std::string::npos || n.find ("mvave") != std::string::npos
+        || n.find ("sinco") != std::string::npos || n.find ("foot") != std::string::npos;
+}
+bool looksVirtual (const std::string& name) {
+    const auto n = lowerCopy (name);
+    return n.find ("network") != std::string::npos || n.find ("session") != std::string::npos || n.find ("iac") != std::string::npos || n.find ("bluetooth") != std::string::npos;
+}
+struct Keyed { FootPortDesc port; std::string key; int occurrence = 0; bool pedal = false, virt = false, dup = false; };
+}
+FootAssignment assignFootPedals (const std::vector<FootPortDesc>& devices, const std::string& savedGuitar, const std::string& savedSection, const std::string& clockInId, bool onePedalSection) {
+    std::vector<Keyed> all;
+    for (auto& d : devices) {
+        Keyed k; k.port = d; k.pedal = looksLikePedal (d.name); k.virt = ! k.pedal && looksVirtual (d.name);
+        int occ = 0; bool dup = d.id.empty();
+        for (auto& e : all) if (! d.id.empty() && e.port.id == d.id) { dup = true; e.dup = true; if (e.occurrence >= occ) occ = e.occurrence + 1; }
+        k.occurrence = d.id.empty() ? 0 : occ; k.dup = dup || k.dup;
+        if (d.id.empty()) k.key = "idx:" + std::to_string (d.index);
+        else if (k.dup) k.key = d.id + "#" + std::to_string (k.occurrence);
+        else k.key = d.id;
+        all.push_back (std::move (k));
+    }
+    for (auto& k : all) if (k.dup && ! k.port.id.empty()) k.key = k.port.id + "#" + std::to_string (k.occurrence);
+    auto match = [&] (const std::string& saved) {
+        if (saved.empty()) return -1;
+        for (int i = 0; i < (int) all.size(); ++i) if (all[(size_t) i].key == saved) return i;
+        for (int i = 0; i < (int) all.size(); ++i) if (all[(size_t) i].occurrence == 0 && all[(size_t) i].port.id == saved) return i;
+        return -1;
+    };
+    bool anyPedal = false; for (auto& k : all) if (k.pedal) anyPedal = true;
+    std::vector<int> cand;
+    for (int i = 0; i < (int) all.size(); ++i) {
+        auto& k = all[(size_t) i];
+        if (! clockInId.empty() && (k.port.id == clockInId || k.key == clockInId)) continue;
+        if (anyPedal) { if (k.pedal) cand.push_back (i); }
+        else if (! k.virt) cand.push_back (i);
+    }
+    const auto pool = cand;
+    auto isCand = [&] (int i) { for (int c : pool) if (c == i) return true; return false; };
+    int g = match (savedGuitar), s = match (savedSection);
+    if (g >= 0 && ! isCand (g)) g = -1;
+    if (s >= 0 && ! isCand (s)) s = -1;
+    if (g >= 0 && g == s) s = -1;
+    FootAssignment out; out.detected = (int) cand.size();
+    auto take = [&] (int i) { for (auto it = cand.begin(); it != cand.end(); ++it) if (*it == i) { cand.erase (it); break; } };
+    if (g >= 0) take (g);
+    if (s >= 0) take (s);
+    if (out.detected == 1) {
+        const int only = cand.empty() ? (g >= 0 ? g : s) : cand[0];
+        if (onePedalSection) s = only, g = -1; else g = only, s = -1;
+        cand.clear();
+    } else {
+        if (g < 0 && ! cand.empty()) { g = cand[0]; cand.erase (cand.begin()); }
+        if (s < 0 && ! cand.empty()) { s = cand[0]; cand.erase (cand.begin()); }
+    }
+    auto roleOf = [&] (int i) { FootRole r; if (i < 0 || i >= (int) all.size()) return r; auto& k = all[(size_t) i]; r.id = k.key; r.index = k.port.index; r.connected = true;
+        r.name = k.port.name.empty() ? "USB pedal" : k.port.name;
+        int seen = 0, nth = 0; for (auto& o : all) if (o.port.name == k.port.name) { ++seen; if (o.port.index == k.port.index) nth = seen; }
+        if (seen > 1) r.name += " (" + std::to_string (nth) + ")";
+        return r; };
+    out.guitar = roleOf (g); out.section = roleOf (s);
+    for (int i = 0; i < (int) all.size(); ++i) if (isCand (i) || i == g || i == s) {
+        auto r = roleOf (i); if (i == g) r.id = out.guitar.id; if (i == s) r.id = out.section.id; out.pedals.push_back (r);
+    }
+    return out;
 }
 
 void MidiRouter::tick (double t) {

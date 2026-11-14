@@ -108,24 +108,15 @@ void wr::ui::addV08Settings (CoreEditor& ed, juce::PopupMenu& m, juce::Component
 }
 void wr::ui::addFootPedalSettings (CoreEditor& ed, juce::PopupMenu& m) {
     CoreEditor* e = &ed; auto& st = e->core.store.lib.settings; juce::PopupMenu pd;
-      auto shortId = [] (const std::string& id) { return id.size() <= 4 ? id : id.substr (id.size() - 4); };
-      auto label = [&] (const std::string& name, const std::string& id, const char* fallback) {
-          if (id.empty()) return juce::String (fallback);
-          auto n = name.empty() ? juce::String ("USB pedal") : juce::String (name);
-          return n + "  " + juce::String (shortId (id));
-      };
-      pd.addItem ("Guitar pedal: " + label (st.guitarPedalName, st.guitarPedalId, "first one plugged in"), false, false, [] {});
-      pd.addItem ("Sections pedal: " + label (st.sectionPedalName, st.sectionPedalId, "second one plugged in"), false, false, [] {});
-      pd.addSeparator();
       juce::Array<juce::MidiDeviceInfo> devs = juce::MidiInput::getAvailableDevices();
+      std::vector<FootPortDesc> desc; for (int i = 0; i < devs.size(); ++i) desc.push_back ({ devs[i].identifier.toStdString(), devs[i].name.toStdString(), i });
+      auto asg = assignFootPedals (desc, st.guitarPedalId, st.sectionPedalId, st.midiClockInId, st.onePedalSection);
       auto pick = [&] (bool guitar) {
-          juce::PopupMenu sub;
-          for (auto& d : devs) {
-              auto id = d.identifier.toStdString(); auto nm = d.name.toStdString();
-              int dup = 0; for (auto& o : devs) if (o.name == d.name) ++dup;
-              auto shown = d.name + (dup > 1 ? "  " + juce::String (shortId (id)) : juce::String());
-              bool on = (guitar ? st.guitarPedalId : st.sectionPedalId) == id;
-              sub.addItem (shown, true, on, [e, id, nm, guitar] {
+          juce::PopupMenu sub; const int n = asg.detected;
+          for (auto& p : asg.pedals) {
+              auto id = p.id; auto nm = p.name;
+              bool on = (guitar ? asg.guitar.id : asg.section.id) == id;
+              sub.addItem (juce::String (nm), true, on, [e, id, nm, guitar, n] {
                   auto& s2 = e->core.store.lib.settings;
                   auto& mine = guitar ? s2.guitarPedalId : s2.sectionPedalId;
                   auto& other = guitar ? s2.sectionPedalId : s2.guitarPedalId;
@@ -133,16 +124,21 @@ void wr::ui::addFootPedalSettings (CoreEditor& ed, juce::PopupMenu& m) {
                   auto& otherName = guitar ? s2.sectionPedalName : s2.guitarPedalName;
                   if (other == id) { std::swap (mine, other); std::swap (myName, otherName); }
                   else { mine = id; myName = nm; }
+                  if (n <= 1) s2.onePedalSection = ! guitar;
                   e->core.refreshFootswitchPorts(); e->core.store.save(); });
           }
-          if (devs.isEmpty()) sub.addItem ("(no USB MIDI inputs yet)", false, false, [] {});
+          if (asg.pedals.empty()) sub.addItem ("(no foot pedal yet)", false, false, [] {});
           return sub;
       };
       pd.addSubMenu ("Guitar pedal is...", pick (true));
       pd.addSubMenu ("Sections pedal is...", pick (false));
-      pd.addItem ("Swap the two pedals", st.guitarPedalId != st.sectionPedalId, false, [e] {
-          auto& s2 = e->core.store.lib.settings; std::swap (s2.guitarPedalId, s2.sectionPedalId); std::swap (s2.guitarPedalName, s2.sectionPedalName);
+      pd.addItem ("Swap the two pedals", asg.detected > 0, false, [e] {
+          auto& s2 = e->core.store.lib.settings; std::vector<FootPortDesc> d2; auto devs2 = juce::MidiInput::getAvailableDevices();
+          for (int i = 0; i < devs2.size(); ++i) d2.push_back ({ devs2[i].identifier.toStdString(), devs2[i].name.toStdString(), i });
+          auto now = assignFootPedals (d2, s2.guitarPedalId, s2.sectionPedalId, s2.midiClockInId, s2.onePedalSection);
+          if (now.detected <= 1) s2.onePedalSection = ! s2.onePedalSection;
+          else { std::swap (s2.guitarPedalId, s2.sectionPedalId); std::swap (s2.guitarPedalName, s2.sectionPedalName); }
           e->core.refreshFootswitchPorts(); e->core.store.save(); });
-      pd.addItem ("Both pedals on U, through a powered hub. First one listed is guitar until you swap.", false, false, [] {});
+      pd.addItem ("One pedal defaults to guitar. Two identical Chocolates stay two pedals. Swap if Next/Play should be the only one.", false, false, [] {});
     m.addSubMenu ("Foot pedals (two Chocolates)", pd);
 }

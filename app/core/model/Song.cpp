@@ -196,7 +196,8 @@ Json toJson (const Library& l) {
     st.set ("stageMode", l.settings.stageMode).set ("autoScroll", l.settings.autoScroll).set ("recordClick", l.settings.recordClick).set ("repeatWarnDays", l.settings.repeatWarnDays).set ("trackJumpAt", l.settings.trackJumpAt)
         .set ("oversampling", l.settings.ampOversampling).set ("osAuto", l.settings.autoOversampling)
         .set ("guitarPedal", l.settings.guitarPedalId).set ("sectionPedal", l.settings.sectionPedalId)
-        .set ("guitarPedalName", l.settings.guitarPedalName).set ("sectionPedalName", l.settings.sectionPedalName);
+        .set ("guitarPedalName", l.settings.guitarPedalName).set ("sectionPedalName", l.settings.sectionPedalName)
+        .set ("onePedalSection", l.settings.onePedalSection);
     if (! l.settings.favoritePedals.empty()) { Json a = Json::array(); for (auto& s : l.settings.favoritePedals) a.push (s); st.set ("favPedals", a); }
     if (! l.settings.recentPedals.empty()) { Json a = Json::array(); for (auto& s : l.settings.recentPedals) a.push (s); st.set ("recentPedals", a); }
     { Json pl = Json::array(); for (auto& e : l.playLog) pl.push (Json::object().set ("song", e.songId).set ("date", e.date)); j.set ("playLog", pl); }
@@ -223,6 +224,7 @@ Library libraryFromJson (const Json& j) {
     { int o = st["oversampling"].integer (4); l.settings.ampOversampling = o >= 8 ? 8 : o >= 4 ? 4 : o >= 2 ? 2 : 1; l.settings.autoOversampling = st["osAuto"].boolean (true); }
     l.settings.guitarPedalId = st["guitarPedal"].str(); l.settings.sectionPedalId = st["sectionPedal"].str();
     l.settings.guitarPedalName = st["guitarPedalName"].str(); l.settings.sectionPedalName = st["sectionPedalName"].str();
+    l.settings.onePedalSection = st["onePedalSection"].boolean (false);
     for (auto& e : st["favPedals"].items()) if (! e.str().empty()) l.settings.favoritePedals.push_back (e.str());
     for (auto& e : st["recentPedals"].items()) if (! e.str().empty()) l.settings.recentPedals.push_back (e.str());
     l.settings.stageMode = false; // saved "dark stage mode" is ignored; the app has one dark look

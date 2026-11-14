@@ -31,4 +31,18 @@ void pickChartFile (juce::Component* anchor, std::function<void (const juce::Fil
 }
 void signInWithApple (std::function<void (juce::String, juce::String)> done) { juce::MessageManager::callAsync ([done] { done ({}, "Sign in with Apple needs the iPad build"); }); }
 void churchSubscriptionJws (std::function<void (juce::String)> done) { juce::MessageManager::callAsync ([done] { done ({}); }); }
+struct JuceMidiPort : MidiSourcePort, private juce::MidiInputCallback {
+    std::unique_ptr<juce::MidiInput> in; void (*fn) (void*, uint8_t, uint8_t, uint8_t, double) = nullptr; void* ctx = nullptr;
+    void handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& msg) override {
+        if (! fn) return; auto* d = msg.getRawData(); int sz = msg.getRawDataSize(); if (sz < 1) return;
+        fn (ctx, d[0], sz > 1 ? d[1] : 0, sz > 2 ? d[2] : 0, juce::Time::getMillisecondCounterHiRes());
+    }
+    void start() override { if (in) in->start(); }
+};
+std::unique_ptr<MidiSourcePort> openMidiSourceIndex (int index, void (*fn) (void*, uint8_t, uint8_t, uint8_t, double), void* ctx) {
+    auto devs = juce::MidiInput::getAvailableDevices(); if (index < 0 || index >= devs.size() || fn == nullptr) return {};
+    auto port = std::make_unique<JuceMidiPort>(); port->fn = fn; port->ctx = ctx;
+    port->in = juce::MidiInput::openDevice (devs[index].identifier, port.get()); if (! port->in) return {};
+    return port;
+}
 }

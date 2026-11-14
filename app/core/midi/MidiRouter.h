@@ -19,6 +19,19 @@ struct Action {
 Action::Type actionFromName (const std::string& n);
 const char* actionName (Action::Type t);
 
+// A MIDI input as the system listed it. `index` is its position in that list (the port we actually open).
+// Two Chocolates often share a name and even a CoreMIDI unique id; index keeps them apart.
+struct FootPortDesc { std::string id, name; int index = 0; };
+struct FootRole { std::string id, name; int index = -1; bool connected = false; };
+struct FootAssignment {
+    FootRole guitar, section;
+    int detected = 0;                              // pedal-like inputs we will use (network session excluded)
+    std::vector<FootRole> pedals;                  // each detected pedal, with its role name in `id` key
+};
+// savedGuitar / savedSection are the keys from the last session (a raw id, "id#2", or "idx:3").
+// onePedalSection: the user asked the only connected pedal to be the sections unit. Default is the guitar unit.
+FootAssignment assignFootPedals (const std::vector<FootPortDesc>& devices, const std::string& savedGuitar, const std::string& savedSection, const std::string& clockInId, bool onePedalSection);
+
 class MidiRouter {
 public:
     static constexpr int kMaxUnits = 4, kMaxOut = 16;
@@ -39,6 +52,7 @@ public:
     void handle (uint8_t status, uint8_t d1, uint8_t d2, double timeMs, int fromUnit = -1);
     void tick (double timeMs);          // call >= every 10 ms so long presses fire while the switch is still held
     void flushFactory (double timeMs);  // release a lone program-change after the A+B / C+D window (~50 ms)
+    bool sawProgramChange() const { return sawPc_; }   // factory Chocolate mode: a press, and no release, so a hold cannot be timed
     // drain generated actions
     int pop (Action* out, int max) { int n = std::min (max, nOut_); for (int i = 0; i < n; ++i) out[i] = out_[(size_t) i]; for (int i = n; i < nOut_; ++i) out_[(size_t) (i - n)] = out_[(size_t) i]; nOut_ -= n; return n; }
     double clockBpm() const { return clockBpm_; }
@@ -57,6 +71,9 @@ private:
     std::array<std::array<Held, 4>, kMaxUnits> held_ {};
     struct Pend { bool on = false; int pc = 0; double t = 0; };
     std::array<Pend, kMaxUnits> pend_ {};
+    struct LastFire { int sw = -1; double t = -1e9; };
+    std::array<LastFire, kMaxUnits> lastFactory_ {};
+    bool sawPc_ = false;
     std::array<Action, kMaxOut> out_ {}; int nOut_ = 0;
     int learnU_ = -1, learnSw_ = 0; bool learnLong_ = false;
     int extCh_ = 16, noteBase_ = 36; bool followClock_ = true;

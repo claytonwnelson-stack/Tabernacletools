@@ -113,7 +113,7 @@ void CoreProcessor::processBlock (juce::AudioBuffer<float>& buf, juce::MidiBuffe
                 auto msg = m.getMessage(); auto* d = msg.getRawData(); int sz = msg.getRawDataSize(); if (sz < 1) continue;
                 const int type = d[0] & 0xF0; const int d1 = sz > 1 ? d[1] : 0;
                 // Pedal ports are read above. Skip their CC here so the device-manager callback cannot double-fire.
-                if (ownPorts && type == 0xB0 && ((d1 >= 80 && d1 <= 83) || (d1 >= 20 && d1 <= 23))) continue;
+                if (ownPorts && (type == 0xC0 || (type == 0xB0 && ((d1 >= 80 && d1 <= 83) || (d1 >= 20 && d1 <= 23))))) continue;
                 router_.handle (d[0], d1, sz > 2 ? d[2] : 0, t0 + m.samplePosition / fs_ * 1000.0);
                 if (d[0] < 0xF8) { lastMidiStatus = d[0]; lastMidiData1 = d1; ++midiActivity; }
             }
@@ -304,18 +304,8 @@ void CoreProcessor::prerenderCustomCues() {
         const double sr = fs_; platform::renderSpeech (juce::String (spokenName (n)), sr, [this, n, sr] (std::vector<float> m) { if (! m.empty()) voice.addPhrase (n, std::move (m), sr); });
     }
 }
-namespace {
-struct FootCallback : juce::MidiInputCallback {
-    CoreProcessor* self = nullptr; int unit = 0;
-    void handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& msg) override {
-        if (! self) return; auto* d = msg.getRawData(); int sz = msg.getRawDataSize(); if (sz < 1) return;
-        self->pushFootMidi (unit, d[0], sz > 1 ? d[1] : 0, sz > 2 ? d[2] : 0, juce::Time::getMillisecondCounterHiRes());
-    }
-};
-bool pedalName (const juce::String& name) {
-    auto n = name.toLowerCase();
-    return n.contains ("chocolate") || n.contains ("m-vave") || n.contains ("mvave") || n.contains ("sinco") || n.contains ("footctrl") || n.contains ("foot ctrl");
-}
+void CoreProcessor::onFoot (void* ctx, uint8_t st, uint8_t d1, uint8_t d2, double ms) {
+    auto* tap = (FootTap*) ctx; if (tap && tap->self) tap->self->pushFootMidi (tap->unit, st, d1, d2, ms);
 }
 void CoreProcessor::pushFootMidi (int unit, uint8_t st, uint8_t d1, uint8_t d2, double ms) {
     std::lock_guard<std::mutex> lk (footMu_);
@@ -323,56 +313,42 @@ void CoreProcessor::pushFootMidi (int unit, uint8_t st, uint8_t d1, uint8_t d2, 
 }
 void CoreProcessor::refreshFootswitchPorts() {
     auto* holder = juce::StandalonePluginHolder::getInstance();
-    if (holder == nullptr) { footPorts_.clear(); footPortsOpen_ = false; return; } // AUv3: host delivers one merged buffer
+    if (holder == nullptr) { footPorts_.clear(); footPortsOpen_ = false; footPedalCount_ = 0; return; } // AUv3: host delivers one merged buffer
     const auto all = juce::MidiInput::getAvailableDevices();
-    juce::Array<juce::MidiDeviceInfo> named, other;
-    for (auto& d : all) (pedalName (d.name) ? named : other).add (d);
-    const auto& cands = named.isEmpty() ? all : named;
+    std::vector<FootPortDesc> desc; desc.reserve ((size_t) all.size());
+    for (int i = 0; i < all.size(); ++i) desc.push_back ({ all[i].identifier.toStdString(), all[i].name.toStdString(), i });
     auto& s = store.lib.settings;
-    const auto clockId = s.midiClockInId;
-    auto findId = [&] (const std::string& id) {
-        juce::MidiDeviceInfo hit; if (id.empty()) return hit;
-        for (auto& d : all) if (d.identifier.toStdString() == id) return d;
-        return hit;
-    };
-    auto g = findId (s.guitarPedalId), sec = findId (s.sectionPedalId);
-    auto taken = [&] (const juce::String& id) { return id.isNotEmpty() && (id == g.identifier || id == sec.identifier); };
-    for (auto& d : cands) {
-        if (d.identifier.isEmpty()) continue;
-        if (! clockId.empty() && d.identifier.toStdString() == clockId) continue;
-        if (taken (d.identifier)) continue;
-        if (s.guitarPedalId.empty() && g.identifier.isEmpty()) g = d;
-        else if (s.sectionPedalId.empty() && sec.identifier.isEmpty()) sec = d;
-    }
+    auto asg = assignFootPedals (desc, s.guitarPedalId, s.sectionPedalId, s.midiClockInId, s.onePedalSection);
+    footPedalCount_ = asg.detected;
     bool dirty = false;
-    if (s.guitarPedalId.empty() && g.identifier.isNotEmpty()) { s.guitarPedalId = g.identifier.toStdString(); dirty = true; }
-    if (s.sectionPedalId.empty() && sec.identifier.isNotEmpty()) { s.sectionPedalId = sec.identifier.toStdString(); dirty = true; }
-    if (g.identifier.isNotEmpty() && s.guitarPedalName != g.name.toStdString()) { s.guitarPedalName = g.name.toStdString(); dirty = true; }
-    if (sec.identifier.isNotEmpty() && s.sectionPedalName != sec.name.toStdString()) { s.sectionPedalName = sec.name.toStdString(); dirty = true; }
+    if (s.guitarPedalId != asg.guitar.id) { s.guitarPedalId = asg.guitar.id; dirty = true; }
+    if (s.sectionPedalId != asg.section.id) { s.sectionPedalId = asg.section.id; dirty = true; }
+    if (s.guitarPedalName != asg.guitar.name) { s.guitarPedalName = asg.guitar.name; dirty = true; }
+    if (s.sectionPedalName != asg.section.name) { s.sectionPedalName = asg.section.name; dirty = true; }
     if (dirty) store.saveSoon();
-    std::pair<std::string, int> wantPorts[2]; int nWant = 0;
-    if (g.identifier.isNotEmpty()) wantPorts[nWant++] = { g.identifier.toStdString(), 0 };
-    if (sec.identifier.isNotEmpty()) wantPorts[nWant++] = { sec.identifier.toStdString(), 1 };
+    struct Want { std::string id; int unit; int index; };
+    Want want[2]; int nWant = 0;
+    if (asg.guitar.connected) want[nWant++] = { asg.guitar.id, 0, asg.guitar.index };
+    if (asg.section.connected) want[nWant++] = { asg.section.id, 1, asg.section.index };
     bool same = (int) footPorts_.size() == nWant;
-    for (int i = 0; same && i < nWant; ++i) if (footPorts_[(size_t) i].id != wantPorts[i].first || footPorts_[(size_t) i].unit != wantPorts[i].second) same = false;
+    for (int i = 0; same && i < nWant; ++i) if (footPorts_[(size_t) i].id != want[i].id || footPorts_[(size_t) i].unit != want[i].unit || footPorts_[(size_t) i].index != want[i].index) same = false;
     if (! same) {
         footPorts_.clear();
-        auto open = [&] (const juce::MidiDeviceInfo& info, int unit) {
-            if (info.identifier.isEmpty()) return;
-            FootPort p; p.id = info.identifier.toStdString(); p.unit = unit;
-            auto cb = std::make_unique<FootCallback>(); cb->self = this; cb->unit = unit;
-            p.input = juce::MidiInput::openDevice (info.identifier, cb.get());
+        auto open = [&] (const Want& w) {
+            FootPort p; p.id = w.id; p.unit = w.unit; p.index = w.index;
+            p.tap = std::make_unique<FootTap>(); p.tap->self = this; p.tap->unit = w.unit;
+            p.input = platform::openMidiSourceIndex (w.index, &CoreProcessor::onFoot, p.tap.get());
             if (! p.input) return;
-            p.cb = std::move (cb); p.input->start(); footPorts_.push_back (std::move (p));
+            p.input->start(); footPorts_.push_back (std::move (p));
         };
-        open (g, 0); open (sec, 1);
+        for (int i = 0; i < nWant; ++i) open (want[i]);
     }
     footPortsOpen_ = ! footPorts_.empty();
-    for (auto& p : footPorts_) holder->deviceManager.setMidiInputDeviceEnabled (juce::String (p.id), false);
-    for (auto& d : all) {
-        bool ours = false; for (auto& p : footPorts_) if (p.id == d.identifier.toStdString()) ours = true;
-        if (! ours && ! holder->deviceManager.isMidiInputDeviceEnabled (d.identifier))
-            holder->deviceManager.setMidiInputDeviceEnabled (d.identifier, true);
+    for (auto& p : footPorts_) if (p.index >= 0 && p.index < all.size()) holder->deviceManager.setMidiInputDeviceEnabled (all[p.index].identifier, false);
+    for (int i = 0; i < all.size(); ++i) {
+        bool ours = false; for (auto& p : footPorts_) if (p.index == i) ours = true;
+        if (! ours && ! holder->deviceManager.isMidiInputDeviceEnabled (all[i].identifier))
+            holder->deviceManager.setMidiInputDeviceEnabled (all[i].identifier, true);
     }
 }
 void CoreProcessor::applySettings() {

@@ -113,11 +113,11 @@ void RigPanel::paint (juce::Graphics& g) {
         return juce::String ("not mapped"); };
     unitHdr ("FOOTSWITCHES - GUITAR (Chocolate Plus) - " + chName ("guitar"), juce::String (P.midiActivity.load() % 2 ? "* " : "  ") + "USB via hub");
     { juce::String n[4] = { "Tap", "Boost", song && ! song->switchC.label.empty() ? juce::String (song->switchC.label) : juce::String ("-"), song && ! song->switchD.label.empty() ? juce::String (song->switchD.label) : juce::String ("-") };
-      juce::String s[4] = { juce::String (L.bpm(), 0) + " BPM - HOLD: TUNER", L.boostOn() ? "FIXED - ON" : "FIXED", "THIS SONG", L.clickMuted() ? "HOLD: UNMUTE CLICK" : "HOLD: MUTE CLICK" };
+      juce::String s[4] = { juce::String (L.bpm(), 0) + " BPM - HOLD OR DOUBLE-TAP: TUNER", L.boostOn() ? "FIXED - ON" : "FIXED", "THIS SONG", L.clickMuted() ? "HOLD OR DOUBLE-TAP: UNMUTE" : "HOLD OR DOUBLE-TAP: MUTE" };
       bool lit[4] = { false, L.boostOn(), L.switchCOn(), L.switchDOn() }; Action::Type a[4] = { Action::Tap, Action::Boost, Action::SwitchC, Action::SwitchD }; drawUnit ("guitar", n, s, lit, a); }
     unitHdr ("SECTIONS (Chocolate Plus) - " + chName ("section"), "spare in bag");
     { const auto& c = L.chart(); int i = L.sectionIndex(); juce::String nx = i + 1 < (int) c.sections.size() ? "-> " + juce::String (c.sections[(size_t) i + 1].name).toUpperCase() : juce::String ("LAST SECTION");
-      juce::String n[4] = { "Play", "Next >", "Chorus", "Next Song" }; juce::String s[4] = { "HOLD: STOP", nx, "JUMP / LONG", "HOLD = PREV" };
+      juce::String n[4] = { "Play", "Next >", "Chorus", "Next Song" }; juce::String s[4] = { "HOLD OR DOUBLE-TAP: STOP", nx, "JUMP / LONG", "HOLD = PREV" };
       bool lit[4] = { false, false, false, false }; Action::Type a[4] = { Action::PlayStart, Action::NextSection, Action::JumpChorus, Action::NextSong };
       const auto tg = wr::sectionSwitchTargets (c, i, L.pass()); uint32_t col[4] = { 0, 0, 0, 0 }; const int idx[3] = { tg.prev, tg.next, tg.chorus };
       for (int k = 0; k < 3; ++k) if (idx[k] >= 0) col[k] = wr::colorArgbOr (wr::effectiveSectionColor (c.sections[(size_t) idx[k]], P.store.lib.settings.sectionColors), 0xff8a93a6);
